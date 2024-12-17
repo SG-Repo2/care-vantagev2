@@ -7,5 +7,14 @@ module.exports = {
   resolver: {
     ...defaultConfig.resolver,
     sourceExts: [...defaultConfig.resolver.sourceExts, 'jsx', 'js', 'ts', 'tsx'],
+    resolverMainFields: ['react-native', 'browser', 'main'],
+    // Add .expo directory to watchFolders
+    watchFolders: [
+      ...defaultConfig.resolver.watchFolders || [],
+      `${__dirname}/.expo`
+    ],
   },
+  // Ensure .expo directory is included in the project roots
+  projectRoot: __dirname,
+  watchFolders: [`${__dirname}/.expo`]
 };
