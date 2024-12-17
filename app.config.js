@@ -18,17 +18,24 @@ module.exports = {
       infoPlist: {
         NSHealthShareUsageDescription: 'CareVantage needs access to read your health data to track your fitness and wellness metrics.',
         NSHealthUpdateUsageDescription: 'CareVantage requires permission to write health data to help you track and manage your fitness goals.',
-        NSHealthClinicalHealthRecordsShareUsageDescription: 'Allow CareVantage to check health clinical info'
+        NSHealthClinicalUsageDescription: 'Allow CareVantage to check health clinical info',
+        UIBackgroundModes: ['health-kit'] 
       },
       entitlements: {
         'com.apple.developer.healthkit': true,
         'com.apple.developer.healthkit.access': [
+          'health-records',
           'HKQuantityTypeIdentifierStepCount',
           'HKQuantityTypeIdentifierHeartRate',
           'HKQuantityTypeIdentifierBodyMass',
           'HKQuantityTypeIdentifierHeight',
           'HKQuantityTypeIdentifierBodyMassIndex'
-        ]
+        ],
+        'com.apple.developer.healthkit.background-delivery': true
+      },
+      scheme: 'carevantage',
+      config: {
+        usesNonExemptEncryption: false
       }
     },
     android: {
@@ -49,6 +56,15 @@ module.exports = {
             deploymentTarget: '16.0'
           }
         }
+      ],
+      [
+        'react-native-health',
+        {
+          isClinicalDataEnabled: true,
+          healthSharePermission: 'CareVantage needs access to read your health data to track your fitness and wellness metrics.',
+          healthUpdatePermission: 'CareVantage requires permission to write health data to help you track and manage your fitness goals.',
+          healthClinicalDescription: 'Allow CareVantage to check health clinical info'
+        }
       ]
     ],
     experiments: {
@@ -58,6 +74,10 @@ module.exports = {
       eas: {
         projectId: process.env.EAS_PROJECT_ID
       }
+    },
+    scheme: 'carevantage',
+    developmentClient: {
+      silentLaunch: true
     }
   }
 };
