@@ -2,7 +2,7 @@ import { LogBox, Platform } from 'react-native';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
-import useHealthData from './src/hooks/useHealthData';
+import useHealthData from './src/features/health/hooks/useHealthData';
 
 export default function App() {
   const { steps, distance, flights } = useHealthData();
