@@ -12,6 +12,7 @@ module.exports = {
       backgroundColor: '#ffffff'
     },
     assetBundlePatterns: ['**/*'],
+    scheme: 'carevantage',
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.groebe1kenobi.carevantage',
@@ -33,7 +34,6 @@ module.exports = {
         ],
         'com.apple.developer.healthkit.background-delivery': true
       },
-      scheme: 'carevantage',
       config: {
         usesNonExemptEncryption: false
       }
@@ -48,6 +48,17 @@ module.exports = {
         'android.permission.ACTIVITY_RECOGNITION',
         'android.permission.ACCESS_FINE_LOCATION',
         'android.permission.BODY_SENSORS'
+      ],
+      intentFilters: [
+        {
+          action: 'VIEW',
+          data: [
+            {
+              scheme: 'carevantage'
+            }
+          ],
+          category: ['BROWSABLE', 'DEFAULT']
+        }
       ]
     },
     web: {
@@ -85,7 +96,6 @@ module.exports = {
         projectId: "ed8a0109-5476-4b93-9502-e9f46028b8d1"
       }
     },
-    scheme: 'carevantage',
     developmentClient: {
       silentLaunch: true
     }
