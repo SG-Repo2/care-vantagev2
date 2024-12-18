@@ -1,43 +1,36 @@
 import { Platform } from 'react-native';
-import HealthConnect, {
-  Permission,
-  StepsRecord,
-  DistanceRecord,
-  HeartRateRecord,
-  BloodPressureRecord,
-  SleepSessionRecord,
-} from 'react-native-health-connect';
+import HealthConnect from '@stridekick/react-native-health-connect';
 import { HealthMetrics } from '../../profile/types/health';
 import { HealthService } from './HealthService';
+import { SleepQuality, DataSource } from '../../../core/types/base';
+
+interface HealthActivity {
+  type?: string;
+  value?: number;
+  startTime?: string;
+  endTime?: string;
+  timestamp?: string;
+  systolic?: number;
+  diastolic?: number;
+}
 
 export class AndroidHealthService implements HealthService {
   private initialized: boolean = false;
-  private healthConnect: HealthConnect;
-
-  private readonly PERMISSIONS: Permission[] = [
-    'read_steps',
-    'read_distance',
-    'read_heart_rate',
-    'read_blood_pressure',
-    'read_sleep',
-    'read_exercise'
-  ];
 
   constructor() {
     if (Platform.OS !== 'android') {
       throw new Error('AndroidHealthService can only be used on Android devices');
     }
-    this.healthConnect = new HealthConnect();
   }
 
   async initialize(): Promise<boolean> {
     if (this.initialized) return true;
 
     try {
-      // Check if Health Connect is available
-      const isAvailable = await this.healthConnect.isAvailable();
-      if (!isAvailable) {
-        console.error('Health Connect is not available on this device');
+      // Check if Health Connect is enabled
+      const isEnabled = await HealthConnect.isEnabled();
+      if (!isEnabled) {
+        console.error('Health Connect is not enabled on this device');
         return false;
       }
 
@@ -62,10 +55,7 @@ export class AndroidHealthService implements HealthService {
 
   async checkPermissions(): Promise<boolean> {
     try {
-      const grantedPermissions = await this.healthConnect.getGrantedPermissions();
-      return this.PERMISSIONS.every(permission => 
-        grantedPermissions.includes(permission)
-      );
+      return await HealthConnect.authorize();
     } catch (error) {
       console.error('Failed to check permissions:', error);
       return false;
@@ -74,8 +64,7 @@ export class AndroidHealthService implements HealthService {
 
   async requestPermissions(): Promise<boolean> {
     try {
-      await this.healthConnect.requestPermissions(this.PERMISSIONS);
-      return this.checkPermissions();
+      return await HealthConnect.authorize();
     } catch (error) {
       console.error('Failed to request permissions:', error);
       return false;
@@ -87,156 +76,121 @@ export class AndroidHealthService implements HealthService {
       throw new Error('Health Connect is not initialized');
     }
 
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
-
-    const timeRangeFilter: TimeRangeFilter = {
-      operator: 'between',
-      startTime: startDate.toISOString(),
-      endTime: endDate.toISOString(),
-    };
-
-    const [steps, distance, heartRate, bloodPressure, sleep] = await Promise.all([
-      this.getSteps(timeRangeFilter),
-      this.getDistance(timeRangeFilter),
-      this.getHeartRate(timeRangeFilter),
-      this.getBloodPressure(timeRangeFilter),
-      this.getSleep(timeRangeFilter),
-    ]);
-
-    return {
-      id: `metrics_${Date.now()}`,
-      date: new Date(date),
-      steps,
-      flights: 0, // Health Connect doesn't track flights climbed
-      distance,
-      heartRate,
-      bloodPressure,
-      sleep,
-      source: 'health_connect' as DataSource,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-  }
-
-  private async getSteps(timeRangeFilter: TimeRangeFilter): Promise<number> {
     try {
-      const request: ReadRecordsRequest = {
-        recordType: 'Steps',
-        timeRangeFilter,
-      };
+      // Get activities for the last day
+      const activities = await HealthConnect.getActivities(1) as HealthActivity[];
       
-      const records = await this.healthConnect.readRecords(request);
-      return records.reduce((total: number, record: StepsRecord) => 
-        total + record.count, 0);
-    } catch (error) {
-      console.error('Error getting steps:', error);
-      return 0;
-    }
-  }
+      // Find activities for the requested date
+      const dateActivities = activities.filter(activity => {
+        const activityDate = new Date(activity.startTime || activity.timestamp || '');
+        const requestDate = new Date(date);
+        return activityDate.toDateString() === requestDate.toDateString();
+      });
 
-  private async getDistance(timeRangeFilter: TimeRangeFilter): Promise<number> {
-    try {
-      const request: ReadRecordsRequest = {
-        recordType: 'Distance',
-        timeRangeFilter,
-      };
-      
-      const records = await this.healthConnect.readRecords(request);
-      return records.reduce((total: number, record: DistanceRecord) => 
-        total + record.distance.inMeters, 0);
-    } catch (error) {
-      console.error('Error getting distance:', error);
-      return 0;
-    }
-  }
+      // Calculate metrics from activities
+      let steps = 0;
+      let distance = 0;
+      let heartRateReadings: number[] = [];
+      let bloodPressureReadings: { systolic: number; diastolic: number; timestamp: Date }[] = [];
+      let sleepSessions: { startTime: Date; endTime: Date }[] = [];
 
-  private async getHeartRate(timeRangeFilter: TimeRangeFilter): Promise<number> {
-    try {
-      const request: ReadRecordsRequest = {
-        recordType: 'HeartRate',
-        timeRangeFilter,
-      };
-      
-      const records = await this.healthConnect.readRecords(request);
-      if (!records.length) return 0;
-      
-      const sum = records.reduce((total: number, record: HeartRateRecord) => 
-        total + record.beatsPerMinute, 0);
-      return Math.round(sum / records.length);
-    } catch (error) {
-      console.error('Error getting heart rate:', error);
-      return 0;
-    }
-  }
+      dateActivities.forEach(activity => {
+        if (activity.type === 'steps') {
+          steps += activity.value || 0;
+        }
+        if (activity.type === 'distance') {
+          distance += activity.value || 0;
+        }
+        if (activity.type === 'heart_rate' && activity.value) {
+          heartRateReadings.push(activity.value);
+        }
+        if (activity.type === 'blood_pressure' && activity.systolic && activity.diastolic && activity.timestamp) {
+          bloodPressureReadings.push({
+            systolic: activity.systolic,
+            diastolic: activity.diastolic,
+            timestamp: new Date(activity.timestamp)
+          });
+        }
+        if (activity.type === 'sleep' && activity.startTime && activity.endTime) {
+          sleepSessions.push({
+            startTime: new Date(activity.startTime),
+            endTime: new Date(activity.endTime)
+          });
+        }
+      });
 
-  private async getBloodPressure(timeRangeFilter: TimeRangeFilter): Promise<{ systolic: number; diastolic: number }> {
-    try {
-      const request: ReadRecordsRequest = {
-        recordType: 'BloodPressure',
-        timeRangeFilter,
-      };
-      
-      const records = await this.healthConnect.readRecords(request);
-      if (!records.length) return { systolic: 0, diastolic: 0 };
-      
-      const latest = records[records.length - 1] as BloodPressureRecord;
-      return {
-        systolic: latest.systolic.inMillimetersOfMercury,
-        diastolic: latest.diastolic.inMillimetersOfMercury,
-      };
-    } catch (error) {
-      console.error('Error getting blood pressure:', error);
-      return { systolic: 0, diastolic: 0 };
-    }
-  }
+      // Calculate heart rate stats
+      const avgHeartRate = heartRateReadings.length 
+        ? heartRateReadings.reduce((a, b) => a + b, 0) / heartRateReadings.length 
+        : 0;
+      const maxHeartRate = heartRateReadings.length 
+        ? Math.max(...heartRateReadings) 
+        : 0;
+      const minHeartRate = heartRateReadings.length 
+        ? Math.min(...heartRateReadings) 
+        : 0;
 
-  private async getSleep(timeRangeFilter: TimeRangeFilter): Promise<{ startTime: Date; endTime: Date; quality: string }> {
-    try {
-      const request: ReadRecordsRequest = {
-        recordType: 'SleepSession',
-        timeRangeFilter,
-      };
-      
-      const records = await this.healthConnect.readRecords(request);
-      if (!records.length) {
-        return { 
-          startTime: new Date(), 
-          endTime: new Date(), 
-          quality: 'POOR' 
-        };
-      }
-      
-      const sleepSessions = records as SleepSessionRecord[];
-      const totalSleep = sleepSessions.reduce((total, session) => {
-        const start = new Date(session.startTime).getTime();
-        const end = new Date(session.endTime).getTime();
-        return total + (end - start);
+      // Calculate sleep metrics
+      const totalSleepMs = sleepSessions.reduce((total, session) => {
+        return total + (session.endTime.getTime() - session.startTime.getTime());
       }, 0);
-      
-      const sleepQuality = this.getSleepQuality(totalSleep);
-      const firstSession = sleepSessions[0];
-      
+
+      const sleepQuality = this.getSleepQuality(totalSleepMs);
+      const firstSleep = sleepSessions[0] || { 
+        startTime: new Date(), 
+        endTime: new Date() 
+      };
+
+      const metricsId = `metrics_${Date.now()}`;
+
       return {
-        startTime: new Date(firstSession.startTime),
-        endTime: new Date(firstSession.endTime),
-        quality: sleepQuality,
+        id: metricsId,
+        profileId: '', // This should be set by the caller
+        date: new Date(date),
+        steps,
+        flights: 0, // Health Connect doesn't track flights climbed
+        distance,
+        heartRate: {
+          average: Math.round(avgHeartRate),
+          max: Math.round(maxHeartRate),
+          min: Math.round(minHeartRate),
+          readings: heartRateReadings.map((value, index) => ({
+            id: `hr_${Date.now()}_${index}`,
+            metricsId,
+            value,
+            timestamp: new Date()
+          }))
+        },
+        bloodPressure: bloodPressureReadings.map((reading, index) => ({
+          id: `bp_${Date.now()}_${index}`,
+          metricsId,
+          ...reading
+        })),
+        sleep: {
+          id: `sleep_${Date.now()}`,
+          metricsId,
+          deepSleep: Math.round(totalSleepMs * 0.2 / 60000), // Convert ms to minutes, estimate 20% deep sleep
+          lightSleep: Math.round(totalSleepMs * 0.5 / 60000), // Convert ms to minutes, estimate 50% light sleep
+          remSleep: Math.round(totalSleepMs * 0.3 / 60000), // Convert ms to minutes, estimate 30% REM sleep
+          awakeTime: 0, // Not provided by Health Connect
+          startTime: firstSleep.startTime,
+          endTime: firstSleep.endTime,
+          quality: sleepQuality
+        },
+        source: 'google_fit' as DataSource,
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
     } catch (error) {
-      console.error('Error getting sleep:', error);
-      return { 
-        startTime: new Date(), 
-        endTime: new Date(), 
-        quality: 'POOR' 
-      };
+      console.error('Failed to fetch health data:', error);
+      throw error;
     }
   }
 
-  private getSleepQuality(sleepDuration: number): string {
-    if (sleepDuration > 7 * 60 * 60 * 1000) return 'GOOD';
-    if (sleepDuration > 5 * 60 * 60 * 1000) return 'FAIR';
-    return 'POOR';
+  private getSleepQuality(sleepDuration: number): SleepQuality {
+    if (sleepDuration > 8 * 60 * 60 * 1000) return 'excellent';
+    if (sleepDuration > 7 * 60 * 60 * 1000) return 'good';
+    if (sleepDuration > 5 * 60 * 60 * 1000) return 'fair';
+    return 'poor';
   }
 }

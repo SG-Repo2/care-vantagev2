@@ -6,7 +6,7 @@
   <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
   <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE"/>
   <uses-permission android:name="android.permission.health.READ_SLEEP"/>
-  <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+  <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
   
   <!-- Basic app permissions -->
   <uses-permission android:name="android.permission.INTERNET"/>
@@ -22,7 +22,7 @@
       <data android:scheme="https"/>
     </intent>
     <!-- Health Connect package query -->
-    <package android:name="com.google.android.apps.healthconnect" />
+    <package android:name="com.google.android.apps.healthconnect"/>
   </queries>
 
   <application 

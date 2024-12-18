@@ -1,7 +1,7 @@
 import { registerRootComponent } from 'expo';
 import { Platform } from 'react-native';
 import RNHealthKit from 'react-native-health';
-import GoogleFit from 'react-native-google-fit';
+import HealthConnect from '@stridekick/react-native-health-connect';
 
 import App from './App';
 
@@ -14,11 +14,22 @@ if (Platform.OS === 'ios') {
     console.warn('HealthKit is not properly initialized');
   }
 } else if (Platform.OS === 'android') {
-  // Initialize Google Fit
-  GoogleFit.checkIsAuthorized().then(() => {
-    console.log('Google Fit is available');
+  // Initialize Health Connect
+  HealthConnect.isEnabled().then((isEnabled) => {
+    if (isEnabled) {
+      console.log('Health Connect is available');
+      HealthConnect.authorize().then((authorized) => {
+        if (authorized) {
+          console.log('Health Connect permissions granted');
+        } else {
+          console.warn('Health Connect permissions not granted');
+        }
+      });
+    } else {
+      console.warn('Health Connect is not available');
+    }
   }).catch((error) => {
-    console.warn('Google Fit initialization error:', error);
+    console.warn('Health Connect initialization error:', error);
   });
 }
 

@@ -2070,6 +2070,11 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
+"@stridekick/react-native-health-connect@^0.1.18":
+  version "0.1.18"
+  resolved "https://registry.yarnpkg.com/@stridekick/react-native-health-connect/-/react-native-health-connect-0.1.18.tgz#101a2afe9483fb12f93da8bb28466990b6818494"
+  integrity sha512-j8opefsXLW8rr8Df1TWA2ajLXvNvKsbMuCbiseobFIEvRABj5y/fX2RsHR1IHOaAMyOWtDsmQAh/49O8XEjKDQ==
+
 "@types/babel__core@^7.1.14":
   version "7.20.5"
   resolved "https://registry.yarnpkg.com/@types/babel__core/-/babel__core-7.20.5.tgz#3df15f27ba85319caa07ba08d0721889bb39c017"
