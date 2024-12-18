@@ -28,8 +28,13 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>carevantage</string>
-          <string>carevantage</string>
           <string>com.groebe1kenobi.carevantage</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>exp+care-vantage</string>
         </array>
       </dict>
     </array>
@@ -53,9 +58,9 @@
     <key>NSHealthClinicalUsageDescription</key>
     <string>Allow CareVantage to check health clinical info</string>
     <key>NSHealthShareUsageDescription</key>
-    <string>We need access to your health data to track your steps, distance walked, and flights climbed</string>
+    <string>CareVantage needs access to read your health data to track your fitness and wellness metrics.</string>
     <key>NSHealthUpdateUsageDescription</key>
-    <string>We need permission to update your health data</string>
+    <string>CareVantage requires permission to write health data to help you track and manage your fitness goals.</string>
     <key>UIBackgroundModes</key>
     <array>
       <string>health-kit</string>
@@ -65,7 +70,6 @@
     <key>UIRequiredDeviceCapabilities</key>
     <array>
       <string>arm64</string>
-      <string>healthkit</string>
     </array>
     <key>UIRequiresFullScreen</key>
     <false/>

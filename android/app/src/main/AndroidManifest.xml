@@ -31,6 +31,12 @@
         <data android:scheme="com.groebe1kenobi.carevantage"/>
         <data android:scheme="exp+care-vantage"/>
       </intent-filter>
+      <intent-filter data-generated="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <data android:scheme="carevantage"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+      </intent-filter>
     </activity>
   </application>
 </manifest>
