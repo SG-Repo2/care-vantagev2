@@ -1,41 +1,71 @@
-import GoogleFit, { Scopes } from 'react-native-google-fit';
+import { Platform } from 'react-native';
+import HealthConnect, {
+  Permission,
+  StepsRecord,
+  DistanceRecord,
+  HeartRateRecord,
+  BloodPressureRecord,
+  SleepSessionRecord,
+} from 'react-native-health-connect';
 import { HealthMetrics } from '../../profile/types/health';
-import { DataSource } from '../../../core/types/base';
+import { HealthService } from './HealthService';
 
-export class AndroidHealthService {
+export class AndroidHealthService implements HealthService {
   private initialized: boolean = false;
+  private healthConnect: HealthConnect;
 
-  private readonly SCOPES = [
-    Scopes.FITNESS_ACTIVITY_READ,
-    Scopes.FITNESS_BODY_READ,
-    Scopes.FITNESS_HEART_RATE_READ,
-    Scopes.FITNESS_BLOOD_PRESSURE_READ,
-    Scopes.FITNESS_SLEEP_READ,
+  private readonly PERMISSIONS: Permission[] = [
+    'read_steps',
+    'read_distance',
+    'read_heart_rate',
+    'read_blood_pressure',
+    'read_sleep',
+    'read_exercise'
   ];
+
+  constructor() {
+    if (Platform.OS !== 'android') {
+      throw new Error('AndroidHealthService can only be used on Android devices');
+    }
+    this.healthConnect = new HealthConnect();
+  }
 
   async initialize(): Promise<boolean> {
     if (this.initialized) return true;
 
     try {
-      const authResult = await GoogleFit.authorize({
-        scopes: this.SCOPES,
-      });
-
-      if (authResult.success) {
-        this.initialized = true;
-        return true;
+      // Check if Health Connect is available
+      const isAvailable = await this.healthConnect.isAvailable();
+      if (!isAvailable) {
+        console.error('Health Connect is not available on this device');
+        return false;
       }
-      return false;
+
+      // Request permissions
+      const granted = await this.requestPermissions();
+      if (!granted) {
+        console.error('Health Connect permissions not granted');
+        return false;
+      }
+
+      this.initialized = true;
+      return true;
     } catch (error) {
-      console.error('Failed to initialize Google Fit:', error);
+      console.error('Failed to initialize Health Connect:', error);
       return false;
     }
   }
 
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
   async checkPermissions(): Promise<boolean> {
     try {
-      const authResult = await GoogleFit.checkIsAuthorized();
-      return authResult.authorized;
+      const grantedPermissions = await this.healthConnect.getGrantedPermissions();
+      return this.PERMISSIONS.every(permission => 
+        grantedPermissions.includes(permission)
+      );
     } catch (error) {
       console.error('Failed to check permissions:', error);
       return false;
@@ -44,101 +74,169 @@ export class AndroidHealthService {
 
   async requestPermissions(): Promise<boolean> {
     try {
-      const authResult = await GoogleFit.authorize({
-        scopes: this.SCOPES,
-      });
-      return authResult.success;
+      await this.healthConnect.requestPermissions(this.PERMISSIONS);
+      return this.checkPermissions();
     } catch (error) {
       console.error('Failed to request permissions:', error);
       return false;
     }
   }
 
-  async getDailyMetrics(date: Date): Promise<HealthMetrics | null> {
-    if (!this.initialized) await this.initialize();
-    if (!await this.checkPermissions()) return null;
+  async fetchHealthData(date: string): Promise<HealthMetrics> {
+    if (!this.initialized) {
+      throw new Error('Health Connect is not initialized');
+    }
 
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    const timeRangeFilter: TimeRangeFilter = {
+      operator: 'between',
+      startTime: startDate.toISOString(),
+      endTime: endDate.toISOString(),
+    };
+
+    const [steps, distance, heartRate, bloodPressure, sleep] = await Promise.all([
+      this.getSteps(timeRangeFilter),
+      this.getDistance(timeRangeFilter),
+      this.getHeartRate(timeRangeFilter),
+      this.getBloodPressure(timeRangeFilter),
+      this.getSleep(timeRangeFilter),
+    ]);
+
+    return {
+      id: `metrics_${Date.now()}`,
+      date: new Date(date),
+      steps,
+      flights: 0, // Health Connect doesn't track flights climbed
+      distance,
+      heartRate,
+      bloodPressure,
+      sleep,
+      source: 'health_connect' as DataSource,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+
+  private async getSteps(timeRangeFilter: TimeRangeFilter): Promise<number> {
     try {
-      const startDate = new Date(date);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(date);
-      endDate.setHours(23, 59, 59, 999);
-
-      const [steps, heartRate, bloodPressure, sleep, distance] = await Promise.all([
-        this.getSteps(startDate, endDate),
-        this.getHeartRate(startDate, endDate),
-        this.getBloodPressure(startDate, endDate),
-        this.getSleep(startDate, endDate),
-        this.getDistance(startDate, endDate),
-      ]);
-
-      return {
-        id: `metrics_${Date.now()}`,
-        date: date,
-        steps: steps,
-        heartRate: heartRate,
-        bloodPressure: bloodPressure,
-        sleep: sleep,
-        distance: distance,
-        flights: 0, // Google Fit doesn't track flights climbed
-        source: 'google_fit' as DataSource,
-        createdAt: new Date(),
-        updatedAt: new Date()
+      const request: ReadRecordsRequest = {
+        recordType: 'Steps',
+        timeRangeFilter,
       };
+      
+      const records = await this.healthConnect.readRecords(request);
+      return records.reduce((total: number, record: StepsRecord) => 
+        total + record.count, 0);
     } catch (error) {
-      console.error('Failed to fetch health data:', error);
-      return null;
+      console.error('Error getting steps:', error);
+      return 0;
     }
   }
 
-  private async getSteps(startDate: Date, endDate: Date): Promise<number> {
-    const res = await GoogleFit.getDailySteps(startDate, endDate);
-    return res.length > 0 ? res[0].steps : 0;
+  private async getDistance(timeRangeFilter: TimeRangeFilter): Promise<number> {
+    try {
+      const request: ReadRecordsRequest = {
+        recordType: 'Distance',
+        timeRangeFilter,
+      };
+      
+      const records = await this.healthConnect.readRecords(request);
+      return records.reduce((total: number, record: DistanceRecord) => 
+        total + record.distance.inMeters, 0);
+    } catch (error) {
+      console.error('Error getting distance:', error);
+      return 0;
+    }
   }
 
-  private async getHeartRate(startDate: Date, endDate: Date): Promise<number | null> {
-    const res = await GoogleFit.getHeartRateSamples({
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    });
-    return res.length > 0 ? res[res.length - 1].value : null;
+  private async getHeartRate(timeRangeFilter: TimeRangeFilter): Promise<number> {
+    try {
+      const request: ReadRecordsRequest = {
+        recordType: 'HeartRate',
+        timeRangeFilter,
+      };
+      
+      const records = await this.healthConnect.readRecords(request);
+      if (!records.length) return 0;
+      
+      const sum = records.reduce((total: number, record: HeartRateRecord) => 
+        total + record.beatsPerMinute, 0);
+      return Math.round(sum / records.length);
+    } catch (error) {
+      console.error('Error getting heart rate:', error);
+      return 0;
+    }
   }
 
-  private async getBloodPressure(startDate: Date, endDate: Date): Promise<{ systolic: number; diastolic: number } | null> {
-    const res = await GoogleFit.getBloodPressureSamples({
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    });
-    return res.length > 0 ? {
-      systolic: res[res.length - 1].systolic,
-      diastolic: res[res.length - 1].diastolic,
-    } : null;
+  private async getBloodPressure(timeRangeFilter: TimeRangeFilter): Promise<{ systolic: number; diastolic: number }> {
+    try {
+      const request: ReadRecordsRequest = {
+        recordType: 'BloodPressure',
+        timeRangeFilter,
+      };
+      
+      const records = await this.healthConnect.readRecords(request);
+      if (!records.length) return { systolic: 0, diastolic: 0 };
+      
+      const latest = records[records.length - 1] as BloodPressureRecord;
+      return {
+        systolic: latest.systolic.inMillimetersOfMercury,
+        diastolic: latest.diastolic.inMillimetersOfMercury,
+      };
+    } catch (error) {
+      console.error('Error getting blood pressure:', error);
+      return { systolic: 0, diastolic: 0 };
+    }
   }
 
-  private async getSleep(startDate: Date, endDate: Date): Promise<{ startTime: Date; endTime: Date; quality: string } | null> {
-    const res = await GoogleFit.getSleepSamples({
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    });
-    return res.length > 0 ? {
-      startTime: new Date(res[0].startDate),
-      endTime: new Date(res[0].endDate),
-      quality: this.getSleepQuality(res[0]),
-    } : null;
+  private async getSleep(timeRangeFilter: TimeRangeFilter): Promise<{ startTime: Date; endTime: Date; quality: string }> {
+    try {
+      const request: ReadRecordsRequest = {
+        recordType: 'SleepSession',
+        timeRangeFilter,
+      };
+      
+      const records = await this.healthConnect.readRecords(request);
+      if (!records.length) {
+        return { 
+          startTime: new Date(), 
+          endTime: new Date(), 
+          quality: 'POOR' 
+        };
+      }
+      
+      const sleepSessions = records as SleepSessionRecord[];
+      const totalSleep = sleepSessions.reduce((total, session) => {
+        const start = new Date(session.startTime).getTime();
+        const end = new Date(session.endTime).getTime();
+        return total + (end - start);
+      }, 0);
+      
+      const sleepQuality = this.getSleepQuality(totalSleep);
+      const firstSession = sleepSessions[0];
+      
+      return {
+        startTime: new Date(firstSession.startTime),
+        endTime: new Date(firstSession.endTime),
+        quality: sleepQuality,
+      };
+    } catch (error) {
+      console.error('Error getting sleep:', error);
+      return { 
+        startTime: new Date(), 
+        endTime: new Date(), 
+        quality: 'POOR' 
+      };
+    }
   }
 
-  private async getDistance(startDate: Date, endDate: Date): Promise<number> {
-    const res = await GoogleFit.getDailyDistanceSamples({
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    });
-    return res.length > 0 ? res[0].distance : 0;
-  }
-
-  private getSleepQuality(sleepSample: any): string {
-    // Google Fit sleep data interpretation
-    if (sleepSample.efficiency > 85) return 'GOOD';
-    if (sleepSample.efficiency > 70) return 'FAIR';
+  private getSleepQuality(sleepDuration: number): string {
+    if (sleepDuration > 7 * 60 * 60 * 1000) return 'GOOD';
+    if (sleepDuration > 5 * 60 * 60 * 1000) return 'FAIR';
     return 'POOR';
   }
 }

@@ -5544,6 +5544,11 @@ react-native-google-fit@^0.21.0:
   dependencies:
     moment "^2.29.4"
 
+react-native-health-connect@^3.3.1:
+  version "3.3.1"
+  resolved "https://registry.yarnpkg.com/react-native-health-connect/-/react-native-health-connect-3.3.1.tgz#bdc1d9b0b938eefe3daf35fbeee47201df65e1b5"
+  integrity sha512-RKEHiXJF6ikqa/rz4FH7BRD4G3lFO4JX95NBv3EMRjBMIp/oncxHreGV5vM7CF5DEdZDLFq96KJ5po7isCyJMg==
+
 react-native-health@^1.19.0:
   version "1.19.0"
   resolved "https://registry.yarnpkg.com/react-native-health/-/react-native-health-1.19.0.tgz#4271bbf10f3ad28b2eff643532224b12c9572348"
