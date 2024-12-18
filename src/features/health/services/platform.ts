@@ -20,10 +20,10 @@ export const getCurrentPlatform = (): HealthPlatform => {
   
   if (Platform.OS === 'android') {
     return {
-      id: 'google_fit',
-      name: 'Google Fit',
+      id: 'health_connect',
+      name: 'Health Connect',
       version: '1.0.0',
-      type: 'google_fit'
+      type: 'health_connect'
     };
   }
   

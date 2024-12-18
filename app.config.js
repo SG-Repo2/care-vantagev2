@@ -43,7 +43,12 @@ module.exports = {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff'
       },
-      package: 'com.groebe1kenobi.carevantage'
+      package: 'com.groebe1kenobi.carevantage',
+      permissions: [
+        'android.permission.ACTIVITY_RECOGNITION',
+        'android.permission.ACCESS_FINE_LOCATION',
+        'android.permission.BODY_SENSORS'
+      ]
     },
     web: {
       favicon: './assets/favicon.png'
@@ -52,6 +57,11 @@ module.exports = {
       [
         'expo-build-properties',
         {
+          android: {
+            compileSdkVersion: 33,
+            targetSdkVersion: 33,
+            buildToolsVersion: "33.0.0"
+          },
           ios: {
             deploymentTarget: '16.0'
           }
@@ -72,7 +82,7 @@ module.exports = {
     },
     extra: {
       eas: {
-        projectId: process.env.EAS_PROJECT_ID
+        projectId: "ed8a0109-5476-4b93-9502-e9f46028b8d1"
       }
     },
     scheme: 'carevantage',

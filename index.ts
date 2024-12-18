@@ -1,17 +1,25 @@
 import { registerRootComponent } from 'expo';
 import { Platform } from 'react-native';
 import RNHealthKit from 'react-native-health';
+import GoogleFit from 'react-native-google-fit';
 
 import App from './App';
 
-// Initialize HealthKit if on iOS
+// Initialize health tracking based on platform
 if (Platform.OS === 'ios') {
-  // Ensure RNHealthKit is available
+  // Initialize HealthKit
   if (RNHealthKit && typeof RNHealthKit.initHealthKit === 'function') {
     console.log('HealthKit is available');
   } else {
     console.warn('HealthKit is not properly initialized');
   }
+} else if (Platform.OS === 'android') {
+  // Initialize Google Fit
+  GoogleFit.checkIsAuthorized().then(() => {
+    console.log('Google Fit is available');
+  }).catch((error) => {
+    console.warn('Google Fit initialization error:', error);
+  });
 }
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
