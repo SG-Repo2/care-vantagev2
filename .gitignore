@@ -33,6 +33,14 @@ DerivedData
 project.xcworkspace
 .xcode.env.local
 
+# iOS Temporary Ignores (for code overview)
+ios/Pods/
+ios/*.xcodeproj/xcshareddata/
+ios/*.xcworkspace/xcshareddata/
+ios/Podfile.lock
+ios/Podfile.properties.json
+ios/*.xcworkspace/contents.xcworkspacedata
+
 # Bundle artifacts
 *.jsbundle
 
