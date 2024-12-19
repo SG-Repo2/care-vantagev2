@@ -27,16 +27,16 @@ interface ModalData {
 }
 
 export const HomeScreen: React.FC = () => {
-  const { metrics, loading, error, refreshMetrics } = useHealthData(MOCK_PROFILE_ID);
+  const { metrics, loading, error, refresh } = useHealthData(MOCK_PROFILE_ID);
   const [refreshing, setRefreshing] = React.useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<ModalData | null>(null);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    await refreshMetrics();
+    await refresh();
     setRefreshing(false);
-  }, [refreshMetrics]);
+  }, [refresh]);
 
   const handleMetricPress = (type: MetricType, metrics: HealthMetrics) => {
     let modalData: ModalData;
