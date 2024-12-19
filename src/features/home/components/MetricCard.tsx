@@ -1,11 +1,13 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Surface, Text, TouchableRipple, useTheme, Icon } from 'react-native-paper';
 
 interface MetricCardProps {
   label: string;
   value: string | number;
   onPress?: () => void;
   style?: object;
+  icon?: string;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -13,40 +15,42 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   value,
   onPress,
   style,
+  icon,
 }) => {
+  const theme = useTheme();
+
   return (
-    <TouchableOpacity onPress={onPress} disabled={!onPress}>
-      <View style={[styles.metricCard, style]}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.value}>{value}</Text>
-      </View>
-    </TouchableOpacity>
+    <TouchableRipple
+      onPress={onPress}
+      disabled={!onPress}
+      rippleColor={theme.colors.primary}
+    >
+      <Surface
+        style={[
+          styles.metricCard,
+          {
+            backgroundColor: theme.colors.surface,
+            elevation: 1,
+          },
+          style,
+        ]}
+      >
+        <Icon source={icon || 'chart-box'} size={24} color={theme.colors.primary} />
+        <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+          {label}
+        </Text>
+        <Text variant="headlineMedium" style={{ color: theme.colors.onSurface }}>
+          {value}
+        </Text>
+      </Surface>
+    </TouchableRipple>
   );
 };
 
 const styles = StyleSheet.create({
   metricCard: {
-    backgroundColor: '#fff',
+    padding: 16,
     borderRadius: 12,
-    padding: 15,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  label: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 5,
-  },
-  value: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
+    gap: 8,
   },
 });

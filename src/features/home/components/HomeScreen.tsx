@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ScrollView, RefreshControl } from 'react-native';
+import { useTheme, Text, Surface, ActivityIndicator, IconButton } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import useHealthData from '../../health/hooks/useHealthData';
 import { formatDistance } from '../../../core/utils/formatting';
 import { MetricCard } from './MetricCard';
 import { MetricModal } from './MetricModal';
 import { HealthMetrics } from '../../profile/types/health';
+import { AppStackParamList } from '../../../navigation/types';
 
 // TODO: Replace with actual user profile management
 const MOCK_PROFILE_ID = 'test_user_1';
@@ -26,7 +30,11 @@ interface ModalData {
   }[];
 }
 
+type NavigationProp = NativeStackNavigationProp<AppStackParamList, 'Home'>;
+
 export const HomeScreen: React.FC = () => {
+  const theme = useTheme();
+  const navigation = useNavigation<NavigationProp>();
   const { metrics, loading, error, refresh } = useHealthData(MOCK_PROFILE_ID);
   const [refreshing, setRefreshing] = React.useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -88,43 +96,50 @@ export const HomeScreen: React.FC = () => {
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
+      <Surface style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </Surface>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.error}>{error}</Text>
-      </View>
+      <Surface style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Text style={[styles.error, { color: theme.colors.error }]}>{error}</Text>
+      </Surface>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="auto" />
+    <Surface style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar style={theme.dark ? 'light' : 'dark'} />
       <ScrollView
-        style={styles.scrollView}
+        style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={[theme.colors.primary]}
+            progressBackgroundColor={theme.colors.surface}
+          />
         }
       >
         <View style={styles.dataContainer}>
-          <Text style={styles.title}>Daily Health Metrics</Text>
+          <Text variant="headlineMedium" style={styles.title}>Daily Health Metrics</Text>
 
           <MetricCard
             label="Steps"
             value={metrics?.steps || 0}
             onPress={() => metrics && handleMetricPress('steps', metrics)}
+            icon="walk"
           />
 
           <MetricCard
             label="Distance"
             value={metrics ? formatDistance(metrics.distance, 'metric') : '0 km'}
             onPress={() => metrics && handleMetricPress('distance', metrics)}
+            icon="map-marker-distance"
           />
 
           {metrics?.score && (
@@ -133,6 +148,7 @@ export const HomeScreen: React.FC = () => {
               value={`${metrics.score.overall}/100`}
               onPress={() => handleMetricPress('score', metrics)}
               style={styles.scoreCard}
+              icon="star"
             />
           )}
         </View>
@@ -147,46 +163,38 @@ export const HomeScreen: React.FC = () => {
           additionalInfo={selectedMetric.additionalInfo}
         />
       )}
-    </View>
+    </Surface>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    width: '100%',
   },
   content: {
     padding: 16,
   },
   dataContainer: {
-    width: '90%',
+    width: '100%',
     alignItems: 'stretch',
+    gap: 16,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
     marginBottom: 20,
     textAlign: 'center',
   },
   error: {
-    color: '#ff0000',
     fontSize: 16,
     textAlign: 'center',
     margin: 20,
   },
   scoreCard: {
-    marginTop: 20,
-    backgroundColor: '#f8f9ff',
-    borderWidth: 1,
-    borderColor: '#e0e0ff',
+    marginTop: 8,
   },
 });

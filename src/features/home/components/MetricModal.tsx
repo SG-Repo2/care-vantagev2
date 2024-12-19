@@ -1,6 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View, Modal, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, View, Dimensions } from 'react-native';
+import { Modal, Portal, Text, IconButton, Surface, useTheme } from 'react-native-paper';
 import { LineChart } from 'react-native-chart-kit';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface MetricModalProps {
   visible: boolean;
@@ -25,21 +27,51 @@ export const MetricModal: React.FC<MetricModalProps> = ({
   data,
   additionalInfo,
 }) => {
-  return (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>×</Text>
-          </TouchableOpacity>
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
-          <Text style={styles.modalTitle}>{title}</Text>
-          <Text style={styles.modalValue}>{value}</Text>
+  const chartConfig = {
+    backgroundColor: theme.colors.surface,
+    backgroundGradientFrom: theme.colors.surface,
+    backgroundGradientTo: theme.colors.surface,
+    decimalPlaces: 0,
+    color: (opacity = 1) => theme.colors.primary,
+    labelColor: (opacity = 1) => theme.colors.onSurface,
+    style: {
+      borderRadius: 16,
+    },
+    propsForDots: {
+      r: '6',
+      strokeWidth: '2',
+      stroke: theme.colors.primary,
+    },
+  };
+
+  return (
+    <Portal>
+      <Modal
+        visible={visible}
+        onDismiss={onClose}
+        contentContainerStyle={[
+          styles.modalContainer,
+          { paddingBottom: insets.bottom },
+          { backgroundColor: theme.colors.surface }
+        ]}
+      >
+        <Surface style={styles.modalContent} elevation={0}>
+          <IconButton
+            icon="close"
+            size={24}
+            onPress={onClose}
+            style={styles.closeButton}
+          />
+
+          <Text variant="headlineMedium" style={styles.modalTitle}>
+            {title}
+          </Text>
+          <Text variant="displaySmall" style={[styles.modalValue, { color: theme.colors.primary }]}>
+            {value}
+          </Text>
 
           {data && data.values.length > 0 && (
             <View style={styles.chartContainer}>
@@ -48,108 +80,71 @@ export const MetricModal: React.FC<MetricModalProps> = ({
                   labels: data.labels,
                   datasets: [{ data: data.values }],
                 }}
-                width={Dimensions.get('window').width - 80}
+                width={Dimensions.get('window').width - 48}
                 height={220}
-                chartConfig={{
-                  backgroundColor: '#ffffff',
-                  backgroundGradientFrom: '#ffffff',
-                  backgroundGradientTo: '#ffffff',
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(74, 144, 226, ${opacity})`,
-                  style: {
-                    borderRadius: 16,
-                  },
-                }}
-                style={styles.chart}
+                chartConfig={chartConfig}
                 bezier
+                style={{
+                  marginVertical: 8,
+                  borderRadius: 16,
+                }}
               />
             </View>
           )}
 
           {additionalInfo && additionalInfo.length > 0 && (
-            <View style={styles.additionalInfo}>
+            <Surface style={styles.additionalInfoContainer} elevation={0}>
               {additionalInfo.map((info, index) => (
                 <View key={index} style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>{info.label}</Text>
-                  <Text style={styles.infoValue}>{info.value}</Text>
+                  <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+                    {info.label}
+                  </Text>
+                  <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+                    {info.value}
+                  </Text>
                 </View>
               ))}
-            </View>
+            </Surface>
           )}
-        </View>
-      </View>
-    </Modal>
+        </Surface>
+      </Modal>
+    </Portal>
   );
 };
 
 const styles = StyleSheet.create({
-  centeredView: {
-    flex: 1,
+  modalContainer: {
+    margin: 0,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  modalView: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingTop: 30,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    maxHeight: '80%',
+  modalContent: {
+    padding: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
   closeButton: {
     position: 'absolute',
-    right: 20,
-    top: 20,
-    zIndex: 1,
-  },
-  closeButtonText: {
-    fontSize: 28,
-    color: '#666',
+    right: 8,
+    top: 8,
   },
   modalTitle: {
-    fontSize: 20,
-    color: '#666',
-    marginBottom: 5,
+    marginTop: 8,
+    marginBottom: 4,
   },
   modalValue: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   chartContainer: {
-    marginVertical: 20,
     alignItems: 'center',
+    marginVertical: 16,
   },
-  chart: {
-    borderRadius: 16,
-  },
-  additionalInfo: {
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingTop: 20,
+  additionalInfoContainer: {
+    marginTop: 16,
+    gap: 12,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  infoLabel: {
-    fontSize: 16,
-    color: '#666',
-  },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#000',
+    alignItems: 'center',
   },
 });

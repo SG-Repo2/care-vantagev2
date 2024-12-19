@@ -5,7 +5,7 @@ module.exports = {
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
-    userInterfaceStyle: 'light',
+    userInterfaceStyle: 'automatic',
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
@@ -19,7 +19,9 @@ module.exports = {
         NSHealthShareUsageDescription: 'CareVantage needs access to read your health data to track your fitness and wellness metrics.',
         NSHealthUpdateUsageDescription: 'CareVantage requires permission to write health data to help you track and manage your fitness goals.',
         NSHealthClinicalUsageDescription: 'Allow CareVantage to check health clinical info',
-        UIBackgroundModes: ['health-kit'] 
+        UIBackgroundModes: ['fetch', 'remote-notification'],
+        UIRequiresFullScreen: true,
+        UIStatusBarStyle: 'auto'
       },
       entitlements: {
         'com.apple.developer.healthkit': true,
@@ -53,7 +55,10 @@ module.exports = {
         'expo-build-properties',
         {
           ios: {
-            deploymentTarget: '16.0'
+            deploymentTarget: '16.1',
+            useFrameworks: 'static',
+            newArchEnabled: false,
+            fabricEnabled: false
           }
         }
       ],
