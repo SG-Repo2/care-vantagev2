@@ -1,21 +1,32 @@
-import { BaseEntity, DataSource } from '../../../core/types/base';
-
-export interface HealthMetrics extends BaseEntity {
-  profileId: string;
-  date: string;
-  steps: number;
-  distance: number;  // in kilometers
-  source: DataSource;
-  score?: HealthScore;  // Making score optional since it's calculated after the metrics are created
-}
+import { DataSource } from '../../../core/types/base';
 
 export interface HealthScore {
-  id: string;
-  metricsId: string;
   overall: number;
   categories: {
     steps: number;
     distance: number;
   };
   dailyVictory: boolean;
+}
+
+export interface HealthMetrics {
+  id: string;
+  profileId: string;
+  date: string;
+  steps: number;
+  distance: number;
+  score: number;
+  source: DataSource;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type MetricType = 'steps' | 'distance' | 'score';
+
+export interface HealthState {
+  isInitialized: boolean;
+  hasPermissions: boolean;
+  isLoading: boolean;
+  error: string | null;
+  metrics: HealthMetrics | null;
 }

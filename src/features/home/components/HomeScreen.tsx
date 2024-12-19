@@ -5,14 +5,17 @@ import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import useHealthData from '../../health/hooks/useHealthData';
-import { formatDistance } from '../../../core/utils/formatting';
+import { formatDistance, formatScore } from '../../../core/utils/formatting';
 import { MetricCard } from './MetricCard';
 import { MetricModal } from './MetricModal';
 import { HealthMetrics } from '../../profile/types/health';
 import { AppStackParamList } from '../../../navigation/types';
+import { MeasurementSystem } from '../../../core/types/base';
 
 // TODO: Replace with actual user profile management
 const MOCK_PROFILE_ID = 'test_user_1';
+// TODO: Make this configurable per user's preference
+const DEFAULT_MEASUREMENT_SYSTEM: MeasurementSystem = 'imperial';
 
 type MetricType = 'steps' | 'distance' | 'score';
 
@@ -47,48 +50,15 @@ export const HomeScreen: React.FC = () => {
   }, [refresh]);
 
   const handleMetricPress = (type: MetricType, metrics: HealthMetrics) => {
-    let modalData: ModalData;
-
-    switch (type) {
-      case 'steps':
-        modalData = {
-          type,
-          title: 'Daily Steps',
-          value: metrics.steps,
-          additionalInfo: [
-            { label: 'Goal', value: '10,000 steps' },
-            { label: 'Distance', value: formatDistance(metrics.distance, 'metric') },
-          ],
-        };
-        break;
-
-      case 'distance':
-        modalData = {
-          type,
-          title: 'Distance Walked',
-          value: formatDistance(metrics.distance, 'metric'),
-          additionalInfo: [
-            { label: 'Steps', value: metrics.steps },
-          ],
-        };
-        break;
-
-      case 'score':
-        modalData = {
-          type,
-          title: 'Health Score',
-          value: `${metrics.score?.overall}/100`,
-          additionalInfo: [
-            { label: 'Steps Score', value: `${metrics.score?.categories.steps}/100` },
-            { label: 'Distance Score', value: `${metrics.score?.categories.distance}/100` },
-            { label: 'Daily Victory', value: metrics.score?.dailyVictory ? 'Yes! 🎉' : 'Not Yet' },
-          ],
-        };
-        break;
-
-      default:
-        return;
-    }
+    let modalData: ModalData = {
+      type,
+      title: type.charAt(0).toUpperCase() + type.slice(1),
+      value: type === 'distance' ? formatDistance(metrics[type], DEFAULT_MEASUREMENT_SYSTEM) : metrics[type].toString(),
+      data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        values: [0, 0, 0, 0, 0, 0, metrics[type]],
+      },
+    };
 
     setSelectedMetric(modalData);
     setModalVisible(true);
@@ -104,97 +74,93 @@ export const HomeScreen: React.FC = () => {
 
   if (error) {
     return (
-      <Surface style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Text style={[styles.error, { color: theme.colors.error }]}>{error}</Text>
+      <Surface style={styles.errorContainer}>
+        <Text variant="titleMedium" style={styles.errorText}>{error}</Text>
+        <IconButton icon="refresh" onPress={refresh} />
       </Surface>
     );
   }
 
   return (
-    <Surface style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <ScrollView
+      style={[styles.container, { flex: 1, backgroundColor: theme.colors.background }]}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
-      <ScrollView
-        style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh}
-            colors={[theme.colors.primary]}
-            progressBackgroundColor={theme.colors.surface}
-          />
-        }
-      >
-        <View style={styles.dataContainer}>
-          <Text variant="headlineMedium" style={styles.title}>Daily Health Metrics</Text>
+      <View style={styles.header}>
+        <Text variant="headlineMedium">Health Dashboard</Text>
+      </View>
 
-          <MetricCard
-            label="Steps"
-            value={metrics?.steps || 0}
-            onPress={() => metrics && handleMetricPress('steps', metrics)}
-            icon="walk"
-          />
+      <View style={styles.metricsContainer}>
+        <MetricCard
+          title="Steps"
+          value={metrics?.steps?.toLocaleString() || '0'}
+          icon="walk"
+          metricType="steps"
+          onPress={() => metrics && handleMetricPress('steps', metrics)}
+          loading={loading}
+          error={error}
+        />
+        <MetricCard
+          title="Distance"
+          value={formatDistance(metrics?.distance || 0, DEFAULT_MEASUREMENT_SYSTEM)}
+          icon="map-marker-distance"
+          metricType="distance"
+          onPress={() => metrics && handleMetricPress('distance', metrics)}
+          loading={loading}
+          error={error}
+        />
+        <MetricCard
+          title="Score"
+          value={formatScore(metrics?.score || 0)}
+          icon="star"
+          metricType="score"
+          onPress={() => metrics && handleMetricPress('score', metrics)}
+          loading={loading}
+          error={error}
+        />
+      </View>
 
-          <MetricCard
-            label="Distance"
-            value={metrics ? formatDistance(metrics.distance, 'metric') : '0 km'}
-            onPress={() => metrics && handleMetricPress('distance', metrics)}
-            icon="map-marker-distance"
-          />
-
-          {metrics?.score && (
-            <MetricCard
-              label="Health Score"
-              value={`${metrics.score.overall}/100`}
-              onPress={() => handleMetricPress('score', metrics)}
-              style={styles.scoreCard}
-              icon="star"
-            />
-          )}
-        </View>
-      </ScrollView>
       {selectedMetric && (
         <MetricModal
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
-          title={selectedMetric.title}
-          value={selectedMetric.value}
-          data={selectedMetric.data}
-          additionalInfo={selectedMetric.additionalInfo}
+          title={selectedMetric?.title || ''}
+          value={selectedMetric?.value || ''}
+          data={selectedMetric?.data}
+          additionalInfo={selectedMetric?.additionalInfo}
         />
       )}
-    </Surface>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollView: {
-    flex: 1,
-    width: '100%',
   },
   content: {
     padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  dataContainer: {
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    marginBottom: 16,
+  },
+  header: {
+    padding: 16,
+  },
+  metricsContainer: {
     width: '100%',
     alignItems: 'stretch',
     gap: 16,
-  },
-  title: {
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  error: {
-    fontSize: 16,
-    textAlign: 'center',
-    margin: 20,
-  },
-  scoreCard: {
-    marginTop: 8,
   },
 });

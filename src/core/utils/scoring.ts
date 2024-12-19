@@ -3,20 +3,21 @@ import { HEALTH_METRICS } from '../constants/metrics';
 
 export class HealthScoring {
   static calculateScore(metrics: HealthMetrics): HealthScore {
-    const stepsScore = this.calculateStepsScore(metrics.steps);
-    const distanceScore = this.calculateDistanceScore(metrics.distance);
+    const steps = metrics.steps || 0;
+    const distance = metrics.distance || 0;
+    
+    const stepsScore = this.calculateStepsScore(steps);
+    const distanceScore = this.calculateDistanceScore(distance);
 
     const overall = (stepsScore + distanceScore) / 2;
 
     return {
-      id: `score_${metrics.id}`,
-      metricsId: metrics.id,
-      overall,
+      overall: Math.round(overall),
       categories: {
-        steps: stepsScore,
-        distance: distanceScore
+        steps: Math.round(stepsScore),
+        distance: Math.round(distanceScore)
       },
-      dailyVictory: metrics.steps >= HEALTH_METRICS.STEPS.DAILY_GOAL
+      dailyVictory: steps >= HEALTH_METRICS.STEPS.DAILY_GOAL
     };
   }
 
@@ -29,8 +30,10 @@ export class HealthScoring {
 
   private static calculateDistanceScore(distance: number): number {
     const { DAILY_GOAL, MIN_HEALTHY } = HEALTH_METRICS.DISTANCE;
-    if (distance >= DAILY_GOAL) return 100;
-    if (distance <= 0) return 0;
-    return Math.min(100, (distance / DAILY_GOAL) * 100);
+    // Convert distance to km if using imperial system
+    const distanceInKm = distance;
+    if (distanceInKm >= DAILY_GOAL) return 100;
+    if (distanceInKm <= 0) return 0;
+    return Math.min(100, (distanceInKm / DAILY_GOAL) * 100);
   }
 }

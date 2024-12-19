@@ -2,21 +2,29 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
-import { RootStackParamList } from './types';
+import { useApp } from '../context/AppContext';
+import { Surface, ActivityIndicator } from 'react-native-paper';
 import { AuthStack } from './AuthStack';
 import { AppStack } from './AppStack';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator();
+
+const LoadingScreen = () => (
+  <Surface style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <ActivityIndicator size="large" />
+  </Surface>
+);
 
 export const RootNavigator = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { theme, isLoading: appLoading } = useApp();
 
-  if (isLoading) {
-    return null; // Or a loading screen
+  if (authLoading || appLoading) {
+    return <LoadingScreen />;
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={theme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           <Stack.Screen name="App" component={AppStack} />

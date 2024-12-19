@@ -1,19 +1,20 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'react-native';
-import { lightTheme, darkTheme } from '../theme';
+import { customLightTheme, customDarkTheme, AppTheme } from '../theme';
 
-type AppContextType = {
-  theme: typeof lightTheme;
-  toggleTheme: () => void;
+interface AppContextType {
+  theme: AppTheme;
+  isDarkMode: boolean;
   isLoading: boolean;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const colorScheme = useColorScheme();
-  const [theme, setTheme] = useState(colorScheme === 'dark' ? darkTheme : lightTheme);
+  const [isDarkMode, setIsDarkMode] = useState(colorScheme === 'dark');
+  const [theme, setTheme] = useState(isDarkMode ? customDarkTheme : customLightTheme);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -21,7 +22,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const savedTheme = await AsyncStorage.getItem('theme');
         if (savedTheme) {
-          setTheme(savedTheme === 'dark' ? darkTheme : lightTheme);
+          setIsDarkMode(savedTheme === 'dark');
+          setTheme(savedTheme === 'dark' ? customDarkTheme : customLightTheme);
         }
       } catch (error) {
         console.error('Error loading theme:', error);
@@ -33,18 +35,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     initializeApp();
   }, []);
 
+  useEffect(() => {
+    setTheme(isDarkMode ? customDarkTheme : customLightTheme);
+  }, [isDarkMode]);
+
   const toggleTheme = async () => {
-    const newTheme = theme === lightTheme ? darkTheme : lightTheme;
-    setTheme(newTheme);
+    const newIsDarkMode = !isDarkMode;
+    setIsDarkMode(newIsDarkMode);
+    setTheme(newIsDarkMode ? customDarkTheme : customLightTheme);
     try {
-      await AsyncStorage.setItem('theme', newTheme === darkTheme ? 'dark' : 'light');
+      await AsyncStorage.setItem('theme', newIsDarkMode ? 'dark' : 'light');
     } catch (error) {
       console.error('Error saving theme:', error);
     }
   };
 
   return (
-    <AppContext.Provider value={{ theme, toggleTheme, isLoading }}>
+    <AppContext.Provider value={{ theme, isDarkMode, isLoading }}>
       {children}
     </AppContext.Provider>
   );

@@ -40,7 +40,7 @@ project.xcworkspace
 
 # dependencies
 node_modules/
-
+temp/
 # Expo
 .expo/
 dist/

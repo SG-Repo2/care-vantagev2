@@ -1,63 +1,98 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type AuthContextType = {
+interface AuthState {
   isAuthenticated: boolean;
   userId: string | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+interface AuthContextType extends AuthState {
   login: (userId: string) => Promise<void>;
   logout: () => Promise<void>;
-  isLoading: boolean;
-};
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [state, setState] = useState<AuthState>({
+    isAuthenticated: false,
+    userId: null,
+    isLoading: true,
+    error: null,
+  });
 
   useEffect(() => {
     const initializeAuth = async () => {
       try {
         const storedUserId = await AsyncStorage.getItem('userId');
         if (storedUserId) {
-          setUserId(storedUserId);
-          setIsAuthenticated(true);
+          setState(prev => ({
+            ...prev,
+            isAuthenticated: true,
+            userId: storedUserId,
+            isLoading: false,
+          }));
+        } else {
+          setState(prev => ({ ...prev, isLoading: false }));
         }
       } catch (error) {
-        console.error('Error loading auth state:', error);
-      } finally {
-        setIsLoading(false);
+        setState(prev => ({
+          ...prev,
+          error: 'Failed to load auth state',
+          isLoading: false,
+        }));
       }
     };
 
     initializeAuth();
   }, []);
 
-  const login = async (newUserId: string) => {
+  const login = async (userId: string) => {
     try {
-      await AsyncStorage.setItem('userId', newUserId);
-      setUserId(newUserId);
-      setIsAuthenticated(true);
+      await AsyncStorage.setItem('userId', userId);
+      setState(prev => ({
+        ...prev,
+        isAuthenticated: true,
+        userId,
+        error: null,
+      }));
     } catch (error) {
-      console.error('Error during login:', error);
-      throw error;
+      setState(prev => ({
+        ...prev,
+        error: 'Failed to login',
+      }));
+      throw new Error('Failed to login');
     }
   };
 
   const logout = async () => {
     try {
       await AsyncStorage.removeItem('userId');
-      setUserId(null);
-      setIsAuthenticated(false);
+      setState(prev => ({
+        ...prev,
+        isAuthenticated: false,
+        userId: null,
+        error: null,
+      }));
     } catch (error) {
-      console.error('Error during logout:', error);
-      throw error;
+      setState(prev => ({
+        ...prev,
+        error: 'Failed to logout',
+      }));
+      throw new Error('Failed to logout');
     }
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userId, login, logout, isLoading }}>
+    <AuthContext.Provider
+      value={{
+        ...state,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

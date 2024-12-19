@@ -1,56 +1,106 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
-import { Surface, Text, TouchableRipple, useTheme, Icon } from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
+import { Surface, Text, TouchableRipple, useTheme, ActivityIndicator } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { getMetricColor, MetricColorKey } from '../../../theme';
 
 interface MetricCardProps {
-  label: string;
+  title: string;
   value: string | number;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  metricType: MetricColorKey;
   onPress?: () => void;
-  style?: object;
-  icon?: string;
+  loading?: boolean;
+  error?: string | null;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
-  label,
+  title,
   value,
-  onPress,
-  style,
   icon,
+  metricType,
+  onPress,
+  loading,
+  error,
 }) => {
   const theme = useTheme();
+  const metricColor = getMetricColor(metricType);
 
-  return (
-    <TouchableRipple
-      onPress={onPress}
-      disabled={!onPress}
-      rippleColor={theme.colors.primary}
-    >
-      <Surface
-        style={[
-          styles.metricCard,
-          {
-            backgroundColor: theme.colors.surface,
-            elevation: 1,
-          },
-          style,
-        ]}
-      >
-        <Icon source={icon || 'chart-box'} size={24} color={theme.colors.primary} />
-        <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-          {label}
-        </Text>
-        <Text variant="headlineMedium" style={{ color: theme.colors.onSurface }}>
+  const renderContent = () => {
+    if (loading) {
+      return <ActivityIndicator size="small" color={metricColor} />;
+    }
+
+    if (error) {
+      return <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+    }
+
+    return (
+      <>
+        <MaterialCommunityIcons name={icon} size={24} color={metricColor} />
+        <Text variant="titleLarge" style={[styles.value, { color: theme.colors.onSurface }]}>
           {value}
         </Text>
-      </Surface>
-    </TouchableRipple>
+        <Text variant="labelMedium" style={[styles.title, { color: theme.colors.onSurfaceVariant }]}>
+          {title}
+        </Text>
+      </>
+    );
+  };
+
+  return (
+    <Surface
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.surfaceVariant,
+        },
+      ]}
+      elevation={1}
+    >
+      <View style={styles.innerContainer}>
+        <TouchableRipple
+          onPress={onPress}
+          style={styles.touchable}
+          rippleColor={metricColor}
+          disabled={loading || !!error}
+        >
+          <>{renderContent()}</>
+        </TouchableRipple>
+      </View>
+    </Surface>
   );
 };
 
 const styles = StyleSheet.create({
-  metricCard: {
-    padding: 16,
+  container: {
+    flex: 1,
+    margin: 8,
     borderRadius: 12,
-    gap: 8,
+    minHeight: 120,
+    borderWidth: 1,
+  },
+  innerContainer: {
+    flex: 1,
+    overflow: 'hidden',
+    borderRadius: 12,
+  },
+  touchable: {
+    flex: 1,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  value: {
+    marginTop: 8,
+    fontWeight: '600',
+  },
+  title: {
+    marginTop: 4,
+  },
+  errorText: {
+    textAlign: 'center',
+    padding: 8,
   },
 });
