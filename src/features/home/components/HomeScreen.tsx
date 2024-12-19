@@ -10,7 +10,7 @@ import { HealthMetrics } from '../../profile/types/health';
 // TODO: Replace with actual user profile management
 const MOCK_PROFILE_ID = 'test_user_1';
 
-type MetricType = 'steps' | 'distance' | 'flights' | 'score';
+type MetricType = 'steps' | 'distance' | 'score';
 
 interface ModalData {
   type: MetricType;
@@ -27,16 +27,16 @@ interface ModalData {
 }
 
 export const HomeScreen: React.FC = () => {
-  const { metrics, loading, error, refreshMetrics } = useHealthData(MOCK_PROFILE_ID);
+  const { metrics, loading, error, refresh } = useHealthData(MOCK_PROFILE_ID);
   const [refreshing, setRefreshing] = React.useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<ModalData | null>(null);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    await refreshMetrics();
+    await refresh();
     setRefreshing(false);
-  }, [refreshMetrics]);
+  }, [refresh]);
 
   const handleMetricPress = (type: MetricType, metrics: HealthMetrics) => {
     let modalData: ModalData;
@@ -61,19 +61,6 @@ export const HomeScreen: React.FC = () => {
           value: formatDistance(metrics.distance, 'metric'),
           additionalInfo: [
             { label: 'Steps', value: metrics.steps },
-            { label: 'Flights Climbed', value: metrics.flights },
-          ],
-        };
-        break;
-
-      case 'flights':
-        modalData = {
-          type,
-          title: 'Flights Climbed',
-          value: metrics.flights,
-          additionalInfo: [
-            { label: 'Elevation', value: `${metrics.flights * 3}m` },
-            { label: 'Steps', value: metrics.steps },
           ],
         };
         break;
@@ -84,9 +71,9 @@ export const HomeScreen: React.FC = () => {
           title: 'Health Score',
           value: `${metrics.score?.overall}/100`,
           additionalInfo: [
-            { label: 'Activity Score', value: `${metrics.score?.categories.activity}/100` },
-            { label: 'Cardio Score', value: `${metrics.score?.categories.cardio}/100` },
-            { label: 'Sleep Score', value: `${metrics.score?.categories.sleep}/100` },
+            { label: 'Steps Score', value: `${metrics.score?.categories.steps}/100` },
+            { label: 'Distance Score', value: `${metrics.score?.categories.distance}/100` },
+            { label: 'Daily Victory', value: metrics.score?.dailyVictory ? 'Yes! 🎉' : 'Not Yet' },
           ],
         };
         break;
@@ -116,49 +103,40 @@ export const HomeScreen: React.FC = () => {
   }
 
   return (
-    <>
+    <View style={styles.container}>
+      <StatusBar style="auto" />
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.container}>
-          <View style={styles.dataContainer}>
-            <Text style={styles.title}>Daily Health Metrics</Text>
+        <View style={styles.dataContainer}>
+          <Text style={styles.title}>Daily Health Metrics</Text>
 
+          <MetricCard
+            label="Steps"
+            value={metrics?.steps || 0}
+            onPress={() => metrics && handleMetricPress('steps', metrics)}
+          />
+
+          <MetricCard
+            label="Distance"
+            value={metrics ? formatDistance(metrics.distance, 'metric') : '0 km'}
+            onPress={() => metrics && handleMetricPress('distance', metrics)}
+          />
+
+          {metrics?.score && (
             <MetricCard
-              label="Steps"
-              value={metrics?.steps || 0}
-              onPress={() => metrics && handleMetricPress('steps', metrics)}
+              label="Health Score"
+              value={`${metrics.score.overall}/100`}
+              onPress={() => handleMetricPress('score', metrics)}
+              style={styles.scoreCard}
             />
-
-            <MetricCard
-              label="Distance"
-              value={metrics ? formatDistance(metrics.distance, 'metric') : '0 km'}
-              onPress={() => metrics && handleMetricPress('distance', metrics)}
-            />
-
-            <MetricCard
-              label="Flights Climbed"
-              value={metrics?.flights || 0}
-              onPress={() => metrics && handleMetricPress('flights', metrics)}
-            />
-
-            {metrics?.score && (
-              <MetricCard
-                label="Health Score"
-                value={`${metrics.score.overall}/100`}
-                onPress={() => handleMetricPress('score', metrics)}
-                style={styles.scoreCard}
-              />
-            )}
-          </View>
-          <StatusBar style="auto" />
+          )}
         </View>
       </ScrollView>
-
       {selectedMetric && (
         <MetricModal
           visible={modalVisible}
@@ -169,24 +147,24 @@ export const HomeScreen: React.FC = () => {
           additionalInfo={selectedMetric.additionalInfo}
         />
       )}
-    </>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  content: {
+    padding: 16,
   },
   dataContainer: {
     width: '90%',

@@ -1,11 +1,10 @@
 import { MeasurementSystem } from '../types/base';
 
-export const formatDistance = (meters: number, system: MeasurementSystem): string => {
+export const formatDistance = (kilometers: number, system: MeasurementSystem): string => {
   if (system === 'imperial') {
-    const miles = meters * 0.000621371;
+    const miles = kilometers * 0.621371;
     return `${miles.toFixed(2)} mi`;
   }
-  const kilometers = meters / 1000;
   return `${kilometers.toFixed(2)} km`;
 };
 
