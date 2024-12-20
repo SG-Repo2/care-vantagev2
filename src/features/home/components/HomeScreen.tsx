@@ -9,7 +9,7 @@ import { formatDistance, formatScore } from '../../../core/utils/formatting';
 import { MetricCard } from './MetricCard';
 import { MetricModal } from './MetricModal';
 import { HealthMetrics } from '../../profile/types/health';
-import { AppStackParamList } from '../../../navigation/types';
+import { TabParamList } from '../../../navigation/types';
 import { MeasurementSystem } from '../../../core/types/base';
 
 // TODO: Replace with actual user profile management
@@ -33,7 +33,7 @@ interface ModalData {
   }[];
 }
 
-type NavigationProp = NativeStackNavigationProp<AppStackParamList, 'Home'>;
+type NavigationProp = NativeStackNavigationProp<TabParamList, 'Home'>;
 
 export const HomeScreen: React.FC = () => {
   const theme = useTheme();
@@ -48,6 +48,10 @@ export const HomeScreen: React.FC = () => {
     await refresh();
     setRefreshing(false);
   }, [refresh]);
+
+  const handleLeaderboardPress = () => {
+    navigation.navigate('Leaderboard');
+  };
 
   const handleMetricPress = (type: MetricType, metrics: HealthMetrics) => {
     let modalData: ModalData = {
@@ -66,7 +70,7 @@ export const HomeScreen: React.FC = () => {
 
   if (loading && !refreshing) {
     return (
-      <Surface style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Surface style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
       </Surface>
     );
@@ -74,7 +78,7 @@ export const HomeScreen: React.FC = () => {
 
   if (error) {
     return (
-      <Surface style={styles.errorContainer}>
+      <Surface style={[styles.container, styles.centered]}>
         <Text variant="titleMedium" style={styles.errorText}>{error}</Text>
         <IconButton icon="refresh" onPress={refresh} />
       </Surface>
@@ -82,65 +86,76 @@ export const HomeScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { flex: 1, backgroundColor: theme.colors.background }]}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
+    <View style={styles.container}>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
-      <View style={styles.header}>
-        <Text variant="headlineMedium">Health Dashboard</Text>
-      </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <View style={styles.header}>
+          <Text variant="headlineMedium" style={styles.title}>
+            Health Dashboard
+          </Text>
+          <IconButton
+            icon="trophy"
+            mode="contained"
+            onPress={handleLeaderboardPress}
+            style={styles.leaderboardButton}
+          />
+        </View>
 
-      <View style={styles.metricsContainer}>
-        <MetricCard
-          title="Steps"
-          value={metrics?.steps?.toLocaleString() || '0'}
-          icon="walk"
-          metricType="steps"
-          onPress={() => metrics && handleMetricPress('steps', metrics)}
-          loading={loading}
-          error={error}
-        />
-        <MetricCard
-          title="Distance"
-          value={formatDistance(metrics?.distance || 0, DEFAULT_MEASUREMENT_SYSTEM)}
-          icon="map-marker-distance"
-          metricType="distance"
-          onPress={() => metrics && handleMetricPress('distance', metrics)}
-          loading={loading}
-          error={error}
-        />
-        <MetricCard
-          title="Score"
-          value={formatScore(metrics?.score || 0)}
-          icon="star"
-          metricType="score"
-          onPress={() => metrics && handleMetricPress('score', metrics)}
-          loading={loading}
-          error={error}
-        />
-      </View>
+        <View style={styles.metricsContainer}>
+          <MetricCard
+            title="Steps"
+            value={metrics?.steps?.toLocaleString() || '0'}
+            icon="walk"
+            metricType="steps"
+            onPress={() => metrics && handleMetricPress('steps', metrics)}
+            loading={loading}
+            error={error}
+          />
+          <MetricCard
+            title="Distance"
+            value={formatDistance(metrics?.distance || 0, DEFAULT_MEASUREMENT_SYSTEM)}
+            icon="map-marker-distance"
+            metricType="distance"
+            onPress={() => metrics && handleMetricPress('distance', metrics)}
+            loading={loading}
+            error={error}
+          />
+          <MetricCard
+            title="Score"
+            value={formatScore(metrics?.score || 0)}
+            icon="star"
+            metricType="score"
+            onPress={() => metrics && handleMetricPress('score', metrics)}
+            loading={loading}
+            error={error}
+          />
+        </View>
 
-      {selectedMetric && (
-        <MetricModal
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          title={selectedMetric?.title || ''}
-          value={selectedMetric?.value || ''}
-          data={selectedMetric?.data}
-          additionalInfo={selectedMetric?.additionalInfo}
-        />
-      )}
-    </ScrollView>
+        {selectedMetric && (
+          <MetricModal
+            visible={modalVisible}
+            onClose={() => setModalVisible(false)}
+            title={selectedMetric?.title || ''}
+            value={selectedMetric?.value || ''}
+            data={selectedMetric?.data}
+            additionalInfo={selectedMetric?.additionalInfo}
+          />
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  
   },
   content: {
     padding: 16,
@@ -156,11 +171,28 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   header: {
-    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  title: {
+    fontWeight: 'bold',
+  },
+  leaderboardButton: {
+    margin: 0,
   },
   metricsContainer: {
     width: '100%',
     alignItems: 'stretch',
     gap: 16,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

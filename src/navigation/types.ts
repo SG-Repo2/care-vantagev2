@@ -9,10 +9,11 @@ export type AuthStackParamList = {
 };
 
 export type AppStackParamList = {
+  MainTabs: undefined;
+};
+
+export type TabParamList = {
   Home: undefined;
-  MetricDetail: {
-    metricType: 'steps' | 'distance' | 'score';
-    title: string;
-  };
+  Leaderboard: undefined;
   Profile: undefined;
 };

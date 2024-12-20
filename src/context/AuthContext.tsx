@@ -1,17 +1,21 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface AuthState {
+type AuthState = {
   isAuthenticated: boolean;
   userId: string | null;
   isLoading: boolean;
   error: string | null;
-}
+  user?: {
+    displayName?: string;
+    email?: string;
+  };
+};
 
-interface AuthContextType extends AuthState {
+type AuthContextType = AuthState & {
   login: (userId: string) => Promise<void>;
   logout: () => Promise<void>;
-}
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -57,6 +61,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: true,
         userId,
         error: null,
+        user: {
+          displayName: 'Test User',
+          email: 'test@example.com',
+        },
       }));
     } catch (error) {
       setState(prev => ({
