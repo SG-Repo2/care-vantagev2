@@ -19,17 +19,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     const initializeApp = async () => {
-      try {
-        const savedTheme = await AsyncStorage.getItem('theme');
-        if (savedTheme) {
-          setIsDarkMode(savedTheme === 'dark');
-          setTheme(savedTheme === 'dark' ? customDarkTheme : customLightTheme);
+      // Defer initialization to next frame to avoid blocking UI
+      requestAnimationFrame(async () => {
+        try {
+          const savedTheme = await AsyncStorage.getItem('theme');
+          if (savedTheme) {
+            // Ensure state updates happen in next frame
+            requestAnimationFrame(() => {
+              setIsDarkMode(savedTheme === 'dark');
+              setTheme(savedTheme === 'dark' ? customDarkTheme : customLightTheme);
+            });
+          }
+        } catch (error) {
+          console.error('Error loading theme:', error);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Error loading theme:', error);
-      } finally {
-        setIsLoading(false);
-      }
+      });
     };
 
     initializeApp();
@@ -43,11 +49,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const newIsDarkMode = !isDarkMode;
     setIsDarkMode(newIsDarkMode);
     setTheme(newIsDarkMode ? customDarkTheme : customLightTheme);
-    try {
-      await AsyncStorage.setItem('theme', newIsDarkMode ? 'dark' : 'light');
-    } catch (error) {
-      console.error('Error saving theme:', error);
-    }
+    
+    // Defer storage operation to next frame
+    requestAnimationFrame(async () => {
+      try {
+        await AsyncStorage.setItem('theme', newIsDarkMode ? 'dark' : 'light');
+      } catch (error) {
+        console.error('Error saving theme:', error);
+      }
+    });
   };
 
   return (

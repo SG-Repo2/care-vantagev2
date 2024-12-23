@@ -40,19 +40,28 @@ const useHealthData = (profileId: string) => {
   }, []);
 
   const fetchHealthData = useCallback(async () => {
-    if (!hasPermissions) {
-      return;
-    }
+    if (!hasPermissions) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const newMetrics = await healthService.getMetrics();
+      // Wrap HealthKit operations in a background task
+      const newMetrics = await new Promise<HealthMetrics>((resolve, reject) => {
+        requestAnimationFrame(async () => {
+          try {
+            const metrics = await healthService.getMetrics();
+            resolve(metrics);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+
       setMetrics({
         ...newMetrics,
         profileId,
-      });
+      } as HealthMetrics);
     } catch (err) {
       console.error('Error fetching health data:', err);
       setError('Failed to fetch health data');
