@@ -8,29 +8,35 @@ export interface HealthPlatform {
   type: DataSource;
 }
 
+const appleHealthPlatform: HealthPlatform = {
+  id: 'apple_health',
+  name: 'Apple Health',
+  version: '1.0.0',
+  type: 'apple_health'
+};
+
+const googleFitPlatform: HealthPlatform = {
+  id: 'google_fit',
+  name: 'Google Fit',
+  version: '1.0.0',
+  type: 'google_fit'
+};
+
+const manualPlatform: HealthPlatform = {
+  id: 'manual',
+  name: 'Manual Entry',
+  version: '1.0.0',
+  type: 'manual'
+};
+
 export const getCurrentPlatform = (): HealthPlatform => {
   if (Platform.OS === 'ios') {
-    return {
-      id: 'apple_health',
-      name: 'Apple Health',
-      version: '1.0.0',
-      type: 'apple_health'
-    };
+    return appleHealthPlatform;
   }
   
   if (Platform.OS === 'android') {
-    return {
-      id: 'google_fit',
-      name: 'Google Fit',
-      version: '1.0.0',
-      type: 'google_fit'
-    };
+    return googleFitPlatform;
   }
   
-  return {
-    id: 'manual',
-    name: 'Manual Entry',
-    version: '1.0.0',
-    type: 'manual'
-  };
+  return manualPlatform;
 };

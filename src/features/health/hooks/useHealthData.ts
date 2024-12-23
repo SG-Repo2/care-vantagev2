@@ -1,17 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import AppleHealthKit, {
-  HealthInputOptions,
-  HealthKitPermissions,
-  HealthUnit,
-} from 'react-native-health';
-import { Platform } from 'react-native';
-import { HealthMetrics } from '../../profile/types/health';
-import { HealthScoring } from '../../../core/utils/scoring';
-import { DataSource } from '../../../core/types/base';
+import { HealthMetrics } from '../types/health';
+import { HealthServiceFactory } from '../services/factory';
+import AppleHealthKit from 'react-native-health';
 
 const { Permissions } = AppleHealthKit.Constants;
 
-const permissions: HealthKitPermissions = {
+const defaultPermissions = {
   permissions: {
     read: [
       Permissions.Steps,
@@ -21,35 +15,32 @@ const permissions: HealthKitPermissions = {
   },
 };
 
+const healthService = HealthServiceFactory.getService();
+
 const useHealthData = (profileId: string) => {
   const [metrics, setMetrics] = useState<HealthMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasPermissions, setHasPermission] = useState(false);
 
-  const initializeHealthKit = useCallback(async () => {
-    if (Platform.OS !== 'ios') {
-      setError('HealthKit is only available on iOS');
-      setLoading(false);
+  const initialize = useCallback(async () => {
+    try {
+      const initialized = await healthService.initialize(defaultPermissions);
+      if (initialized) {
+        const permissions = await healthService.hasPermissions();
+        setHasPermission(permissions);
+        return permissions;
+      }
+      return false;
+    } catch (err) {
+      console.error('Health service initialization error:', err);
+      setError('Failed to initialize health service');
       return false;
     }
-
-    return new Promise<boolean>((resolve) => {
-      AppleHealthKit.initHealthKit(permissions, (error: string) => {
-        if (error) {
-          setError('Failed to initialize HealthKit');
-          setLoading(false);
-          resolve(false);
-          return;
-        }
-        setHasPermission(true);
-        resolve(true);
-      });
-    });
   }, []);
 
   const fetchHealthData = useCallback(async () => {
-    if (!hasPermissions || Platform.OS !== 'ios') {
+    if (!hasPermissions) {
       return;
     }
 
@@ -57,51 +48,11 @@ const useHealthData = (profileId: string) => {
     setError(null);
 
     try {
-      const options: HealthInputOptions = {
-        date: new Date().toISOString(),
-      };
-
-      const [steps, distance] = await Promise.all([
-        new Promise<number>((resolve, reject) =>
-          AppleHealthKit.getStepCount(options, (err, results) => {
-            if (err) reject(err);
-            else resolve(results.value);
-          })
-        ),
-        new Promise<number>((resolve, reject) =>
-          AppleHealthKit.getDistanceWalkingRunning(options, (err, results) => {
-            if (err) reject(err);
-            else resolve(results.value / 1000); // Convert to kilometers
-          })
-        ),
-      ]);
-
-      const now = new Date();
-      const id = `metrics_${now.getTime()}`;
-      const score = HealthScoring.calculateScore({ 
-        id,
-        steps,
-        distance,
-        profileId: '',  
-        date: '',       
-        score: 0,
-        source: 'apple_health',
-        createdAt: now,
-        updatedAt: now,
-      });
-      const newMetrics: HealthMetrics = {
-        id,
+      const newMetrics = await healthService.getMetrics();
+      setMetrics({
+        ...newMetrics,
         profileId,
-        date: now.toISOString(),
-        steps,
-        distance,
-        score: score.overall,
-        source: 'apple_health',
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      setMetrics(newMetrics);
+      });
     } catch (err) {
       console.error('Error fetching health data:', err);
       setError('Failed to fetch health data');
@@ -115,15 +66,15 @@ const useHealthData = (profileId: string) => {
   }, [fetchHealthData]);
 
   useEffect(() => {
-    const initialize = async () => {
-      const initialized = await initializeHealthKit();
+    const setupHealthData = async () => {
+      const initialized = await initialize();
       if (initialized) {
         await fetchHealthData();
       }
     };
 
-    initialize();
-  }, [initializeHealthKit, fetchHealthData]);
+    setupHealthData();
+  }, [initialize, fetchHealthData]);
 
   return {
     metrics,

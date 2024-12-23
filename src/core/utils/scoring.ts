@@ -1,4 +1,4 @@
-import { HealthMetrics, HealthScore } from '../../features/profile/types/health';
+import { HealthMetrics, HealthScore } from '../../features/health/types/health';
 import { HEALTH_METRICS } from '../constants/metrics';
 
 export class HealthScoring {
