@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { HealthMetrics } from '../types/health';
 import { HealthServiceFactory } from '../services/factory';
+import { HealthService } from '../services/types';
 import AppleHealthKit from 'react-native-health';
 
 const { Permissions } = AppleHealthKit.Constants;
@@ -15,9 +16,8 @@ const defaultPermissions = {
   },
 };
 
-const healthService = HealthServiceFactory.getService();
-
 const useHealthData = (profileId: string) => {
+  const [healthService, setHealthService] = useState<HealthService | null>(null);
   const [metrics, setMetrics] = useState<HealthMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,9 +25,12 @@ const useHealthData = (profileId: string) => {
 
   const initialize = useCallback(async () => {
     try {
-      const initialized = await healthService.initialize(defaultPermissions);
+      const service = await HealthServiceFactory.getService();
+      setHealthService(service);
+      
+      const initialized = await service.initialize(defaultPermissions);
       if (initialized) {
-        const permissions = await healthService.hasPermissions();
+        const permissions = await service.hasPermissions();
         setHasPermission(permissions);
         return permissions;
       }
@@ -40,7 +43,7 @@ const useHealthData = (profileId: string) => {
   }, []);
 
   const fetchHealthData = useCallback(async () => {
-    if (!hasPermissions) return;
+    if (!hasPermissions || !healthService) return;
 
     setLoading(true);
     setError(null);

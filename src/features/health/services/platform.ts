@@ -15,11 +15,11 @@ const appleHealthPlatform: HealthPlatform = {
   type: 'apple_health'
 };
 
-const googleFitPlatform: HealthPlatform = {
-  id: 'google_fit',
-  name: 'Google Fit',
+const healthConnectPlatform: HealthPlatform = {
+  id: 'health_connect',
+  name: 'Health Connect',
   version: '1.0.0',
-  type: 'google_fit'
+  type: 'health_connect'
 };
 
 const manualPlatform: HealthPlatform = {
@@ -29,13 +29,25 @@ const manualPlatform: HealthPlatform = {
   type: 'manual'
 };
 
-export const getCurrentPlatform = (): HealthPlatform => {
+declare const HealthConnectClient: {
+  isAvailable(): Promise<boolean>;
+};
+
+export const getCurrentPlatform = async (): Promise<HealthPlatform> => {
   if (Platform.OS === 'ios') {
     return appleHealthPlatform;
   }
   
   if (Platform.OS === 'android') {
-    return googleFitPlatform;
+    try {
+      const isHealthConnectAvailable = await HealthConnectClient.isAvailable();
+      if (isHealthConnectAvailable) {
+        return healthConnectPlatform;
+      }
+    } catch (error) {
+      console.warn('Error checking Health Connect availability:', error);
+    }
+    return manualPlatform;
   }
   
   return manualPlatform;
