@@ -32,6 +32,12 @@
           <string>com.groebe1kenobi.carevantage</string>
         </array>
       </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>exp+care-vantage</string>
+        </array>
+      </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>1</string>
@@ -53,12 +59,13 @@
     <key>NSHealthClinicalUsageDescription</key>
     <string>Allow CareVantage to check health clinical info</string>
     <key>NSHealthShareUsageDescription</key>
-    <string>We need access to your health data to track your steps, distance walked, and flights climbed</string>
+    <string>CareVantage needs access to read your health data to track your fitness and wellness metrics.</string>
     <key>NSHealthUpdateUsageDescription</key>
-    <string>We need permission to update your health data</string>
+    <string>CareVantage requires permission to write health data to help you track and manage your fitness goals.</string>
     <key>UIBackgroundModes</key>
     <array>
-      <string>health-kit</string>
+      <string>fetch</string>
+      <string>remote-notification</string>
     </array>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
@@ -70,7 +77,7 @@
     <key>UIRequiresFullScreen</key>
     <false/>
     <key>UIStatusBarStyle</key>
-    <string>UIStatusBarStyleDefault</string>
+    <string>auto</string>
     <key>UISupportedInterfaceOrientations</key>
     <array>
       <string>UIInterfaceOrientationPortrait</string>
@@ -84,7 +91,7 @@
       <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>UIUserInterfaceStyle</key>
-    <string>Light</string>
+    <string>Automatic</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
   </dict>

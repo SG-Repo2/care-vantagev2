@@ -80,7 +80,7 @@ module.exports = {
         projectId: process.env.EAS_PROJECT_ID
       }
     },
-    scheme: 'carevantage',
+    scheme: ['carevantage', 'exp+care-vantage'],
     developmentClient: {
       silentLaunch: true
     }

@@ -5,6 +5,9 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.changes.UpsertionChange
 import com.facebook.react.bridge.*
 import com.facebook.react.module.annotations.ReactModule
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +26,7 @@ class HealthConnectModule(reactContext: ReactApplicationContext) : ReactContextB
     fun isAvailable(promise: Promise) {
         scope.launch {
             try {
-                val availability = HealthConnectClient.isProviderAvailable(reactApplicationContext)
+                val availability = HealthConnectClient.getSdkStatus(reactApplicationContext) == HealthConnectClient.SDK_AVAILABLE
                 promise.resolve(availability)
             } catch (e: Exception) {
                 promise.reject("ERROR", e.message)
@@ -36,12 +39,22 @@ class HealthConnectModule(reactContext: ReactApplicationContext) : ReactContextB
         scope.launch {
             try {
                 val client = HealthConnectClient.getOrCreate(reactApplicationContext)
-                // Convert permissions array to set of permissions
-                val permissionSet = mutableSetOf<String>()
+                val permissionSet = mutableSetOf<HealthPermission>()
+                
                 for (i in 0 until permissions.size()) {
-                    permissionSet.add(permissions.getString(i))
+                    val permission = permissions.getString(i)
+                    when (permission) {
+                        "steps" -> permissionSet.add(HealthPermission.createReadPermission(StepsRecord::class))
+                        "distance" -> permissionSet.add(HealthPermission.createReadPermission(DistanceRecord::class))
+                    }
                 }
-                promise.resolve(true)
+                
+                val granted = client.permissionController.getGrantedPermissions()
+                if (granted.containsAll(permissionSet)) {
+                    promise.resolve(true)
+                } else {
+                    promise.resolve(false)
+                }
             } catch (e: Exception) {
                 promise.reject("ERROR", e.message)
             }
