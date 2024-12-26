@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../features/auth/context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { Surface, ActivityIndicator } from 'react-native-paper';
 import { AuthStack } from './AuthStack';

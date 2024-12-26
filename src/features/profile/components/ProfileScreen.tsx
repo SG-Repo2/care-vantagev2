@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Avatar, useTheme, HelperText } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../auth/context/AuthContext';
 import { customLightTheme, customDarkTheme } from '../../../theme';
 
 type RootStackParamList = {

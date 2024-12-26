@@ -2,7 +2,7 @@ import React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider } from 'react-native-paper';
 import { AppProvider } from './src/context/AppContext';
-import { AuthProvider } from './src/context/AuthContext';
+import { AuthProvider } from './src/features/auth/context/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { LogBox } from 'react-native';
 
