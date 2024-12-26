@@ -31,8 +31,12 @@ dependencyResolutionManagement {
   }
 }
 
-apply from: new File(["node", "--print", "require.resolve('expo/package.json')"].execute(null, rootDir).text.trim(), "../scripts/autolinking.gradle");
-useExpoModules()
+// Remove the old autolinking configuration
+// apply from: new File(["node", "--print", "require.resolve('expo/package.json')"].execute(null, rootDir).text.trim(), "../scripts/autolinking.gradle");
+// useExpoModules()
+
+include ':expo-modules-core'
+project(':expo-modules-core').projectDir = new File(['node', '--print', "require.resolve('expo-modules-core/package.json')"].execute(null, rootDir).text.trim(), '../android')
 
 include ':app'
 includeBuild(new File(["node", "--print", "require.resolve('@react-native/gradle-plugin/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile())
