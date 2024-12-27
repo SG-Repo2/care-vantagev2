@@ -8,7 +8,7 @@ import useHealthData from '../../health/hooks/useHealthData';
 import { formatDistance, formatScore } from '../../../core/utils/formatting';
 import { MetricCard } from './MetricCard';
 import { MetricModal } from './MetricModal';
-import { HealthMetrics } from '../../profile/types/health';
+import { HealthMetrics } from '../../health/types/health';
 import { TabParamList } from '../../../navigation/types';
 import { MeasurementSystem } from '../../../core/types/base';
 

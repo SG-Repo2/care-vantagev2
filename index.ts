@@ -1,14 +1,13 @@
 import { registerRootComponent } from 'expo';
 import { Platform } from 'react-native';
 import RNHealthKit from 'react-native-health';
-import { initializeFirebase } from './src/config/firebase';
 import App from './App';
 
 // Immediately Invoked Function Expression (IIFE) for async initialization
 (async () => {
   try {
     // Initialize Firebase first and wait for it
-    await initializeFirebase();
+
     
     // Initialize HealthKit if on iOS
     if (Platform.OS === 'ios') {

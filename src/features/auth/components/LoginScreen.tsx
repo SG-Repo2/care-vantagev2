@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { useAuth } from '../context/AuthContext';
 import { useTheme, TextInput, Button, Text } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../../navigation/types';
+import AuthService from '../../../services/authService';
 
 type LoginScreenProps = {
   navigation: StackNavigationProp<AuthStackParamList, 'Login'>;
@@ -12,24 +12,31 @@ type LoginScreenProps = {
 export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, signInWithGoogle, isLoading, error } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
+  const [request, response, promptAsync] = AuthService.useGoogleAuth();
 
   const handleLogin = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      await login(email, password);
-    } catch (error) {
-      // Error is handled by AuthContext
-      console.error('Login error:', error);
+      await AuthService.login(email, password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithGoogle();
-    } catch (error) {
-      // Error is handled by AuthContext
-      console.error('Google Sign-In error:', error);
+      const response = await promptAsync();
+      if (response?.type === 'success' && response.authentication) {
+        await AuthService.signInWithGoogle(response.authentication.accessToken);
+      }
+    } catch (err) {
+      setError('Google sign-in failed');
     }
   };
 

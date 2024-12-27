@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAuth } from '../features/auth/context/AuthContext';
-import { useApp } from '../context/AppContext';
 import { Surface, ActivityIndicator } from 'react-native-paper';
+import { useApp } from '../context/AppContext';
 import { AuthStack } from './AuthStack';
 import { AppStack } from './AppStack';
+import AuthService from '../services/authService';
 
 const Stack = createNativeStackNavigator();
 
@@ -16,10 +16,26 @@ const LoadingScreen = () => (
 );
 
 export const RootNavigator = () => {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { theme, isLoading: appLoading } = useApp();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { theme } = useApp();
 
-  if (authLoading || appLoading) {
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const user = await AuthService.getCurrentUser();
+      setIsAuthenticated(!!user);
+    } catch (error) {
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
     return <LoadingScreen />;
   }
 

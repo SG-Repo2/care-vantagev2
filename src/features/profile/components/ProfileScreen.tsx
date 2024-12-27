@@ -1,9 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Avatar, useTheme, HelperText } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useAuth } from '../../auth/context/AuthContext';
-import { customLightTheme, customDarkTheme } from '../../../theme';
+import AuthService, { User } from '../../../services/authService';
 
 type RootStackParamList = {
   Profile: undefined;
@@ -16,25 +15,34 @@ type ProfileScreenProps = {
 };
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
-  const { logout, user } = useAuth();
   const paperTheme = useTheme();
-  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [user, setUser] = useState<User | null>(null);
+  const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const loadUser = async () => {
+      const currentUser = await AuthService.getCurrentUser();
+      setUser(currentUser);
+      setDisplayName(currentUser?.displayName || '');
+    };
+    loadUser();
+  }, []);
+
   const handleLogout = useCallback(async () => {
     try {
       setLoading(true);
-      await logout();
-      // Navigation will be handled by the AuthContext
+      await AuthService.logout();
+      navigation.replace('Login');
     } catch (err) {
       console.error('[ProfileScreen] Logout error:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
-  }, [logout]);
+  }, [navigation]);
 
   const handleProfileUpdate = useCallback(async () => {
     if (!displayName.trim()) {
@@ -61,7 +69,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         <View style={styles.avatarContainer}>
           <Avatar.Image
             size={100}
-            source={{ uri: 'https://via.placeholder.com/100' }}
+            source={user?.photoUrl ? { uri: user.photoUrl } : { uri: 'https://via.placeholder.com/100' }}
           />
         </View>
 

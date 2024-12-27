@@ -15,7 +15,6 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.groebe1kenobi.carevantage',
-      googleServicesFile: './ios/carevantage/GoogleService-Info.plist',
       infoPlist: {
         NSHealthShareUsageDescription: 'CareVantage needs access to read your health data to track your fitness and wellness metrics.',
         NSHealthUpdateUsageDescription: 'CareVantage requires permission to write health data to help you track and manage your fitness goals.',

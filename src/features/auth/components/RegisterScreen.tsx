@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { useAuth } from '../context/AuthContext';
 import { useTheme, TextInput, Button, Text } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../../navigation/types';
+import AuthService from '../../../services/authService';
 
 type RegisterScreenProps = {
   navigation: StackNavigationProp<AuthStackParamList, 'Register'>;
@@ -15,8 +15,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [emailError, setEmailError] = useState('');
-  const { signInWithGoogle, isLoading, error, register } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
+  const [request, response, promptAsync] = AuthService.useGoogleAuth();
 
   const validateEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,11 +44,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
   };
 
   const handleRegister = async () => {
-    // Clear previous errors
     setEmailError('');
     setPasswordError('');
+    setError(null);
 
-    // Validate both email and password
     const isEmailValid = validateEmail();
     const isPasswordValid = validatePasswords();
 
@@ -54,11 +55,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
       return;
     }
 
+    setIsLoading(true);
     try {
-      await register(email, password);
-      // No need to navigate - RootNavigator will handle it based on auth state
-    } catch (error) {
-      console.error('Registration error:', error);
+      await AuthService.register(email, password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -85,9 +88,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
 
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithGoogle();
-    } catch (error) {
-      console.error('Google Sign-In error:', error);
+      const response = await promptAsync();
+      if (response?.type === 'success' && response.authentication) {
+        await AuthService.signInWithGoogle(response.authentication.accessToken);
+      }
+    } catch (err) {
+      setError('Google sign-in failed');
     }
   };
 
