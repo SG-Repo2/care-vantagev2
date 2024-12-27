@@ -15,9 +15,6 @@ import com.facebook.soloader.SoLoader
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
-import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.NativeModule
-import com.facebook.react.uimanager.ViewManager
 
 class MainApplication : Application(), ReactApplication {
 
@@ -25,16 +22,9 @@ class MainApplication : Application(), ReactApplication {
         this,
         object : DefaultReactNativeHost(this) {
           override fun getPackages(): List<ReactPackage> {
-            val packages = PackageList(this).packages.toMutableList()
-            // Packages that cannot be autolinked yet can be added manually here
-            packages.add(object : ReactPackage {
-              override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-                return listOf(HealthConnectModule(reactContext))
-              }
-              override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {
-                return emptyList()
-              }
-            })
+            val packages = PackageList(this).packages
+            // Packages that cannot be autolinked yet can be added manually here, for example:
+            // packages.add(new MyReactNativePackage());
             return packages
           }
 

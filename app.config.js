@@ -84,6 +84,7 @@ module.exports = {
         messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
         appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID_IOS,
         measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
+        databaseURL: `https://${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}.firebaseio.com`,
       }
     },
     scheme: ['carevantage', 'exp+care-vantage'],

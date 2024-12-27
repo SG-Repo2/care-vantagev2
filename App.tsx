@@ -6,6 +6,7 @@ import { AppProvider } from './src/context/AppContext';
 import { AuthProvider } from './src/features/auth/context/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { LogBox } from 'react-native';
+import { initializeFirebase } from './src/config/firebase';
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -14,41 +15,34 @@ LogBox.ignoreLogs([
 
 export default function App() {
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [firebaseInitialized, setFirebaseInitialized] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = auth().onAuthStateChanged((user) => {
+    const init = async () => {
       try {
-        if (!authInitialized) {
-          setAuthInitialized(true);
-        }
-        
-        if (user) {
-          console.log('User signed in:', user.uid);
-        } else {
-          console.log('User signed out');
-        }
+        await initializeFirebase();
+        setFirebaseInitialized(true);
+        setAuthInitialized(true);
       } catch (error) {
-        console.error('Auth state change error:', error);
+        console.error('Failed to initialize Firebase:', error);
       }
-    });
+    };
+    init();
+  }, []);
 
-    return () => unsubscribe();
-  }, [authInitialized]);
-
-  // Optional: You could add a loading state while auth initializes
-  if (!authInitialized) {
-    return null; // Or return a loading spinner
+  if (!firebaseInitialized) {
+    return null; // or a loading spinner
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AppProvider>
-        <AuthProvider>
-          <PaperProvider>
+      <PaperProvider>
+        <AppProvider>
+          <AuthProvider>
             <RootNavigator />
-          </PaperProvider>
-        </AuthProvider>
-      </AppProvider>
+          </AuthProvider>
+        </AppProvider>
+      </PaperProvider>
     </GestureHandlerRootView>
   );
 }
