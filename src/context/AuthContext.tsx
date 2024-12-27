@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -37,9 +38,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Google OAuth configuration
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    androidClientId: Constants.expoConfig?.extra?.googleAuth?.androidClientId,
+    iosClientId: Constants.expoConfig?.extra?.googleAuth?.iosClientId,
+    webClientId: Constants.expoConfig?.extra?.googleAuth?.webClientId,
   });
 
   // Load persisted auth state
