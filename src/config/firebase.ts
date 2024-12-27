@@ -2,18 +2,26 @@ import { Platform } from 'react-native';
 import firebase from '@react-native-firebase/app';
 import Constants from 'expo-constants';
 
+type FirebaseConfig = {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  storageBucket: string;
+  messagingSenderId: string;
+  appId: string;
+};
+
 // Get the config from Expo constants
-const getFirebaseConfig = () => {
+const getFirebaseConfig = (): FirebaseConfig => {
   const config = Constants.expoConfig?.extra?.firebaseConfig;
   if (!config) {
     throw new Error('Firebase configuration is missing in app.config.js');
   }
-  
-  // Ensure appId is set based on platform
-  const appId = Platform.select({
-    ios: config.appId?.ios,
-    android: config.appId?.android,
-  });
+
+  // Get platform-specific app ID
+  const appId = Platform.OS === 'android'
+    ? process.env.FIREBASE_APP_ID_ANDROID
+    : process.env.FIREBASE_APP_ID_IOS;
 
   if (!appId) {
     throw new Error(`No Firebase App ID found for platform ${Platform.OS}`);
@@ -21,7 +29,7 @@ const getFirebaseConfig = () => {
 
   return {
     ...config,
-    appId,
+    appId
   };
 };
 

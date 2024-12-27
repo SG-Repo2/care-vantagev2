@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import auth from '@react-native-firebase/auth';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider } from 'react-native-paper';
@@ -13,9 +13,15 @@ LogBox.ignoreLogs([
 ]);
 
 export default function App() {
+  const [authInitialized, setAuthInitialized] = useState(false);
+
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged((user) => {
       try {
+        if (!authInitialized) {
+          setAuthInitialized(true);
+        }
+        
         if (user) {
           console.log('User signed in:', user.uid);
         } else {
@@ -27,7 +33,12 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [authInitialized]);
+
+  // Optional: You could add a loading state while auth initializes
+  if (!authInitialized) {
+    return null; // Or return a loading spinner
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

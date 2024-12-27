@@ -83,10 +83,7 @@ module.exports = {
           projectId: process.env.FIREBASE_PROJECT_ID,
           storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
           messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-          appId: Platform.select({
-            ios: process.env.FIREBASE_APP_ID_IOS,
-            android: process.env.FIREBASE_APP_ID_ANDROID
-          }),
+          appId: process.env.FIREBASE_APP_ID_IOS, // Default to iOS, will be overridden for Android
         },
       eas: {
         projectId: process.env.EAS_PROJECT_ID
