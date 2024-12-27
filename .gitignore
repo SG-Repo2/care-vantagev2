@@ -47,6 +47,9 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Firebase Config
+ios/GoogleService-Info.plist
+android/app/google-services.json
 # Native
 *.orig.*
 *.jks
