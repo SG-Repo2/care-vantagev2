@@ -2,7 +2,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Avatar, useTheme, HelperText } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
-import AuthService, { User } from '../../../services/authService';
+import { useAuth } from '../../../context/AuthContext';
+import { User } from '../../../services/authService';
 
 type RootStackParamList = {
   Profile: undefined;
@@ -16,33 +17,24 @@ type ProfileScreenProps = {
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const paperTheme = useTheme();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, signOut, isLoading } = useAuth();
   const [displayName, setDisplayName] = useState('');
-  const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updateLoading, setUpdateLoading] = useState(false);
 
   useEffect(() => {
-    const loadUser = async () => {
-      const currentUser = await AuthService.getCurrentUser();
-      setUser(currentUser);
-      setDisplayName(currentUser?.displayName || '');
-    };
-    loadUser();
-  }, []);
+    setDisplayName(user?.name || '');
+  }, [user]);
 
   const handleLogout = useCallback(async () => {
     try {
-      setLoading(true);
-      await AuthService.logout();
-      navigation.replace('Login');
+      await signOut();
     } catch (err) {
       console.error('[ProfileScreen] Logout error:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-    } finally {
-      setLoading(false);
     }
-  }, [navigation]);
+  }, [signOut]);
 
   const handleProfileUpdate = useCallback(async () => {
     if (!displayName.trim()) {
@@ -51,7 +43,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
     
     try {
-      setLoading(true);
+      setUpdateLoading(true);
       setError(null);
       // TODO: Implement profile update
       setEditMode(false);
@@ -59,7 +51,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       console.error('[ProfileScreen] Profile update error:', err);
       setError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
-      setLoading(false);
+      setUpdateLoading(false);
     }
   }, [displayName]);
 
@@ -81,7 +73,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 value={displayName}
                 onChangeText={setDisplayName}
                 mode="outlined"
-                disabled={loading}
+                disabled={updateLoading}
                 error={!!error}
               />
               {error && <HelperText type="error">{error}</HelperText>}
@@ -89,8 +81,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 <Button
                   mode="contained"
                   onPress={handleProfileUpdate}
-                  loading={loading}
-                  disabled={loading}
+                  loading={updateLoading}
+                  disabled={updateLoading}
                   style={styles.button}
                 >
                   Save
@@ -99,10 +91,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                   mode="outlined"
                   onPress={() => {
                     setEditMode(false);
-                    setDisplayName(user?.displayName || '');
+                    setDisplayName(user?.name || '');
                     setError(null);
                   }}
-                  disabled={loading}
+                  disabled={updateLoading}
                   style={styles.button}
                 >
                   Cancel
@@ -113,7 +105,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             <>
               <TextInput
                 label="Display Name"
-                value={user?.displayName || ''}
+                value={user?.name || ''}
                 disabled
                 mode="outlined"
               />
@@ -134,8 +126,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 <Button
                   mode="outlined"
                   onPress={handleLogout}
-                  loading={loading}
-                  disabled={loading}
+                  loading={isLoading}
+                  disabled={isLoading}
                   style={styles.button}
                 >
                   Logout
