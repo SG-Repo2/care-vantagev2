@@ -13,10 +13,13 @@ export interface User {
   photoUrl?: string;
 }
 
+type AuthStateListener = (user: User | null) => void;
+
 class AuthService {
   private static instance: AuthService;
   private googleConfig = Constants.expoConfig?.extra?.googleAuth;
   private currentUser: User | null = null;
+  private listeners: Set<AuthStateListener> = new Set();
 
   private constructor() {}
 
@@ -57,8 +60,7 @@ class AuthService {
   }
 
   public async logout(): Promise<void> {
-    await StorageService.clearAll();
-    this.currentUser = null;
+    await this.setCurrentUser(null);
   }
 
   public async getCurrentUser(): Promise<User | null> {
@@ -72,9 +74,26 @@ class AuthService {
     return null;
   }
 
-  private async setCurrentUser(user: User): Promise<void> {
+  public addAuthStateListener(listener: AuthStateListener): () => void {
+    this.listeners.add(listener);
+    // Return cleanup function
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private async setCurrentUser(user: User | null): Promise<void> {
     this.currentUser = user;
-    await StorageService.setUserData(user);
+    if (user) {
+      await StorageService.setUserData(user);
+    } else {
+      await StorageService.clearAll();
+    }
+    this.notifyListeners();
+  }
+
+  private notifyListeners(): void {
+    this.listeners.forEach(listener => listener(this.currentUser));
   }
 
   private async getUserInfo(accessToken: string): Promise<User> {

@@ -81,7 +81,7 @@ module.exports = {
         iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
       }
     },
-    scheme: ['carevantage', 'exp+care-vantage'],
+    scheme: 'carevantage',
     developmentClient: {
       silentLaunch: true
     }

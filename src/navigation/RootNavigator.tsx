@@ -21,19 +21,30 @@ export const RootNavigator = () => {
   const { theme } = useApp();
 
   useEffect(() => {
-    checkAuthStatus();
-  }, []);
+    const checkInitialAuthStatus = async () => {
+      try {
+        const user = await AuthService.getCurrentUser();
+        setIsAuthenticated(!!user);
+      } catch (error) {
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const checkAuthStatus = async () => {
-    try {
-      const user = await AuthService.getCurrentUser();
+    // Check initial auth status
+    checkInitialAuthStatus();
+
+    // Set up auth state listener
+    const unsubscribe = AuthService.addAuthStateListener((user) => {
       setIsAuthenticated(!!user);
-    } catch (error) {
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    });
+
+    // Cleanup listener on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   if (isLoading) {
     return <LoadingScreen />;

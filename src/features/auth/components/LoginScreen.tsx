@@ -18,8 +18,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [request, response, promptAsync] = AuthService.useGoogleAuth();
 
   const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+    
     try {
       await AuthService.login(email, password);
     } catch (err) {
@@ -30,13 +36,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   };
 
   const handleGoogleSignIn = async () => {
+    setError(null);
+    setIsLoading(true);
+    
     try {
       const response = await promptAsync();
       if (response?.type === 'success' && response.authentication) {
         await AuthService.signInWithGoogle(response.authentication.accessToken);
+      } else if (response?.type === 'cancel') {
+        // User cancelled the login flow
+        setError(null);
+      } else {
+        setError('Google sign-in failed');
       }
     } catch (err) {
-      setError('Google sign-in failed');
+      console.error('Google sign-in error:', err);
+      setError('Google sign-in failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -47,7 +64,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       <TextInput
         label="Email"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(text) => {
+          setEmail(text);
+          setError(null);
+        }}
         mode="outlined"
         style={styles.input}
         autoCapitalize="none"
@@ -58,7 +78,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       <TextInput
         label="Password"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(text) => {
+          setPassword(text);
+          setError(null);
+        }}
         mode="outlined"
         style={styles.input}
         secureTextEntry
