@@ -1,8 +1,15 @@
 import { registerRootComponent } from 'expo';
 import { Platform } from 'react-native';
 import RNHealthKit from 'react-native-health';
-
+import { initializeFirebase } from './src/config/firebase';
 import App from './App';
+
+// Initialize Firebase first
+try {
+  initializeFirebase();
+} catch (error) {
+  console.error('Failed to initialize Firebase:', error);
+}
 
 // Initialize HealthKit if on iOS
 if (Platform.OS === 'ios') {

@@ -7,7 +7,7 @@ export class GoogleAuthService {
   private constructor() {
     // Initialize Google Sign-In
     GoogleSignin.configure({
-      webClientId: '1071113185455-mpdsi13fffb3o4sqhe64b8vtpiuutrqs.apps.googleusercontent.com', // web client ID from google-services.json
+      webClientId: process.env.GOOGLE_WEB_CLIENT_ID, // web client ID from environment variable
     });
   }
 
