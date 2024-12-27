@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { useTheme, TextInput, Button, Text } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../../navigation/types';
-import AuthService from '../../../services/authService';
+import { useAuth } from '../../../context/AuthContext';
 
 type LoginScreenProps = {
   navigation: StackNavigationProp<AuthStackParamList, 'Login'>;
@@ -12,50 +12,31 @@ type LoginScreenProps = {
 export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const theme = useTheme();
-  const [request, response, promptAsync] = AuthService.useGoogleAuth();
+  const { signInWithGoogle, error: authError, isLoading } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError('Please enter both email and password');
+      setLocalError('Please enter both email and password');
       return;
     }
-
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      await AuthService.login(email, password);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
-    } finally {
-      setIsLoading(false);
-    }
+    setLocalError(null);
+    // Email/password login not implemented in this version
+    setLocalError('Email/password login is not available. Please use Google Sign-In.');
   };
 
   const handleGoogleSignIn = async () => {
-    setError(null);
-    setIsLoading(true);
-    
+    setLocalError(null);
     try {
-      const response = await promptAsync();
-      if (response?.type === 'success' && response.authentication) {
-        await AuthService.signInWithGoogle(response.authentication.accessToken);
-      } else if (response?.type === 'cancel') {
-        // User cancelled the login flow
-        setError(null);
-      } else {
-        setError('Google sign-in failed');
-      }
+      await signInWithGoogle();
     } catch (err) {
       console.error('Google sign-in error:', err);
-      setError('Google sign-in failed. Please try again.');
-    } finally {
-      setIsLoading(false);
+      setLocalError('Failed to sign in with Google. Please try again.');
     }
   };
+
+  const error = localError || authError;
 
   return (
     <View style={styles.container}>
@@ -66,7 +47,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         value={email}
         onChangeText={(text) => {
           setEmail(text);
-          setError(null);
+          setLocalError(null);
         }}
         mode="outlined"
         style={styles.input}
@@ -80,7 +61,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         value={password}
         onChangeText={(text) => {
           setPassword(text);
-          setError(null);
+          setLocalError(null);
         }}
         mode="outlined"
         style={styles.input}

@@ -1,50 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Surface, ActivityIndicator } from 'react-native-paper';
 import { useApp } from '../context/AppContext';
-import { AuthStack } from './AuthStack';
+import { useAuth } from '../context/AuthContext';
 import { AppStack } from './AppStack';
-import AuthService from '../services/authService';
+import { AuthStack } from './AuthStack';
+import { ActivityIndicator, View } from 'react-native';
+
+// Inline LoadingScreen component until we create a separate one
+const LoadingScreen = () => {
+  const { theme } = useApp();
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+    </View>
+  );
+};
 
 const Stack = createNativeStackNavigator();
 
-const LoadingScreen = () => (
-  <Surface style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <ActivityIndicator size="large" />
-  </Surface>
-);
-
 export const RootNavigator = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState(true);
   const { theme } = useApp();
-
-  useEffect(() => {
-    const checkInitialAuthStatus = async () => {
-      try {
-        const user = await AuthService.getCurrentUser();
-        setIsAuthenticated(!!user);
-      } catch (error) {
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Check initial auth status
-    checkInitialAuthStatus();
-
-    // Set up auth state listener
-    const unsubscribe = AuthService.addAuthStateListener((user) => {
-      setIsAuthenticated(!!user);
-    });
-
-    // Cleanup listener on unmount
-    return () => {
-      unsubscribe();
-    };
-  }, []);
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -53,7 +30,7 @@ export const RootNavigator = () => {
   return (
     <NavigationContainer theme={theme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
+        {user ? (
           <Stack.Screen name="App" component={AppStack} />
         ) : (
           <Stack.Screen name="Auth" component={AuthStack} />
