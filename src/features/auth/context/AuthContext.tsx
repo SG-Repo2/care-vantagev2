@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import auth from '@react-native-firebase/auth';
+import GoogleAuthService from '../services/GoogleAuthService';
 
 type User = {
   id: string;
@@ -32,14 +34,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   useEffect(() => {
-    loadUser();
-  }, []);
-
-  const loadUser = async () => {
-    try {
-      const userData = await AsyncStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
+    const unsubscribe = auth().onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        const user = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          displayName: firebaseUser.displayName || '',
+        };
+        await AsyncStorage.setItem('user', JSON.stringify(user));
         setState(prev => ({
           ...prev,
           isAuthenticated: true,
@@ -47,18 +49,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isLoading: false,
         }));
       } else {
-        setState(prev => ({ ...prev, isLoading: false }));
+        await AsyncStorage.removeItem('user');
+        setState(prev => ({
+          ...prev,
+          isAuthenticated: false,
+          user: null,
+          isLoading: false,
+        }));
       }
-    } catch (error) {
-      setState(prev => ({ ...prev, isLoading: false, error: 'Failed to load user data' }));
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const login = async (email: string, password: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      // TODO: Replace with actual authentication
-      const user = { id: 'temp_id', email };
+      const userCredential = await auth().signInWithEmailAndPassword(email, password);
+      const user = {
+        id: userCredential.user.uid,
+        email: userCredential.user.email || '',
+        displayName: userCredential.user.displayName || '',
+      };
       await AsyncStorage.setItem('user', JSON.stringify(user));
       setState(prev => ({
         ...prev,
@@ -66,20 +78,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isLoading: false,
       }));
-    } catch (error) {
+    } catch (error: any) {
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: 'Login failed',
+        error: error.message || 'Login failed',
       }));
+      throw error;
     }
   };
 
   const register = async (email: string, password: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      // TODO: Replace with actual registration
-      const user = { id: 'temp_id', email };
+      const userCredential = await auth().createUserWithEmailAndPassword(email, password);
+      const user = {
+        id: userCredential.user.uid,
+        email: userCredential.user.email || '',
+        displayName: userCredential.user.displayName || '',
+      };
       await AsyncStorage.setItem('user', JSON.stringify(user));
       setState(prev => ({
         ...prev,
@@ -87,43 +104,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isLoading: false,
       }));
-    } catch (error) {
+    } catch (error: any) {
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: 'Registration failed',
+        error: error.message || 'Registration failed',
       }));
+      throw error;
     }
   };
 
   const signInWithGoogle = async () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      // TODO: Implement Google Sign-In logic here
-      const mockUser = {
-        id: 'google-mock-id',
-        email: 'google.user@example.com',
-        displayName: 'Google User',
-      };
-      await AsyncStorage.setItem('user', JSON.stringify(mockUser));
+      const user = await GoogleAuthService.signIn();
+      await AsyncStorage.setItem('user', JSON.stringify(user));
       setState(prev => ({
         ...prev,
         isAuthenticated: true,
-        user: mockUser,
+        user,
         isLoading: false,
       }));
-    } catch (error) {
+    } catch (error: any) {
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Google Sign-In failed',
+        error: error.message || 'Google Sign-In failed',
         isLoading: false,
       }));
+      throw error;
     }
   };
 
   const logout = async () => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
+      await GoogleAuthService.signOut();
       await AsyncStorage.removeItem('user');
       setState({
         isAuthenticated: false,
@@ -131,12 +146,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading: false,
         error: null,
       });
-    } catch (error) {
+    } catch (error: any) {
       setState(prev => ({
         ...prev,
-        error: 'Logout failed',
+        error: error.message || 'Logout failed',
         isLoading: false,
       }));
+      throw error;
     }
   };
 
