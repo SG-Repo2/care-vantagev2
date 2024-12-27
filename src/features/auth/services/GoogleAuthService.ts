@@ -1,14 +1,21 @@
 import auth from '@react-native-firebase/auth';
 import { GoogleSignin, User } from '@react-native-google-signin/google-signin';
+import { Platform } from 'react-native';
 
 export class GoogleAuthService {
   private static instance: GoogleAuthService;
 
   private constructor() {
     // Initialize Google Sign-In
-    GoogleSignin.configure({
-      webClientId: process.env.GOOGLE_WEB_CLIENT_ID, // web client ID from environment variable
-    });
+    if (Platform.OS === 'ios') {
+      // On iOS, we don't need to explicitly provide the client IDs as they are read from GoogleService-Info.plist
+      GoogleSignin.configure({});
+    } else {
+      // On Android, we need the web client ID
+      GoogleSignin.configure({
+        webClientId: '1071113185455-mpdsi13fffb3o4sqhe64b8vtpiutrqs.apps.googleusercontent.com',
+      });
+    }
   }
 
   public static getInstance(): GoogleAuthService {
