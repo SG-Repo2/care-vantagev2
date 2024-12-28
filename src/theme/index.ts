@@ -1,5 +1,35 @@
 import { MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import { MD3Colors } from 'react-native-paper/lib/typescript/types';
+import { Theme as NavigationTheme } from '@react-navigation/native';
+import { MD3Theme } from 'react-native-paper/lib/typescript/types';
+
+export interface ExtendedTheme extends MD3Theme, NavigationTheme {
+  colors: MD3Colors & {
+    card: string;
+    text: string;
+    border: string;
+    notification: string;
+    shadow: string;
+    textSecondary: string;
+  };
+  textVariants: {
+    body: {
+      fontSize: number;
+      lineHeight: number;
+    };
+    caption: {
+      fontSize: number;
+      lineHeight: number;
+    };
+  };
+  metrics: {
+    steps: string;
+    distance: string;
+    score: string;
+    calories: string;
+    sleep: string;
+  };
+}
 
 // Custom colors for metrics
 const metricColors = {
@@ -50,44 +80,71 @@ export const darkColors: MD3Colors = {
   onErrorContainer: '#FFE5E5',
 };
 
+const textVariants = {
+  body: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  caption: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+};
+
 export const lightTheme = {
   ...MD3LightTheme,
-  colors: lightColors,
+  colors: {
+    ...lightColors,
+    shadow: '#000000',
+    textSecondary: '#666666',
+  },
   metrics: metricColors,
+  textVariants,
 };
 
 export const darkTheme = {
   ...MD3DarkTheme,
-  colors: darkColors,
+  colors: {
+    ...darkColors,
+    shadow: '#000000',
+    textSecondary: '#999999',
+  },
   metrics: metricColors,
+  textVariants,
 };
 
 // Create a custom theme that combines MD3Theme and NavigationTheme
-export const customLightTheme = {
-  ...MD3LightTheme,
+export const customLightTheme: ExtendedTheme = {
+  ...lightTheme,
   colors: {
     ...lightColors,
-    // Add required navigation theme colors
     card: lightColors.surface,
     text: lightColors.onSurface,
     border: lightColors.outline,
     notification: lightColors.error,
+    shadow: '#000000',
+    textSecondary: '#666666',
   },
+  textVariants,
+  metrics: metricColors,
 };
 
-export const customDarkTheme = {
-  ...MD3DarkTheme,
+export const customDarkTheme: ExtendedTheme = {
+  ...darkTheme,
   colors: {
     ...darkColors,
-    // Add required navigation theme colors
     card: darkColors.surface,
     text: darkColors.onSurface,
     border: darkColors.outline,
     notification: darkColors.error,
+    shadow: '#000000',
+    textSecondary: '#999999',
   },
+  textVariants,
+  metrics: metricColors,
 };
 
-export type AppTheme = typeof customLightTheme;
+export type AppTheme = ExtendedTheme;
 export type MetricColorKey = keyof typeof metricColors;
 
 // Helper function to get metric color

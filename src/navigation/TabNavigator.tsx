@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useTheme } from 'react-native-paper';
+import { useTheme } from '@react-navigation/native';
+import { ExtendedTheme } from '../theme';
 import { HomeScreen } from '../features/home/components/HomeScreen';
 import { LeaderboardScreen } from '../features/leaderboard/components/LeaderboardScreen';
 import { ProfileScreen } from '../features/profile/components/ProfileScreen';
@@ -8,7 +9,7 @@ import { ProfileScreen } from '../features/profile/components/ProfileScreen';
 const Tab = createBottomTabNavigator();
 
 export const TabNavigator = () => {
-  const theme = useTheme();
+  const theme = useTheme() as unknown as ExtendedTheme;
 
   return (
     <Tab.Navigator

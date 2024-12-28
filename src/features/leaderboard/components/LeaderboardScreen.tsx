@@ -1,120 +1,133 @@
-import React from 'react';
-import { View, ScrollView } from 'react-native';
-import { Surface, Text, useTheme, Avatar, Divider, IconButton } from 'react-native-paper';
-import { formatScore } from '../../../core/utils/formatting';
-import { DUMMY_DATA, LeaderboardItemProps, ExtendedTheme } from '../types/leaderboard';
-import { useStyles } from '../styles/LeaderboardScreen.styles';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+  ListRenderItem,
+} from 'react-native';
+import { useApp } from '../../../context/AppContext';
+import useHealthData from '../../health/hooks/useHealthData';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { createStyles } from '../styles/LeaderboardScreen.styles';
+import { generateMockLeaderboardData } from '../data/mockData';
+import { LeaderboardEntry } from '../types/leaderboard';
+import { ExtendedTheme } from '../../../theme';
 
-const LeaderboardItem: React.FC<LeaderboardItemProps> = ({ entry, isUser }) => {
-  const theme = useTheme<ExtendedTheme>();
-  const styles = useStyles();
-  const [expanded, setExpanded] = React.useState(false);
+const LeaderboardItem: React.FC<{
+  item: LeaderboardEntry;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  theme: ExtendedTheme;
+  styles: ReturnType<typeof createStyles>;
+}> = ({ item, isExpanded, onToggleExpand, theme, styles }) => {
+  const isUser = item.name === 'You';
 
-  // Add null check for entry
-  if (!entry) {
-    return null;
-  }
-  
   return (
-    <Surface 
-      style={[
-        styles.itemContainer, 
-        isUser && { backgroundColor: theme.colors.primaryContainer }
-      ]}
-    >
-      <View style={styles.mainContent}>
-        <View style={styles.rankContainer}>
-          <Text style={[styles.rank, { color: theme.colors.primary }]}>{entry.rank}</Text>
-        </View>
+    <View style={[styles.entryContainer, isUser && styles.userEntryContainer]}>
+      <View style={styles.headerRow}>
         <View style={styles.userInfo}>
-          {entry.avatarUrl ? (
-            <Avatar.Image 
-              size={40} 
-              source={{ uri: entry.avatarUrl }} 
-            />
-          ) : (
-            <Avatar.Text
-              size={40}
-              label={entry.name.charAt(0)}
-              color={theme.colors.onPrimary}
-              style={{ backgroundColor: theme.colors.primary }}
-            />
-          )}
-          <Text style={[styles.name, { marginLeft: 12, color: theme.colors.onSurface }]}>
-            {entry.name}
-          </Text>
+          <View style={styles.rankContainer}>
+            <Text style={styles.rankText}>{item.rank}</Text>
+          </View>
+          <Image
+            source={{ uri: item.avatarUrl }}
+            style={styles.avatar}
+            defaultSource={require('../../../../assets/favicon.png')}
+          />
+          <Text style={styles.nameText}>{item.name}</Text>
         </View>
         <View style={styles.scoreContainer}>
-          <Text style={[styles.score, { color: theme.metrics.score }]}>
-            {formatScore(entry.score.overall)}
-          </Text>
-          <IconButton
-            icon={expanded ? 'chevron-up' : 'chevron-down'}
-            size={24}
-            onPress={() => setExpanded(!expanded)}
-            iconColor={theme.colors.primary}
-          />
+          <Text style={styles.scoreText}>{item.score.overall}</Text>
         </View>
+        <TouchableOpacity style={styles.expandButton} onPress={onToggleExpand}>
+          <MaterialCommunityIcons
+            name={isExpanded ? 'chevron-up' : 'chevron-down'}
+            size={24}
+            color={theme.colors.primary}
+          />
+        </TouchableOpacity>
       </View>
-      
-      {expanded && (
+
+      {isExpanded && (
         <View style={styles.detailsContainer}>
           <View style={styles.metricRow}>
-            <Text style={[styles.metricLabel, { color: theme.colors.onSurfaceVariant }]}>
-              Steps
-            </Text>
-            <Text style={[styles.metricValue, { color: theme.metrics.steps }]}>
-              {entry.metrics.steps.toLocaleString()} ({entry.score.categories.steps}pts)
+            <Text style={styles.metricLabel}>Steps</Text>
+            <Text style={styles.metricValue}>{item.metrics.steps.toLocaleString()}</Text>
+          </View>
+          <View style={styles.metricRow}>
+            <Text style={styles.metricLabel}>Distance (km)</Text>
+            <Text style={styles.metricValue}>{item.metrics.distance.toFixed(1)}</Text>
+          </View>
+          <View style={styles.metricRow}>
+            <Text style={styles.metricLabel}>Category Scores</Text>
+            <Text style={styles.metricValue}>
+              Steps: {item.score.categories.steps} | Distance: {item.score.categories.distance}
             </Text>
           </View>
           <View style={styles.metricRow}>
-            <Text style={[styles.metricLabel, { color: theme.colors.onSurfaceVariant }]}>
-              Distance
-            </Text>
-            <Text style={[styles.metricValue, { color: theme.metrics.distance }]}>
-              {entry.metrics.distance.toFixed(1)}km ({entry.score.categories.distance}pts)
-            </Text>
-          </View>
-          <View style={styles.metricRow}>
-            <Text style={[styles.metricLabel, { color: theme.colors.onSurfaceVariant }]}>
-              Bonus Points
-            </Text>
-            <Text style={[styles.metricValue, { color: theme.colors.secondary }]}>
-              +{entry.score.bonusPoints}
-            </Text>
+            <Text style={styles.metricLabel}>Bonus Points</Text>
+            <Text style={styles.metricValue}>{item.score.bonusPoints}</Text>
           </View>
         </View>
       )}
-    </Surface>
+    </View>
   );
 };
 
 export const LeaderboardScreen: React.FC = () => {
-  const theme = useTheme<ExtendedTheme>();
-  const styles = useStyles();
+  const { theme } = useApp();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isLoading] = useState(false);
+  const [error] = useState<string | null>(null);
+
+  // Get user's actual score from health data
+  const { metrics } = useHealthData('test_user_1');
+  
+  // Generate mock data with user's actual score
+  const leaderboardData = useMemo(() => 
+    generateMockLeaderboardData(metrics?.score || 85), 
+    [metrics?.score]
+  );
+
+  const renderItem: ListRenderItem<LeaderboardEntry> = ({ item }) => (
+    <LeaderboardItem
+      item={item}
+      isExpanded={expandedId === item.id}
+      onToggleExpand={() => setExpandedId(expandedId === item.id ? null : item.id)}
+      theme={theme}
+      styles={styles}
+    />
+  );
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Surface style={[styles.headerContainer, { backgroundColor: theme.colors.surface }]}>
-        <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onSurface }]}>
-          Leaderboard
-        </Text>
-        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-          Top Health Champions
-        </Text>
-      </Surface>
-      
-      <ScrollView style={styles.scrollView}>
-        {(DUMMY_DATA || []).map((entry) => entry && (
-          <React.Fragment key={entry.id}>
-            <LeaderboardItem
-              entry={entry}
-              isUser={entry.name === 'You'}
-            />
-            <Divider />
-          </React.Fragment>
-        ))}
-      </ScrollView>
+    <View style={styles.container}>
+      <FlatList
+        data={leaderboardData}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 };
