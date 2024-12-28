@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Modal, View, Animated, Share, Platform } from 'react-native';
-import { styles } from './GoalCelebration.styles';
+import { styles } from '../styles/GoalCelebration.styles';
 import { Surface, Text, useTheme, Button } from 'react-native-paper';
 import { FontAwesome } from '@expo/vector-icons';
 interface GoalCelebrationProps {
@@ -61,6 +61,9 @@ const GoalCelebration: React.FC<GoalCelebrationProps> = ({
             break;
           case 'instagram':
             shareUrl = 'https://instagram.com';
+            break;
+          case 'whatsapp':
+            shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)} ${encodeURIComponent(url)}`;
             break;
         }
         window.open(shareUrl, '_blank');
@@ -206,6 +209,19 @@ const GoalCelebration: React.FC<GoalCelebrationProps> = ({
                 icon={() => (
                   <View style={{ width: '100%', alignItems: 'center' }}>
                   <FontAwesome name="instagram" size={30} color="white" />
+                  </View>
+                )}
+                contentStyle={styles.buttonContent}
+              >
+                {''}
+              </Button>
+              <Button
+                mode="contained"
+                onPress={() => handleShare('whatsapp')}
+                style={[styles.shareButton, { backgroundColor: '#25D366' }]}
+                icon={() => (
+                  <View style={{ width: '100%', alignItems: 'center' }}>
+                  <FontAwesome name="whatsapp" size={30} color="white" />
                   </View>
                 )}
                 contentStyle={styles.buttonContent}
