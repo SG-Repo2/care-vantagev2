@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, RefreshControl } from 'react-native';
 import { useTheme, Text, Surface, ActivityIndicator, IconButton } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
@@ -11,6 +11,7 @@ import { MetricModal } from './MetricModal';
 import { HealthMetrics } from '../../health/types/health';
 import { TabParamList } from '../../../navigation/types';
 import { MeasurementSystem } from '../../../core/types/base';
+import GoalCelebration from './GoalCelebration';
 
 // TODO: Replace with actual user profile management
 const MOCK_PROFILE_ID = 'test_user_1';
@@ -42,6 +43,17 @@ export const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = React.useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<ModalData | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [previousSteps, setPreviousSteps] = useState(0);
+
+  useEffect(() => {
+    if (metrics?.steps && metrics.steps >= 10000 && previousSteps < 10000) {
+      setShowCelebration(true);
+    }
+    if (metrics?.steps) {
+      setPreviousSteps(metrics.steps);
+    }
+  }, [metrics?.steps]);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -148,6 +160,12 @@ export const HomeScreen: React.FC = () => {
           />
         )}
       </ScrollView>
+
+      <GoalCelebration 
+        visible={showCelebration}
+        onClose={() => setShowCelebration(false)}
+        bonusPoints={5}
+      />
     </View>
   );
 };
@@ -155,7 +173,6 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  
   },
   content: {
     padding: 16,
