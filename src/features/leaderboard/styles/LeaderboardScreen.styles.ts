@@ -5,7 +5,7 @@ export const createStyles = (theme: ExtendedTheme) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.colors.background,
+      backgroundColor: '#20B2AA', // Seafoam green
     },
     listContainer: {
       paddingHorizontal: 16,
@@ -23,9 +23,8 @@ export const createStyles = (theme: ExtendedTheme) =>
       elevation: 3,
     },
     userEntryContainer: {
-      backgroundColor: theme.colors.secondary + '15', // 15% opacity
-      borderWidth: 1,
-      borderColor: theme.colors.secondary,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
     },
     headerRow: {
       flexDirection: 'row',
@@ -43,7 +42,7 @@ export const createStyles = (theme: ExtendedTheme) =>
     },
     rankText: {
       ...theme.textVariants.body,
-      color: theme.colors.secondary,
+      color: theme.colors.text,
       fontWeight: 'bold',
     },
     userInfo: {
@@ -70,7 +69,7 @@ export const createStyles = (theme: ExtendedTheme) =>
     },
     scoreText: {
       ...theme.textVariants.body,
-      color: theme.colors.secondary,
+      color: theme.colors.text,
       fontWeight: 'bold',
     },
     detailsContainer: {

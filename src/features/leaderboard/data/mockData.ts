@@ -6,6 +6,11 @@ const MOCK_AVATARS = [
   'https://i.pravatar.cc/150?img=28',
   'https://i.pravatar.cc/150?img=15',
   'https://i.pravatar.cc/150?img=56',
+  'https://i.pravatar.cc/150?img=12',
+  'https://i.pravatar.cc/150?img=23',
+  'https://i.pravatar.cc/150?img=35',
+  'https://i.pravatar.cc/150?img=41',
+  'https://i.pravatar.cc/150?img=52',
 ];
 
 const MOCK_NAMES = [
@@ -14,6 +19,11 @@ const MOCK_NAMES = [
   'Emma Wilson',
   'James Rodriguez',
   'Lisa Thompson',
+  'David Park',
+  'Maria Garcia',
+  'Alex Turner',
+  'Rachel Kim',
+  'Omar Hassan',
 ];
 
 export const generateMockLeaderboardData = (userScore: number): LeaderboardEntry[] => {
