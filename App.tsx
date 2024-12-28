@@ -3,6 +3,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider } from 'react-native-paper';
 import { AppProvider } from './src/context/AppContext';
 import { AuthProvider } from './src/context/AuthContext';
+import { UserProvider } from './src/context/UserContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { LogBox } from 'react-native';
 
@@ -17,7 +18,9 @@ export default function App() {
       <PaperProvider>
         <AppProvider>
           <AuthProvider>
-            <RootNavigator />
+            <UserProvider>
+              <RootNavigator />
+            </UserProvider>
           </AuthProvider>
         </AppProvider>
       </PaperProvider>

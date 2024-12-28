@@ -26,12 +26,23 @@ const MOCK_NAMES = [
   'Omar Hassan',
 ];
 
-export const generateMockLeaderboardData = (userScore: number): LeaderboardEntry[] => {
+interface UserData {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  metrics: {
+    steps: number;
+    distance: number;
+  };
+  score: number;
+}
+
+export const generateMockLeaderboardData = (userData: UserData): LeaderboardEntry[] => {
   // Generate mock competitors with varying scores around the user's score
   const baseEntries: LeaderboardEntry[] = MOCK_NAMES.map((name, index) => {
     // Create some variance in scores but keep them relatively close to user's score
     const scoreVariance = Math.random() * 20 - 10; // Random number between -10 and 10
-    const competitorScore = Math.max(0, Math.min(100, userScore + scoreVariance));
+    const competitorScore = Math.max(0, Math.min(100, userData.score + scoreVariance));
     
     return {
       id: `mock-${index + 2}`, // Start from 2 since user will be 1
@@ -53,20 +64,20 @@ export const generateMockLeaderboardData = (userScore: number): LeaderboardEntry
     };
   });
 
-  // Create user entry
+  // Create user entry using actual user data
   const userEntry: LeaderboardEntry = {
-    id: '1',
-    name: 'You',
-    avatarUrl: 'https://i.pravatar.cc/150?img=68',
+    id: userData.id,
+    name: userData.name,
+    avatarUrl: userData.avatarUrl || 'https://i.pravatar.cc/150?img=68', // Fallback avatar
     metrics: {
-      steps: Math.round(userScore * 100),
-      distance: Number((userScore * 0.1).toFixed(1)),
+      steps: userData.metrics.steps,
+      distance: userData.metrics.distance,
     },
     score: {
-      overall: userScore,
+      overall: userData.score,
       categories: {
-        steps: Math.round(userScore * 0.9),
-        distance: Math.round(userScore * 0.95),
+        steps: Math.round(userData.score * 0.9),
+        distance: Math.round(userData.score * 0.95),
       },
       bonusPoints: 5,
     },

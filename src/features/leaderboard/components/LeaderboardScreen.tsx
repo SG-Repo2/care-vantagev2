@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ListRenderItem,
 } from 'react-native';
 import { useApp } from '../../../context/AppContext';
+import { useUser } from '../../../context/UserContext';
 import useHealthData from '../../health/hooks/useHealthData';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createStyles } from '../styles/LeaderboardScreen.styles';
@@ -23,7 +24,8 @@ const LeaderboardItem: React.FC<{
   theme: ExtendedTheme;
   styles: ReturnType<typeof createStyles>;
 }> = ({ item, isExpanded, onToggleExpand, theme, styles }) => {
-  const isUser = item.name === 'You';
+  const { user } = useUser();
+  const isUser = user ? item.id === user.id : false;
 
   return (
     <View style={[styles.entryContainer, isUser && styles.userEntryContainer]}>
@@ -81,17 +83,53 @@ export const LeaderboardScreen: React.FC = () => {
   const { theme } = useApp();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [isLoading] = useState(false);
   const [error] = useState<string | null>(null);
 
-  // Get user's actual score from health data
-  const { metrics } = useHealthData('test_user_1');
-  
-  // Generate mock data with user's actual score
-  const leaderboardData = useMemo(() => 
-    generateMockLeaderboardData(metrics?.score || 85), 
-    [metrics?.score]
-  );
+  const { user, isLoading: isUserLoading } = useUser();
+  const { metrics, loading: isMetricsLoading } = useHealthData(user?.id || '');
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+
+  // Only show loading on initial load
+  const isLoading = !initialLoadComplete && (isUserLoading || isMetricsLoading);
+
+  // Mark initial load as complete after first render
+  useEffect(() => {
+    if (!isUserLoading && !isMetricsLoading) {
+      setInitialLoadComplete(true);
+    }
+  }, [isUserLoading, isMetricsLoading]);
+
+  // Generate mock data with user's actual data if available, otherwise use default data
+  const leaderboardData = useMemo(() => {
+    const defaultUserData = {
+      id: '1',
+      name: 'You',
+      avatarUrl: 'https://i.pravatar.cc/150?img=68',
+      metrics: {
+        steps: 8500,
+        distance: 6.5,
+      },
+      score: 85,
+    };
+
+    if (!user || !metrics) {
+      return generateMockLeaderboardData(defaultUserData);
+    }
+
+    const userData = {
+      id: user.id,
+      name: user.displayName,
+      avatarUrl: user.photoUrl,
+      metrics: {
+        steps: metrics.steps || 0,
+        distance: metrics.distance || 0,
+      },
+      score: metrics.score || 85,
+    };
+
+    return generateMockLeaderboardData(userData);
+  }, [user, metrics]);
+
 
   const renderItem: ListRenderItem<LeaderboardEntry> = ({ item }) => (
     <LeaderboardItem
