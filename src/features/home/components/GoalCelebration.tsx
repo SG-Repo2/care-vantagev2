@@ -98,7 +98,7 @@ const GoalCelebration: React.FC<GoalCelebrationProps> = ({
   return (
     <Modal transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.container}>
-        <View style={styles.backdrop} />
+        <View style={styles.backdrop} onTouchEnd={onClose} />
         <Animated.View
           style={[
             styles.contentContainer,

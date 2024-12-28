@@ -41,86 +41,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     androidClientId: Constants.expoConfig?.extra?.googleAuth?.androidClientId,
     iosClientId: Constants.expoConfig?.extra?.googleAuth?.iosClientId,
     webClientId: Constants.expoConfig?.extra?.googleAuth?.webClientId,
+    clientId: Constants.expoConfig?.extra?.googleAuth?.expoClientId,
+    scopes: ['openid', 'profile', 'email'],
   });
 
-  // Load persisted auth state
+  // For development: Set mock user immediately
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const savedUser = await AsyncStorage.getItem('user');
-        if (savedUser) {
-          setUser(JSON.parse(savedUser));
-        }
-      } catch (err) {
-        console.error('Error loading auth state:', err);
-        setError('Failed to load authentication state');
-      } finally {
-        setIsLoading(false);
-      }
+    const mockUser: User = {
+      id: 'mock-user-id',
+      email: 'mock@example.com',
+      name: 'Mock User',
+      photoUrl: 'https://via.placeholder.com/150',
     };
-
-    loadUser();
+    setUser(mockUser);
+    setIsLoading(false);
   }, []);
 
-  // Handle Google Sign-In response
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { authentication } = response;
-      handleSignInWithGoogle(authentication?.accessToken);
-    }
-  }, [response]);
-
-  // Handle Google Sign-In
-  const handleSignInWithGoogle = async (accessToken: string | undefined) => {
-    if (!accessToken) {
-      setError('Failed to get access token');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Get user info from Google
-      const userInfoResponse = await fetch(
-        'https://www.googleapis.com/userinfo/v2/me',
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
-
-      const userInfo = await userInfoResponse.json();
-
-      if (userInfoResponse.ok) {
-        const user: User = {
-          id: userInfo.id,
-          email: userInfo.email,
-          name: userInfo.name,
-          photoUrl: userInfo.picture,
-        };
-
-        // Persist user data
-        await AsyncStorage.setItem('user', JSON.stringify(user));
-        setUser(user);
-      } else {
-        throw new Error('Failed to get user info from Google');
-      }
-    } catch (err) {
-      console.error('Google sign in error:', err);
-      setError('Failed to sign in with Google');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Mock sign in function for development
   const signInWithGoogle = async () => {
-    try {
-      setError(null);
-      await promptAsync();
-    } catch (err) {
-      console.error('Error initiating Google sign in:', err);
-      setError('Failed to initiate Google sign in');
-    }
+    const mockUser: User = {
+      id: 'mock-user-id',
+      email: 'mock@example.com',
+      name: 'Mock User',
+      photoUrl: 'https://via.placeholder.com/150',
+    };
+    setUser(mockUser);
   };
 
   const signOut = async () => {
