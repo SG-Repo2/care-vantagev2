@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, RefreshControl } from 'react-native';
+import { View, ScrollView, RefreshControl } from 'react-native';
 import { useTheme, Text, Surface, ActivityIndicator, IconButton } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import { HealthMetrics, WeeklyMetrics } from '../../health/types/health';
 import { TabParamList } from '../../../navigation/types';
 import { MeasurementSystem } from '../../../core/types/base';
 import GoalCelebration from './GoalCelebration';
+import { useStyles } from '../styles/HomeScreen.styles';
 
 // TODO: Replace with actual user profile management
 const MOCK_PROFILE_ID = 'test_user_1';
@@ -39,6 +40,7 @@ type NavigationProp = NativeStackNavigationProp<TabParamList, 'Home'>;
 
 export const HomeScreen: React.FC = () => {
   const theme = useTheme();
+  const styles = useStyles();
   const navigation = useNavigation<NavigationProp>();
   const { metrics, loading, error, refresh } = useHealthData(MOCK_PROFILE_ID);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -171,47 +173,3 @@ export const HomeScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    marginBottom: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  title: {
-    fontWeight: 'bold',
-  },
-  leaderboardButton: {
-    margin: 0,
-  },
-  metricsContainer: {
-    width: '100%',
-    alignItems: 'stretch',
-    gap: 16,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

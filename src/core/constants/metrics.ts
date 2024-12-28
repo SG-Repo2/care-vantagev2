@@ -13,13 +13,11 @@ export const HEALTH_METRICS = {
   }
 };
 
-// Helper function to get the start of the current week
+// Helper function to get the date 6 days ago
 export const getCurrentWeekStart = (): Date => {
   const today = new Date();
-  const dayOfWeek = today.getDay();
-  const diff = dayOfWeek - HEALTH_METRICS.STEPS.START_OF_WEEK;
   const startDate = new Date(today);
-  startDate.setDate(today.getDate() - (diff >= 0 ? diff : diff + 7));
+  startDate.setDate(today.getDate() - 6);
   startDate.setHours(0, 0, 0, 0);
   return startDate;
 };

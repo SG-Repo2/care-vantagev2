@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Modal, View, Animated, Share, Platform } from 'react-native';
-import { styles } from '../styles/GoalCelebration.styles';
+import { useStyles } from '../styles/GoalCelebration.styles';
 import { Surface, Text, useTheme, Button } from 'react-native-paper';
 import { FontAwesome } from '@expo/vector-icons';
 interface GoalCelebrationProps {
@@ -14,6 +14,7 @@ const GoalCelebration: React.FC<GoalCelebrationProps> = ({
   onClose,
   bonusPoints,
 }) => {
+  const styles = useStyles();
   const theme = useTheme();
   const scale = new Animated.Value(0.5);
   const opacity = new Animated.Value(0);

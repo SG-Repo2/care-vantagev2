@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
-import { Modal, Portal, Text, IconButton, Surface, useTheme } from 'react-native-paper';
+import { Modal, Portal, Text, IconButton, Surface, useTheme, MD3Theme } from 'react-native-paper';
 import { LineChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,13 +21,16 @@ interface MetricModalProps {
 }
 
 const formatDateLabel = (date: Date): string => {
-  return date.toLocaleDateString('en-US', { weekday: 'short' });
+  const today = new Date();
+  const isToday = date.toDateString() === today.toDateString();
+  return isToday ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' });
 };
 
 const generateWeekLabels = (startDate: Date): string[] => {
   const labels: string[] = [];
   const currentDate = new Date(startDate);
   
+  // Generate labels for the past 6 days plus today
   for (let i = 0; i < 7; i++) {
     labels.push(formatDateLabel(currentDate));
     currentDate.setDate(currentDate.getDate() + 1);
@@ -47,12 +50,52 @@ export const MetricModal: React.FC<MetricModalProps> = ({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
+  const styles = StyleSheet.create({
+    modalContainer: {
+      margin: 0,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+      padding: 24,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      borderWidth: 2,
+      borderColor: theme.colors.secondary,
+    },
+    closeButton: {
+      position: 'absolute',
+      right: 8,
+      top: 8,
+    },
+    modalTitle: {
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    modalValue: {
+      marginBottom: 16,
+    },
+    chartContainer: {
+      alignItems: 'center',
+      marginVertical: 16,
+    },
+    additionalInfoContainer: {
+      marginTop: 16,
+      gap: 12,
+    },
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+  });
+
   const chartConfig = {
     backgroundColor: theme.colors.surface,
-    backgroundGradientFrom: theme.colors.surface,
+    backgroundGradientFrom: theme.colors.primaryContainer,
     backgroundGradientTo: theme.colors.surface,
     decimalPlaces: 0,
-    color: (opacity = 1) => theme.colors.primary,
+    color: (opacity = 1) => `rgba(32, 178, 170, ${opacity})`, // Light sea green
     labelColor: (opacity = 1) => theme.colors.onSurface,
     style: {
       borderRadius: 16,
@@ -60,7 +103,8 @@ export const MetricModal: React.FC<MetricModalProps> = ({
     propsForDots: {
       r: '6',
       strokeWidth: '2',
-      stroke: theme.colors.primary,
+      stroke: '#20B2AA', // Light sea green
+      fill: theme.colors.surface,
     },
   };
 
@@ -128,40 +172,3 @@ export const MetricModal: React.FC<MetricModalProps> = ({
     </Portal>
   );
 };
-
-const styles = StyleSheet.create({
-  modalContainer: {
-    margin: 0,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    padding: 24,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-  },
-  closeButton: {
-    position: 'absolute',
-    right: 8,
-    top: 8,
-  },
-  modalTitle: {
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  modalValue: {
-    marginBottom: 16,
-  },
-  chartContainer: {
-    alignItems: 'center',
-    marginVertical: 16,
-  },
-  additionalInfoContainer: {
-    marginTop: 16,
-    gap: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-});

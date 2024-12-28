@@ -26,6 +26,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 }) => {
   const theme = useTheme();
   const metricColor = getMetricColor(metricType);
+  const surfaceColor = theme.colors.surface;
+  const borderColor = theme.colors.secondary;
+  const borderWidth = 2;
   
   const handlePress = () => {
     if (onPress) {
@@ -60,11 +63,12 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       style={[
         styles.container,
         {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.surfaceVariant,
+          backgroundColor: surfaceColor,
+          borderColor: borderColor,
+          shadowColor: metricColor,
         },
       ]}
-      elevation={1}
+      elevation={2}
     >
       <View style={styles.innerContainer}>
         <TouchableRipple
@@ -84,9 +88,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     margin: 8,
-    borderRadius: 12,
+    borderRadius: 16,
     minHeight: 120,
-    borderWidth: 1,
+    borderWidth: 2,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   innerContainer: {
     flex: 1,

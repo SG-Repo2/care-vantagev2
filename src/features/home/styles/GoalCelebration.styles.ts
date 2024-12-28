@@ -1,18 +1,20 @@
 import { StyleSheet } from 'react-native';
+import { MD3Theme, useTheme } from 'react-native-paper';
 
-export const styles = StyleSheet.create({
+const createStyles = (theme: MD3Theme) => StyleSheet.create({
     sharePrompt: {
         marginTop: 16,
         marginBottom: 8,
         textAlign: 'center',
+        color: theme.colors.onSurface,
     },
     shareButtonsContainer: {
         flexDirection: 'row',
-        justifyContent: 'center', // Changed back to center for better centering
+        justifyContent: 'center',
         alignItems: 'center',
         marginTop: 24,
         width: '100%',
-        gap: 16, // Added gap for even spacing between buttons
+        gap: 16,
     },
     shareButton: {
         width: 60,
@@ -20,11 +22,12 @@ export const styles = StyleSheet.create({
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        alignSelf: 'center', // Added for better centering
+        alignSelf: 'center',
+        backgroundColor: theme.colors.primaryContainer,
     },
     buttonContent: {
-        height: '100%', // Changed to percentage
-        width: '100%', // Changed to percentage
+        height: '100%',
+        width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row',
@@ -37,7 +40,7 @@ export const styles = StyleSheet.create({
     },
     backdrop: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     contentContainer: {
         width: '80%',
@@ -50,6 +53,9 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         elevation: 4,
         width: '100%',
+        backgroundColor: theme.colors.surface,
+        borderColor: theme.colors.surfaceVariant,
+        borderWidth: 1,
     },
     starsContainer: {
         flexDirection: 'row',
@@ -63,23 +69,33 @@ export const styles = StyleSheet.create({
         fontWeight: 'bold',
         textAlign: 'center',
         marginBottom: 8,
+        color: theme.colors.onSurface,
     },
     subtitle: {
         textAlign: 'center',
         marginBottom: 16,
+        color: theme.colors.onSurfaceVariant,
     },
     points: {
         fontWeight: 'bold',
         textAlign: 'center',
+        color: theme.colors.primary,
     },
     star: {
         width: 32,
         height: 32,
         justifyContent: 'center',
         alignItems: 'center',
+        color: theme.colors.primary,
     },
     starIcon: {
         fontSize: 32,
         lineHeight: 32,
+        color: theme.colors.primary,
     },
 });
+
+export const useStyles = () => {
+    const theme = useTheme();
+    return createStyles(theme);
+};

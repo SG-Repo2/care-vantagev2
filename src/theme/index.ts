@@ -3,51 +3,51 @@ import { MD3Colors } from 'react-native-paper/lib/typescript/types';
 
 // Custom colors for metrics
 const metricColors = {
-  steps: '#4CAF50',      // Green
-  distance: '#2196F3',   // Blue
-  score: '#FFC107',      // Amber
-  calories: '#FF5722',   // Deep Orange
-  sleep: '#9C27B0',      // Purple
+  steps: '#20B2AA',      // Light sea green
+  distance: '#20B2AA',   // Light sea green
+  score: '#9B59B6',      // Purpureus
+  calories: '#FF6B6B',   // Light red
+  sleep: '#9B59B6',      // Purpureus
 };
 
 export const lightColors: MD3Colors = {
   ...MD3LightTheme.colors,
-  primary: '#006A6A',
+  primary: '#20B2AA',
   onPrimary: '#FFFFFF',
-  primaryContainer: '#6FF7F7',
-  onPrimaryContainer: '#002020',
-  secondary: '#4A6363',
+  primaryContainer: '#E0F7F6',
+  onPrimaryContainer: '#003D3A',
+  secondary: '#9B59B6',
   onSecondary: '#FFFFFF',
-  secondaryContainer: '#CCE8E7',
-  onSecondaryContainer: '#051F1F',
-  background: '#FAFDFC',
-  surface: '#FAFDFC',
-  surfaceVariant: '#DAE5E4',
-  onSurfaceVariant: '#3F4948',
-  error: '#BA1A1A',
+  secondaryContainer: '#F3E5F5',
+  onSecondaryContainer: '#4A2D59',
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  surfaceVariant: '#F5F5F5',
+  onSurfaceVariant: '#666666',
+  error: '#FF6B6B',
   onError: '#FFFFFF',
-  errorContainer: '#FFDAD6',
-  onErrorContainer: '#410002',
+  errorContainer: '#FFE5E5',
+  onErrorContainer: '#660000',
 };
 
 export const darkColors: MD3Colors = {
   ...MD3DarkTheme.colors,
-  primary: '#4CDADA',
-  onPrimary: '#003737',
-  primaryContainer: '#004F4F',
-  onPrimaryContainer: '#6FF7F7',
-  secondary: '#B0CCCC',
-  onSecondary: '#1B3434',
-  secondaryContainer: '#324B4B',
-  onSecondaryContainer: '#CCE8E7',
-  background: '#191C1C',
-  surface: '#191C1C',
-  surfaceVariant: '#3F4948',
-  onSurfaceVariant: '#BEC9C8',
-  error: '#FFB4AB',
-  onError: '#690005',
-  errorContainer: '#93000A',
-  onErrorContainer: '#FFDAD6',
+  primary: '#20B2AA',
+  onPrimary: '#FFFFFF',
+  primaryContainer: '#004D40',
+  onPrimaryContainer: '#E0F7F6',
+  secondary: '#9B59B6',
+  onSecondary: '#FFFFFF',
+  secondaryContainer: '#4A2D59',
+  onSecondaryContainer: '#F3E5F5',
+  background: '#121212',
+  surface: '#121212',
+  surfaceVariant: '#2C2C2C',
+  onSurfaceVariant: '#CCCCCC',
+  error: '#FF6B6B',
+  onError: '#FFFFFF',
+  errorContainer: '#660000',
+  onErrorContainer: '#FFE5E5',
 };
 
 export const lightTheme = {
