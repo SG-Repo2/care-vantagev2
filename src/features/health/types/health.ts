@@ -7,6 +7,7 @@ export interface HealthScore {
     distance: number;
   };
   dailyVictory: boolean;
+  bonusPoints: number;
 }
 
 export interface HealthMetrics {
