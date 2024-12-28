@@ -4,7 +4,7 @@ import { MD3Theme, useTheme } from 'react-native-paper';
 const createStyles = (theme: MD3Theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#20B2AA',
   },
   content: {
     padding: 16,
@@ -26,22 +26,19 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     paddingHorizontal: 16,
-    backgroundColor: theme.colors.surface,
+    
     elevation: 2,
     shadowColor: theme.colors.primary,
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: theme.colors.secondary,
+
+    
   },
   title: {
     fontWeight: 'bold',
-    color: theme.colors.onSurface,
+    color: '#FFFFFF',
   },
   leaderboardButton: {
     margin: 0,

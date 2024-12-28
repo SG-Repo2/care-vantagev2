@@ -12,11 +12,11 @@ const metricColors = {
 
 export const lightColors: MD3Colors = {
   ...MD3LightTheme.colors,
-  primary: '#20B2AA',
+  primary: '#98DFD6',  // Seafoam green
   onPrimary: '#FFFFFF',
   primaryContainer: '#E0F7F6',
   onPrimaryContainer: '#003D3A',
-  secondary: '#9B59B6',
+  secondary: '#98DFD6',  // Changed to match primary
   onSecondary: '#FFFFFF',
   secondaryContainer: '#F3E5F5',
   onSecondaryContainer: '#4A2D59',

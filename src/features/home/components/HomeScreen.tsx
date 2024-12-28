@@ -111,7 +111,7 @@ export const HomeScreen: React.FC = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.header}>
+        {/* <View style={styles.header}>
           <Text variant="headlineMedium" style={styles.title}>
             Health Dashboard
           </Text>
@@ -121,7 +121,7 @@ export const HomeScreen: React.FC = () => {
             onPress={handleLeaderboardPress}
             style={styles.leaderboardButton}
           />
-        </View>
+        </View> */}
 
         <View style={styles.metricsContainer}>
           <MetricCard
