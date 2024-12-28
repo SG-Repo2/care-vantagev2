@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
-import { Modal, View, StyleSheet, Animated, Share, Platform } from 'react-native';
+import { Modal, View, Animated, Share, Platform } from 'react-native';
+import { styles } from './GoalCelebration.styles';
 import { Surface, Text, useTheme, Button } from 'react-native-paper';
+import { FontAwesome } from '@expo/vector-icons';
 interface GoalCelebrationProps {
   visible: boolean;
   onClose: () => void;
@@ -132,9 +134,11 @@ const GoalCelebration: React.FC<GoalCelebrationProps> = ({
                   ]}
                 >
                   <View style={[styles.star, { marginHorizontal: 4 }]}>
-                    <Text style={[styles.starIcon, { color: theme.colors.primary }]}>
-                      ★
-                    </Text>
+                    <FontAwesome
+                      name="star"
+                      size={32}
+                      color={theme.colors.primary}
+                    />
                   </View>
                 </Animated.View>
               ))}
@@ -173,25 +177,40 @@ const GoalCelebration: React.FC<GoalCelebrationProps> = ({
                 mode="contained"
                 onPress={() => handleShare('facebook')}
                 style={[styles.shareButton, { backgroundColor: '#1877F2' }]}
-                labelStyle={styles.shareButtonLabel}
+                icon={() => (
+                  <View style={{ width: '100%', alignItems: 'center' }}>
+                  <FontAwesome name="facebook" size={30} color="white" />
+                  </View>
+                )}
+                contentStyle={styles.buttonContent}
               >
-                Facebook
+                {''}
               </Button>
               <Button
                 mode="contained"
                 onPress={() => handleShare('twitter')}
                 style={[styles.shareButton, { backgroundColor: '#1DA1F2' }]}
-                labelStyle={styles.shareButtonLabel}
+                icon={() => (
+                  <View style={{ width: '100%', alignItems: 'center' }}>
+                  <FontAwesome name="twitter" size={30} color="white" />
+                  </View>
+                )}
+                contentStyle={styles.buttonContent}
               >
-                Twitter
+                {''}
               </Button>
               <Button
                 mode="contained"
                 onPress={() => handleShare('instagram')}
                 style={[styles.shareButton, { backgroundColor: '#E4405F' }]}
-                labelStyle={styles.shareButtonLabel}
+                icon={() => (
+                  <View style={{ width: '100%', alignItems: 'center' }}>
+                  <FontAwesome name="instagram" size={30} color="white" />
+                  </View>
+                )}
+                contentStyle={styles.buttonContent}
               >
-                Instagram
+                {''}
               </Button>
             </View>
           </Surface>
@@ -200,79 +219,5 @@ const GoalCelebration: React.FC<GoalCelebrationProps> = ({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  sharePrompt: {
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  shareButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    paddingHorizontal: 8,
-    width: '100%',
-  },
-  shareButton: {
-    marginHorizontal: 4,
-    minWidth: 100,
-    borderRadius: 8,
-  },
-  shareButtonLabel: {
-    fontSize: 12,
-    color: 'white',
-    paddingVertical: 4,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  contentContainer: {
-    width: '80%',
-    maxWidth: 400,
-  },
-  surface: {
-    padding: 24,
-    borderRadius: 16,
-    alignItems: 'center',
-    elevation: 4,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  starContainer: {
-    padding: 4,
-  },
-  title: {
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  points: {
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  star: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  starIcon: {
-    fontSize: 32,
-    lineHeight: 32,
-  },
-});
 
 export default GoalCelebration;
