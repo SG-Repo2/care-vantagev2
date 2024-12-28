@@ -12,12 +12,29 @@ interface MetricModalProps {
   data?: {
     labels: string[];
     values: number[];
+    startDate?: Date;
   };
   additionalInfo?: {
     label: string;
     value: string | number;
   }[];
 }
+
+const formatDateLabel = (date: Date): string => {
+  return date.toLocaleDateString('en-US', { weekday: 'short' });
+};
+
+const generateWeekLabels = (startDate: Date): string[] => {
+  const labels: string[] = [];
+  const currentDate = new Date(startDate);
+  
+  for (let i = 0; i < 7; i++) {
+    labels.push(formatDateLabel(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return labels;
+};
 
 export const MetricModal: React.FC<MetricModalProps> = ({
   visible,
@@ -77,7 +94,7 @@ export const MetricModal: React.FC<MetricModalProps> = ({
             <View style={styles.chartContainer}>
               <LineChart
                 data={{
-                  labels: data.labels,
+                  labels: data.startDate ? generateWeekLabels(data.startDate) : data.labels,
                   datasets: [{ data: data.values }],
                 }}
                 width={Dimensions.get('window').width - 48}

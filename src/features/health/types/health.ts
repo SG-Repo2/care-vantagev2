@@ -22,6 +22,11 @@ export interface HealthMetrics {
   updatedAt: Date;
 }
 
+export interface WeeklyMetrics {
+  weeklySteps: number[];
+  weekStartDate: Date;
+}
+
 export type MetricType = 'steps' | 'distance' | 'score';
 
 export interface HealthState {

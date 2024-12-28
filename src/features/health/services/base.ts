@@ -65,4 +65,26 @@ export abstract class BaseHealthService implements HealthService {
 
   abstract getDailySteps(date?: Date): Promise<number>;
   abstract getDailyDistance(date?: Date): Promise<number>;
+  
+  async getWeeklySteps(startDate: Date): Promise<number[]> {
+    if (!this.initialized) {
+      throw new Error('Health service not initialized');
+    }
+    
+    const weeklySteps: number[] = [];
+    const currentDate = new Date(startDate);
+
+    for (let i = 0; i < 7; i++) {
+      try {
+        const steps = await this.getDailySteps(currentDate);
+        weeklySteps.push(steps);
+      } catch (error) {
+        console.error(`Error reading steps for ${currentDate.toISOString()}:`, error);
+        weeklySteps.push(0);
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return weeklySteps;
+  }
 }

@@ -60,14 +60,35 @@ export class GHealthConnectService extends BaseHealthService {
     endTime.setHours(23, 59, 59, 999);
 
     try {
-      return await NativeHealthConnect.getDailySteps(
+      const steps = await NativeHealthConnect.getDailySteps(
         startTime.getTime(),
         endTime.getTime()
       );
+      return steps || 0; // Return 0 if no data available
     } catch (error) {
       console.error('Error reading steps from Health Connect:', error);
-      throw error;
+      return 0; // Return 0 on error
     }
+  }
+
+  async getWeeklySteps(startDate: Date): Promise<number[]> {
+    if (!this.initialized) throw new Error('Health Connect not initialized');
+
+    const weeklySteps: number[] = [];
+    const currentDate = new Date(startDate);
+
+    for (let i = 0; i < 7; i++) {
+      try {
+        const steps = await this.getDailySteps(currentDate);
+        weeklySteps.push(steps);
+      } catch (error) {
+        console.error(`Error reading steps for ${currentDate.toISOString()}:`, error);
+        weeklySteps.push(0);
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return weeklySteps;
   }
 
   async getDailyDistance(date: Date = new Date()): Promise<number> {

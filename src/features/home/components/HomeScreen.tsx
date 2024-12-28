@@ -8,7 +8,7 @@ import useHealthData from '../../health/hooks/useHealthData';
 import { formatDistance, formatScore } from '../../../core/utils/formatting';
 import { MetricCard } from './MetricCard';
 import { MetricModal } from './MetricModal';
-import { HealthMetrics } from '../../health/types/health';
+import { HealthMetrics, WeeklyMetrics } from '../../health/types/health';
 import { TabParamList } from '../../../navigation/types';
 import { MeasurementSystem } from '../../../core/types/base';
 import GoalCelebration from './GoalCelebration';
@@ -27,6 +27,7 @@ interface ModalData {
   data?: {
     labels: string[];
     values: number[];
+    startDate?: Date;
   };
   additionalInfo?: {
     label: string;
@@ -65,14 +66,15 @@ export const HomeScreen: React.FC = () => {
     navigation.navigate('Leaderboard');
   };
 
-  const handleMetricPress = (type: MetricType, metrics: HealthMetrics) => {
+  const handleMetricPress = (type: MetricType, metrics: HealthMetrics & WeeklyMetrics) => {
     let modalData: ModalData = {
       type,
       title: type.charAt(0).toUpperCase() + type.slice(1),
       value: type === 'distance' ? formatDistance(metrics[type], DEFAULT_MEASUREMENT_SYSTEM) : metrics[type].toString(),
       data: {
         labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        values: [0, 0, 0, 0, 0, 0, metrics[type]],
+        values: type === 'steps' ? metrics.weeklySteps : [0, 0, 0, 0, 0, 0, metrics[type]],
+        startDate: type === 'steps' ? metrics.weekStartDate : undefined
       },
     };
 

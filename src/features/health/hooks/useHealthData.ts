@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import { HealthMetrics } from '../types/health';
+import { HealthMetrics, WeeklyMetrics } from '../types/health';
 import { HealthServiceFactory } from '../services/factory';
 import { HealthService } from '../services/types';
 import AppleHealthKit from 'react-native-health';
+import { getCurrentWeekStart } from '../../../core/constants/metrics';
 
 const { Permissions } = AppleHealthKit.Constants;
 
@@ -18,7 +19,7 @@ const defaultPermissions = {
 
 const useHealthData = (profileId: string) => {
   const [healthService, setHealthService] = useState<HealthService | null>(null);
-  const [metrics, setMetrics] = useState<HealthMetrics | null>(null);
+  const [metrics, setMetrics] = useState<HealthMetrics & WeeklyMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasPermissions, setHasPermission] = useState(false);
@@ -50,11 +51,19 @@ const useHealthData = (profileId: string) => {
 
     try {
       // Wrap HealthKit operations in a background task
-      const newMetrics = await new Promise<HealthMetrics>((resolve, reject) => {
+      const newMetrics = await new Promise<HealthMetrics & WeeklyMetrics>((resolve, reject) => {
         requestAnimationFrame(async () => {
           try {
-            const metrics = await healthService.getMetrics();
-            resolve(metrics);
+            const [metrics, weeklySteps] = await Promise.all([
+              healthService.getMetrics(),
+              healthService.getWeeklySteps(getCurrentWeekStart())
+            ]);
+            
+            resolve({
+              ...metrics,
+              weeklySteps,
+              weekStartDate: getCurrentWeekStart()
+            });
           } catch (error) {
             reject(error);
           }
@@ -64,7 +73,9 @@ const useHealthData = (profileId: string) => {
       setMetrics({
         ...newMetrics,
         profileId,
-      } as HealthMetrics);
+        weeklySteps: newMetrics.weeklySteps,
+        weekStartDate: newMetrics.weekStartDate
+      });
     } catch (err) {
       console.error('Error fetching health data:', err);
       setError('Failed to fetch health data');

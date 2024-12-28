@@ -3,13 +3,14 @@ import { StyleSheet, View } from 'react-native';
 import { Surface, Text, TouchableRipple, useTheme, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getMetricColor, MetricColorKey } from '../../../theme';
+import { getCurrentWeekStart } from '../../../core/constants/metrics';
 
 interface MetricCardProps {
   title: string;
   value: string | number;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   metricType: MetricColorKey;
-  onPress?: () => void;
+  onPress?: (startDate?: Date) => void;
   loading?: boolean;
   error?: string | null;
 }
@@ -25,6 +26,12 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 }) => {
   const theme = useTheme();
   const metricColor = getMetricColor(metricType);
+  
+  const handlePress = () => {
+    if (onPress) {
+      onPress(getCurrentWeekStart());
+    }
+  };
 
   const renderContent = () => {
     if (loading) {
@@ -61,7 +68,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     >
       <View style={styles.innerContainer}>
         <TouchableRipple
-          onPress={onPress}
+          onPress={handlePress}
           style={styles.touchable}
           rippleColor={metricColor}
           disabled={loading || !!error}
