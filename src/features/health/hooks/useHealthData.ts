@@ -4,6 +4,7 @@ import { HealthServiceFactory } from '../services/factory';
 import { HealthService } from '../services/types';
 import AppleHealthKit from 'react-native-health';
 import { getCurrentWeekStart } from '../../../core/constants/metrics';
+import healthMetricsService from '../../../services/healthMetricsService';
 
 const { Permissions } = AppleHealthKit.Constants;
 
@@ -50,31 +51,27 @@ const useHealthData = (profileId: string) => {
     setError(null);
 
     try {
-      // Wrap HealthKit operations in a background task
-      const newMetrics = await new Promise<HealthMetrics & WeeklyMetrics>((resolve, reject) => {
-        requestAnimationFrame(async () => {
-          try {
-            const [metrics, weeklySteps] = await Promise.all([
-              healthService.getMetrics(),
-              healthService.getWeeklySteps(getCurrentWeekStart())
-            ]);
-            
-            resolve({
-              ...metrics,
-              weeklySteps,
-              weekStartDate: getCurrentWeekStart()
-            });
-          } catch (error) {
-            reject(error);
-          }
+      const [metrics, weeklySteps] = await Promise.all([
+        healthService.getMetrics(),
+        healthService.getWeeklySteps(getCurrentWeekStart())
+      ]);
+
+      // Only save metrics to Supabase if we have a valid UUID
+      if (profileId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profileId)) {
+        await healthMetricsService.saveMetrics({
+          user_id: profileId,
+          date: new Date().toISOString().split('T')[0],
+          steps: metrics.steps,
+          distance: metrics.distance,
+          score: metrics.score
         });
-      });
+      }
 
       setMetrics({
-        ...newMetrics,
+        ...metrics,
         profileId,
-        weeklySteps: newMetrics.weeklySteps,
-        weekStartDate: newMetrics.weekStartDate
+        weeklySteps,
+        weekStartDate: getCurrentWeekStart()
       });
     } catch (err) {
       console.error('Error fetching health data:', err);
