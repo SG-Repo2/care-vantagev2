@@ -9,10 +9,10 @@ import authService from '../services/authService';
 export function SignInButton() {
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: Platform.select({
-      ios: Constants.expoConfig?.extra?.googleAuth?.iosClientId,
-      android: Constants.expoConfig?.extra?.googleAuth?.androidClientId,
-      web: Constants.expoConfig?.extra?.googleAuth?.webClientId,
-      default: Constants.expoConfig?.extra?.googleAuth?.expoClientId, // Used in Expo Go
+      ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+      android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+      web: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      default: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
     }),
     redirectUri: AuthSession.makeRedirectUri({
       scheme: 'carevantage',

@@ -1,19 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../utils/supabase';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
+import { User } from '../features/auth/types/auth';
 import Constants from 'expo-constants';
 
 WebBrowser.maybeCompleteAuthSession();
-
-// Types
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-  photoUrl?: string;
-}
 
 interface AuthContextType {
   user: User | null;
@@ -27,55 +20,110 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Provider
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Google OAuth configuration
+  const googleAuth = Constants.expoConfig?.extra?.googleAuth;
+
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: Constants.expoConfig?.extra?.googleAuth?.androidClientId,
-    iosClientId: Constants.expoConfig?.extra?.googleAuth?.iosClientId,
-    webClientId: Constants.expoConfig?.extra?.googleAuth?.webClientId,
-    clientId: Constants.expoConfig?.extra?.googleAuth?.expoClientId,
+    androidClientId: googleAuth?.androidClientId,
+    iosClientId: googleAuth?.iosClientId,
+    webClientId: googleAuth?.webClientId,
+    clientId: googleAuth?.expoClientId,
     scopes: ['openid', 'profile', 'email'],
+    responseType: "id_token",
+    prompt: "consent"
   });
 
-  // For development: Set mock user immediately
   useEffect(() => {
-    const mockUser: User = {
-      id: 'mock-user-id',
-      email: 'mock@example.com',
-      name: 'Mock User',
-      photoUrl: 'https://via.placeholder.com/150',
+    const initAuth = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+      } catch (err) {
+        console.error('Error initializing auth:', err);
+        setError('Failed to initialize authentication');
+      } finally {
+        setIsLoading(false);
+      }
     };
-    setUser(mockUser);
-    setIsLoading(false);
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Mock sign in function for development
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleGoogleSignIn(id_token);
+    }
+  }, [response]);
+
+  const handleGoogleSignIn = async (idToken: string) => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+
+      if (error) throw error;
+      if (data.user) {
+        setUser(data.user);
+      }
+    } catch (err) {
+      console.error('Error signing in with Google:', err);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to sign in with Google');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signInWithGoogle = async () => {
-    const mockUser: User = {
-      id: 'mock-user-id',
-      email: 'mock@example.com',
-      name: 'Mock User',
-      photoUrl: 'https://via.placeholder.com/150',
-    };
-    setUser(mockUser);
+    try {
+      setError(null);
+      if (!request) {
+        throw new Error('Google Auth request was not initialized');
+      }
+      await promptAsync();
+    } catch (err) {
+      console.error('Error initiating Google sign-in:', err);
+      setError('Failed to initiate Google sign-in');
+    }
   };
 
   const signOut = async () => {
     try {
       setError(null);
-      await AsyncStorage.removeItem('user');
+      setIsLoading(true);
+      await supabase.auth.signOut();
       setUser(null);
     } catch (err) {
       console.error('Error signing out:', err);
       setError('Failed to sign out');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -94,7 +142,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
-// Hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

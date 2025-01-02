@@ -37,10 +37,11 @@ module.exports = {
         'com.apple.developer.healthkit.background-delivery': true
       },
       scheme: 'carevantage',
+      googleServicesFile: './GoogleService-Info.plist',
       config: {
         usesNonExemptEncryption: false,
         googleSignIn: {
-          reservedClientId: `com.googleusercontent.apps.${process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID}`
+          reservedClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
         }
       }
     },
@@ -89,8 +90,7 @@ module.exports = {
         iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
         webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
         androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-        expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
-        clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID
+        expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID
       }
     },
     experiments: {

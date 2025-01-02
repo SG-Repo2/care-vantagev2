@@ -120,3 +120,4 @@ yarn-error.*
 
 # @end expo-cli
 .env
+.aider*

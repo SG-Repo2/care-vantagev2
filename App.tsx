@@ -6,6 +6,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import { UserProvider } from './src/context/UserContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { LogBox } from 'react-native';
+import 'react-native-url-polyfill/auto';
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
