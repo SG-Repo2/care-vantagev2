@@ -1,5 +1,6 @@
 module.exports = {
   expo: {
+    owner:"groebe1kenobi",
     name: 'care-vantage',
     slug: 'care-vantage',
     version: '1.0.0',
@@ -77,6 +78,9 @@ module.exports = {
       ]
     ],
     extra: {
+      eas: {
+        projectId: "care-vantage-dev"
+      },
       supabase: {
         url: process.env.EXPO_PUBLIC_SUPABASE_URL,
         anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,

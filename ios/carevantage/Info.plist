@@ -28,19 +28,19 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>carevantage</string>
-          <string>exp+care-vantage</string>
           <string>carevantage</string>
           <string>com.groebe1kenobi.carevantage</string>
         </array>
       </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>exp+care-vantage</string>
+        </array>
+      </dict>
     </array>
-	<key>CFBundleVersion</key>
-	<string>1</string>
-	<key>UIAppFonts</key>
-	<array>
-		<string>FontAwesome.ttf</string>
-		<string>MaterialIcons.ttf</string>
-	</array>
+    <key>CFBundleVersion</key>
+    <string>1</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSMinimumSystemVersion</key>
