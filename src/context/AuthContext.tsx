@@ -2,8 +2,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '../utils/supabase';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 import { Platform } from 'react-native';
-import { User } from '../features/auth/types/auth';
+import { User, mapSupabaseUser } from '../features/auth/types/auth';
 import Constants from 'expo-constants';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -28,22 +29,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
 
   const googleAuth = Constants.expoConfig?.extra?.googleAuth;
+  
+  if (!googleAuth?.iosClientId || !googleAuth?.webClientId || !googleAuth?.androidClientId) {
+    throw new Error('Missing Google Auth configuration. Check your app.config.js and .env files.');
+  }
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: googleAuth?.androidClientId,
-    iosClientId: googleAuth?.iosClientId,
-    webClientId: googleAuth?.webClientId,
-    clientId: googleAuth?.expoClientId,
-    scopes: ['openid', 'profile', 'email'],
-    responseType: "id_token",
-    prompt: "consent"
+  console.log('Auth Configuration:', {
+    androidClientId: googleAuth.androidClientId,
+    iosClientId: googleAuth.iosClientId,
+    webClientId: googleAuth.webClientId,
+    clientId: googleAuth.expoClientId,
+  });
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: Platform.select({
+      ios: googleAuth.iosClientId,
+      android: googleAuth.androidClientId,
+      default: googleAuth.webClientId,
+    }),
+    iosClientId: googleAuth.iosClientId,
+    androidClientId: googleAuth.androidClientId,
+    webClientId: googleAuth.webClientId,
+    scopes: [
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'openid'
+    ]
   });
 
   useEffect(() => {
     const initAuth = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
+        setUser(user ? mapSupabaseUser(user) : null);
       } catch (err) {
         console.error('Error initializing auth:', err);
         setError('Failed to initialize authentication');
@@ -56,7 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        setUser(session.user);
+        setUser(mapSupabaseUser(session.user));
       } else {
         setUser(null);
       }
@@ -71,6 +89,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
       handleGoogleSignIn(id_token);
+    } else if (response?.type === 'error') {
+      console.error('Google Auth Error:', response.error);
+      setError(response.error?.message || 'Failed to authenticate with Google');
     }
   }, [response]);
 
@@ -79,14 +100,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(null);
       setIsLoading(true);
       
+      console.log('Attempting to sign in with token:', idToken);
+      
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase auth error:', error);
+        throw error;
+      }
+      
       if (data.user) {
-        setUser(data.user);
+        console.log('Successfully signed in user:', data.user.id);
+        setUser(data.user ? mapSupabaseUser(data.user) : null);
       }
     } catch (err) {
       console.error('Error signing in with Google:', err);
@@ -106,7 +134,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!request) {
         throw new Error('Google Auth request was not initialized');
       }
-      await promptAsync();
+      const result = await promptAsync();
+      console.log('Prompt result:', result);
     } catch (err) {
       console.error('Error initiating Google sign-in:', err);
       setError('Failed to initiate Google sign-in');

@@ -1,18 +1,12 @@
-import { supabase } from './supabaseClient';
-import { User } from '@supabase/supabase-js';
+import { supabase } from '../utils/supabase';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-export interface AppUser {
-  id: string;
-  email: string;
-  displayName: string;
-  photoUrl?: string;
-}
+import { User, mapSupabaseUser } from '../features/auth/types/auth';
 
 class AuthService {
   private static instance: AuthService;
-  private currentUser: AppUser | null = null;
-  private listeners: Set<(user: AppUser | null) => void> = new Set();
+  private currentUser: User | null = null;
+  private listeners: Set<(user: User | null) => void> = new Set();
 
   private constructor() {
     this.initializeAuth();
@@ -36,7 +30,7 @@ class AuthService {
     });
   }
 
-  private async createAppUserFromSupabaseUser(supabaseUser: User): Promise<AppUser> {
+  private async createAppUserFromSupabaseUser(supabaseUser: SupabaseUser): Promise<User> {
     const { data: profile } = await supabase
       .from('users')
       .select('*')
@@ -62,20 +56,10 @@ class AuthService {
       const { error } = await supabase.from('users').insert([newProfile]);
       if (error) throw error;
 
-      return {
-        id: newProfile.id,
-        email: newProfile.email,
-        displayName: newProfile.display_name,
-        photoUrl: newProfile.photo_url
-      };
+      return mapSupabaseUser(supabaseUser);
     }
 
-    return {
-      id: profile.id,
-      email: profile.email,
-      displayName: profile.display_name,
-      photoUrl: profile.photo_url
-    };
+    return mapSupabaseUser(supabaseUser);
   }
 
   public static getInstance(): AuthService {
@@ -115,11 +99,11 @@ class AuthService {
     await AsyncStorage.clear();
   }
 
-  public getCurrentUser(): AppUser | null {
+  public getCurrentUser(): User | null {
     return this.currentUser;
   }
 
-  public addAuthStateListener(listener: (user: AppUser | null) => void): () => void {
+  public addAuthStateListener(listener: (user: User | null) => void): () => void {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);

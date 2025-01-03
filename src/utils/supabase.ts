@@ -3,14 +3,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient } from '@supabase/supabase-js'
 import Constants from 'expo-constants'
 
-const supabaseUrl = Constants.expoConfig?.extra?.supabase?.url
-const supabaseAnonKey = Constants.expoConfig?.extra?.supabase?.anonKey
+const supabaseConfig = Constants.expoConfig?.extra?.supabase;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseConfig?.url || !supabaseConfig?.anonKey) {
   throw new Error('Missing Supabase configuration. Check your app.config.js and .env files.')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,

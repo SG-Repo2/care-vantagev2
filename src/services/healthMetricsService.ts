@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from '../utils/supabase';
 
 interface HealthMetricsData {
   user_id: string;

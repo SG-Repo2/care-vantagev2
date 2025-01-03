@@ -13,9 +13,11 @@ module.exports = {
       backgroundColor: '#ffffff'
     },
     assetBundlePatterns: ['**/*'],
+    scheme: 'com.groebe1kenobi.carevantage',
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.groebe1kenobi.carevantage',
+      scheme: 'com.groebe1kenobi.carevantage',
       infoPlist: {
         NSHealthShareUsageDescription: 'CareVantage needs access to read your health data to track your fitness and wellness metrics.',
         NSHealthUpdateUsageDescription: 'CareVantage requires permission to write health data to help you track and manage your fitness goals.',
@@ -36,13 +38,9 @@ module.exports = {
         ],
         'com.apple.developer.healthkit.background-delivery': true
       },
-      scheme: 'carevantage',
       googleServicesFile: './GoogleService-Info.plist',
       config: {
-        usesNonExemptEncryption: false,
-        googleSignIn: {
-          reservedClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
-        }
+        usesNonExemptEncryption: false
       }
     },
     android: {
@@ -50,12 +48,13 @@ module.exports = {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff'
       },
-      package: 'com.groebe1kenobi.carevantage'
+      package: 'com.groebe1kenobi.carevantage',
+      scheme: 'com.groebe1kenobi.carevantage',
+      googleServicesFile: './google-services.json'
     },
     web: {
       favicon: './assets/favicon.png'
     },
-    scheme: 'carevantage',
     plugins: [
       [
         'expo-build-properties',
