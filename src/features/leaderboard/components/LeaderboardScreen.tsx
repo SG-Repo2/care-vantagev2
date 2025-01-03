@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
+import { useTheme } from 'react-native-paper';
+import { Card } from '../../../components/common/atoms/Card';
+import { Button } from '../../../components/common/atoms/Button';
 
 import healthMetricsService from '../../../services/healthMetricsService';
 import { createStyles } from '../styles/LeaderboardScreen.styles';
@@ -28,40 +31,41 @@ export const LeaderboardScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
+  const styles = createStyles(theme);
+  const fetchLeaderboard = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const leaderboardData = await healthMetricsService.getLeaderboard(today);
+      
+      const formattedData = leaderboardData.map((entry, index) => ({
+        id: entry.user_id,
+        name: entry.users[0].display_name,
+        avatarUrl: entry.users[0].photo_url,
+        rank: index + 1,
+        metrics: {
+          steps: entry.steps,
+          distance: entry.distance,
+        },
+        score: {
+          overall: entry.score,
+          categories: {
+            steps: Math.round(entry.score * 0.9),
+            distance: Math.round(entry.score * 0.95),
+          },
+          bonusPoints: 5,
+        },
+      }));
+
+      setLeaderboardData(formattedData);
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+      setError('Failed to fetch leaderboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const leaderboardData = await healthMetricsService.getLeaderboard(today);
-        
-        const formattedData = leaderboardData.map((entry, index) => ({
-          id: entry.user_id,
-          name: entry.users[0].display_name,
-          avatarUrl: entry.users[0].photo_url,
-          rank: index + 1,
-          metrics: {
-            steps: entry.steps,
-            distance: entry.distance,
-          },
-          score: {
-            overall: entry.score,
-            categories: {
-              steps: Math.round(entry.score * 0.9),
-              distance: Math.round(entry.score * 0.95),
-            },
-            bonusPoints: 5,
-          },
-        }));
-
-        setLeaderboardData(formattedData);
-      } catch (error) {
-        console.error('Error fetching leaderboard:', error);
-        setError('Failed to fetch leaderboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchLeaderboard();
   }, []);
 
@@ -73,10 +77,24 @@ export const LeaderboardScreen: React.FC = () => {
     );
   }
 
+  const handleRetry = () => {
+    setError(null);
+    setLoading(true);
+    fetchLeaderboard();
+  };
+
   if (error) {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>{error}</Text>
+        <Button 
+          style={{ marginTop: 16 }}
+          onPress={handleRetry}
+          variant="primary"
+          size='medium'
+        >
+          Retry
+        </Button>
       </View>
     );
   }
@@ -84,7 +102,7 @@ export const LeaderboardScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container}>
       {leaderboardData.map((entry) => (
-        <View key={entry.id} style={styles.entryContainer}>
+        <Card key={entry.id} style={styles.entryContainer}>
           <View style={styles.rankContainer}>
             <Text style={styles.rankText}>#{entry.rank}</Text>
           </View>
@@ -95,9 +113,8 @@ export const LeaderboardScreen: React.FC = () => {
             </Text>
             <Text style={styles.scoreText}>Score: {entry.score.overall}</Text>
           </View>
-        </View>
+        </Card>
       ))}
     </ScrollView>
   );
 };
-

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { spacing } from '../../theme/spacing';
 
@@ -15,15 +15,18 @@ export const Card: React.FC<CardProps> = ({ children, style, onPress, disabled =
   const styles = createStyles(theme);
 
   return (
-    <View
-      style={[
+    <Pressable
+      style={({ pressed }) => [
         styles.container,
         style,
         disabled && styles.disabled,
+        pressed && styles.pressed,
       ]}
+      onPress={onPress}
+      disabled={disabled}
     >
       {children}
-    </View>
+    </Pressable>
   );
 };
 
@@ -45,5 +48,8 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   disabled: {
     opacity: 0.5,
+  },
+  pressed: {
+    opacity: 0.8,
   },
 });

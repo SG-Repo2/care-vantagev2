@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
+import { useStyles } from '../styles/MetricCard.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getMetricColor, MetricColorKey } from '../../../theme';
 import { getCurrentWeekStart } from '../../../core/constants/metrics';
@@ -28,11 +29,15 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 }) => {
   const theme = useTheme();
   const metricColor = getMetricColor(metricType);
-  const styles = createStyles(theme);
+  const styles = useStyles();
 
   const handlePress = () => {
+    console.log('Card pressed - metric:', metricType);
     if (onPress) {
+      console.log('Calling onPress handler with startDate:', getCurrentWeekStart());
       onPress(getCurrentWeekStart());
+    } else {
+      console.warn('No onPress handler provided for metric:', metricType);
     }
   };
 
@@ -73,35 +78,3 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     </Card>
   );
 };
-
-const createStyles = (theme: any) => StyleSheet.create({
-  container: {
-    flex: 1,
-    margin: spacing.sm,
-    minHeight: 120,
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  value: {
-    marginTop: spacing.sm,
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  title: {
-    marginTop: spacing.xs,
-    fontSize: 14,
-  },
-  errorText: {
-    color: theme.colors.error,
-    textAlign: 'center',
-    padding: spacing.sm,
-  },
-  loadingText: {
-    color: theme.colors.onSurface,
-    textAlign: 'center',
-    padding: spacing.sm,
-  },
-});

@@ -1,18 +1,20 @@
 import { StyleSheet } from 'react-native';
 import { MD3Theme } from 'react-native-paper';
+import { spacing } from '../../../components/common/theme/spacing';
 
 export const createStyles = (theme: MD3Theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: theme.colors.background,
+    padding: spacing.lg,
   },
   entryContainer: {
     flexDirection: 'row',
-    padding: 16,
+    padding: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: theme.colors.outline,
     alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   rankContainer: {
     width: 40,
@@ -21,7 +23,7 @@ export const createStyles = (theme: MD3Theme) => StyleSheet.create({
     backgroundColor: theme.colors.surfaceVariant,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: spacing.md,
   },
   rankText: {
     fontSize: 16,

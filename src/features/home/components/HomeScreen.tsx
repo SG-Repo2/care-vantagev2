@@ -69,6 +69,8 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleMetricPress = (type: MetricType, metrics: HealthMetrics & WeeklyMetrics) => {
+    console.log('Metric pressed:', type);
+    
     let modalData: ModalData = {
       type,
       title: type.charAt(0).toUpperCase() + type.slice(1),
@@ -80,8 +82,10 @@ export const HomeScreen: React.FC = () => {
       },
     };
 
+    console.log('Setting modal data:', modalData);
     setSelectedMetric(modalData);
     setModalVisible(true);
+    console.log('Modal visible state set to true');
   };
 
   if (loading && !refreshing) {

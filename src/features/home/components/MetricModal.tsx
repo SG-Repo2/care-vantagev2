@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, View, Dimensions } from 'react-native';
+import { View, Dimensions } from 'react-native';
 import { Modal, Portal, Text, IconButton, useTheme } from 'react-native-paper';
+import { useStyles } from '../styles/MetricModal.styles';
 import { LineChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '../../../components/common/atoms/Card';
@@ -50,7 +51,7 @@ export const MetricModal: React.FC<MetricModalProps> = ({
 }) => {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = createStyles(theme);
+  const styles = useStyles();
 
   const chartConfig = {
     backgroundColor: theme.colors.surface,
@@ -124,58 +125,3 @@ export const MetricModal: React.FC<MetricModalProps> = ({
     </Portal>
   );
 };
-
-const createStyles = (theme: any) => StyleSheet.create({
-  modalContainer: {
-    margin: 0,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    padding: spacing.xl,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-  },
-  closeButton: {
-    position: 'absolute',
-    right: spacing.sm,
-    top: spacing.sm,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-    color: theme.colors.onSurface,
-  },
-  modalValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: spacing.lg,
-  },
-  chartContainer: {
-    alignItems: 'center',
-    marginVertical: spacing.lg,
-  },
-  chart: {
-    marginVertical: spacing.sm,
-    borderRadius: 16,
-  },
-  additionalInfoContainer: {
-    marginTop: spacing.lg,
-    gap: spacing.md,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  infoLabel: {
-    fontSize: 16,
-    color: theme.colors.onSurfaceVariant,
-  },
-  infoValue: {
-    fontSize: 18,
-    color: theme.colors.onSurface,
-  },
-});
