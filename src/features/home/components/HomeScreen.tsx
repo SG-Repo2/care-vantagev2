@@ -13,10 +13,9 @@ import { TabParamList } from '../../../navigation/types';
 import { MeasurementSystem } from '../../../core/types/base';
 import GoalCelebration from './GoalCelebration';
 import { useStyles } from '../styles/HomeScreen.styles';
+import { useAuth } from '../../../context/AuthContext';
 
-// TODO: Replace with actual user profile management
-const MOCK_PROFILE_ID = 'test_user_1';
-// TODO: Make this configurable per user's preference
+// Default measurement system - TODO: Get from user preferences
 const DEFAULT_MEASUREMENT_SYSTEM: MeasurementSystem = 'imperial';
 
 type MetricType = 'steps' | 'distance' | 'score';
@@ -42,7 +41,8 @@ export const HomeScreen: React.FC = () => {
   const theme = useTheme();
   const styles = useStyles();
   const navigation = useNavigation<NavigationProp>();
-  const { metrics, loading, error, refresh } = useHealthData(MOCK_PROFILE_ID);
+  const { user } = useAuth();
+  const { metrics, loading, error, refresh } = useHealthData(user?.id || '');
   const [refreshing, setRefreshing] = React.useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<ModalData | null>(null);
@@ -65,7 +65,9 @@ export const HomeScreen: React.FC = () => {
   }, [refresh]);
 
   const handleLeaderboardPress = () => {
-    navigation.navigate('Leaderboard');
+    if (metrics?.steps || metrics?.distance || metrics?.score) {
+      navigation.navigate('Leaderboard');
+    }
   };
 
   const handleMetricPress = (type: MetricType, metrics: HealthMetrics & WeeklyMetrics) => {
@@ -115,7 +117,7 @@ export const HomeScreen: React.FC = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* <View style={styles.header}>
+        <View style={styles.header}>
           <Text variant="headlineMedium" style={styles.title}>
             Health Dashboard
           </Text>
@@ -124,8 +126,9 @@ export const HomeScreen: React.FC = () => {
             mode="contained"
             onPress={handleLeaderboardPress}
             style={styles.leaderboardButton}
+            disabled={!metrics?.steps && !metrics?.distance && !metrics?.score}
           />
-        </View> */}
+        </View>
 
         <View style={styles.metricsContainer}>
           <MetricCard

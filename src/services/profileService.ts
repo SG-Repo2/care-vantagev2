@@ -3,16 +3,35 @@ import { Profile } from '../features/profile/types/profile';
 import { User } from '../features/auth/types/auth';
 import { MeasurementSystem, PrivacyLevel } from '../core/types/base';
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  display_name: string;
+  photo_url: string | null;
+  settings: {
+    measurementSystem: MeasurementSystem;
+    notifications: boolean;
+    privacyLevel: PrivacyLevel;
+    dailyGoals: {
+      steps: number;
+      sleep: number;
+      water: number;
+    };
+  };
+  created_at?: string;
+  updated_at?: string;
+}
+
 export const profileService = {
-  async createProfile(user: User) {
+  async createProfile(user: User): Promise<UserProfile> {
     const { data, error } = await supabase
       .from('users')
       .insert([
         {
           id: user.id,
           email: user.email,
-          display_name: user.displayName || '',
-          photo_url: '',
+          display_name: user.displayName || user.email.split('@')[0],
+          photo_url: user.photoURL || null,
           settings: {
             measurementSystem: 'metric',
             notifications: true,
@@ -36,7 +55,7 @@ export const profileService = {
     return data;
   },
 
-  async getProfile(userId: string) {
+  async getProfile(userId: string): Promise<UserProfile | null> {
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -51,10 +70,17 @@ export const profileService = {
     return data;
   },
 
-  async updateProfile(userId: string, updates: Partial<Profile>) {
+  async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
+    // Ensure we're not trying to update protected fields
+    const safeUpdates = { ...updates };
+    delete safeUpdates.id;
+    delete safeUpdates.email;
+    delete safeUpdates.created_at;
+    delete safeUpdates.updated_at;
+
     const { data, error } = await supabase
       .from('users')
-      .update(updates)
+      .update(safeUpdates)
       .eq('id', userId)
       .select()
       .single();
@@ -65,5 +91,9 @@ export const profileService = {
     }
 
     return data;
+  },
+
+  async updateProfilePhoto(userId: string, photoURL: string): Promise<UserProfile> {
+    return this.updateProfile(userId, { photo_url: photoURL });
   }
 };

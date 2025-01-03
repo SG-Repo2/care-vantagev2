@@ -7,6 +7,7 @@ import type { User } from '../../../features/auth/types/auth';
 import { Button } from '../../../components/common/atoms/Button';
 import { spacing } from '../../../components/common/theme/spacing';
 import { createStyles } from '../styles/ProfileScreen.styles';
+import { profileService } from '../../../services/profileService';
 
 type RootStackParamList = {
   Profile: undefined;
@@ -45,10 +46,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       return;
     }
     
+    if (!user?.id) {
+      setError('User not found');
+      return;
+    }
+    
     try {
       setUpdateLoading(true);
       setError(null);
-      // TODO: Implement profile update
+      
+      await profileService.updateProfile(user.id, {
+        display_name: displayName.trim()
+      });
+      
       setEditMode(false);
     } catch (err) {
       console.error('[ProfileScreen] Profile update error:', err);
@@ -56,7 +66,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     } finally {
       setUpdateLoading(false);
     }
-  }, [displayName]);
+  }, [displayName, user?.id]);
 
   const styles = createStyles(theme);
 
@@ -112,7 +122,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             <>
               <TextInput
                 label="Display Name"
-                value={user?.displayName || ''}
+                value={displayName}
                 disabled
                 mode="outlined"
               />
@@ -149,4 +159,3 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     </View>
   );
 };
-

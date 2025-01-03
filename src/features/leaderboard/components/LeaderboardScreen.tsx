@@ -1,62 +1,46 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
-import { useTheme } from 'react-native-paper';
+import { View, Text, ScrollView, RefreshControl, Image } from 'react-native';
+import { useTheme, ActivityIndicator, SegmentedButtons } from 'react-native-paper';
 import { Card } from '../../../components/common/atoms/Card';
 import { Button } from '../../../components/common/atoms/Button';
-
-import healthMetricsService from '../../../services/healthMetricsService';
+import { useAuth } from '../../../context/AuthContext';
+import leaderboardService, { LeaderboardEntry } from '../../../services/leaderboardService';
 import { createStyles } from '../styles/LeaderboardScreen.styles';
+import { formatDistance } from '../../../core/utils/formatting';
 
-interface LeaderboardEntry {
-  id: string;
-  name: string;
-  avatarUrl?: string;
-  rank: number;
-  metrics: {
-    steps: number;
-    distance: number;
-  };
-  score: {
-    overall: number;
-    categories: {
-      steps: number;
-      distance: number;
-    };
-    bonusPoints: number;
-  };
-}
+type PeriodType = 'daily' | 'weekly';
 
 export const LeaderboardScreen: React.FC = () => {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [periodType, setPeriodType] = useState<PeriodType>('daily');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
   const styles = createStyles(theme);
-  const fetchLeaderboard = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const leaderboardData = await healthMetricsService.getLeaderboard(today);
-      
-      const formattedData = leaderboardData.map((entry, index) => ({
-        id: entry.user_id,
-        name: entry.users[0].display_name,
-        avatarUrl: entry.users[0].photo_url,
-        rank: index + 1,
-        metrics: {
-          steps: entry.steps,
-          distance: entry.distance,
-        },
-        score: {
-          overall: entry.score,
-          categories: {
-            steps: Math.round(entry.score * 0.9),
-            distance: Math.round(entry.score * 0.95),
-          },
-          bonusPoints: 5,
-        },
-      }));
+  const { user } = useAuth();
 
-      setLeaderboardData(formattedData);
+  const fetchData = async () => {
+    try {
+      setError(null);
+      setLoading(true);
+      
+      const today = new Date().toISOString().split('T')[0];
+      let data: LeaderboardEntry[];
+      
+      if (periodType === 'daily') {
+        data = await leaderboardService.getLeaderboard(today);
+      } else {
+        // Get weekly data (last 7 days)
+        const endDate = today;
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+        data = await leaderboardService.getWeeklyLeaderboard(
+          startDate.toISOString().split('T')[0],
+          endDate
+        );
+      }
+
+      setLeaderboardData(data);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
       setError('Failed to fetch leaderboard data');
@@ -66,55 +50,85 @@ export const LeaderboardScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchLeaderboard();
-  }, []);
+    fetchData();
+  }, [user, periodType]);
 
-  if (loading) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  }, [periodType]);
+
+
+  if (loading && !refreshing) {
     return (
-      <View style={styles.container}>
-        <Text>Loading leaderboard...</Text>
-      </View>
-    );
-  }
-
-  const handleRetry = () => {
-    setError(null);
-    setLoading(true);
-    fetchLeaderboard();
-  };
-
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>{error}</Text>
-        <Button 
-          style={{ marginTop: 16 }}
-          onPress={handleRetry}
-          variant="primary"
-          size='medium'
-        >
-          Retry
-        </Button>
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { marginTop: 16 }]}>
+          Loading leaderboard...
+        </Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+      <SegmentedButtons
+        value={periodType}
+        onValueChange={(value) => setPeriodType(value as PeriodType)}
+        buttons={[
+          { value: 'daily', label: 'Daily' },
+          { value: 'weekly', label: 'Weekly' }
+        ]}
+        style={styles.periodSelector}
+      />
+
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
       {leaderboardData.map((entry) => (
-        <Card key={entry.id} style={styles.entryContainer}>
+        <Card key={entry.user_id} style={[
+          styles.entryContainer,
+          user?.id === entry.user_id && styles.currentUserEntry
+        ]}>
           <View style={styles.rankContainer}>
-            <Text style={styles.rankText}>#{entry.rank}</Text>
-          </View>
-          <View style={styles.detailsContainer}>
-            <Text style={styles.nameText}>{entry.name}</Text>
-            <Text style={styles.metricsText}>
-              Steps: {entry.metrics.steps.toLocaleString()} • Distance: {entry.metrics.distance.toFixed(2)}km
+            <Text style={[
+              styles.rankText,
+              entry.rank !== undefined && entry.rank <= 3 ? styles.topThreeRank : undefined
+            ]}>
+              #{entry.rank ?? '-'}
             </Text>
-            <Text style={styles.scoreText}>Score: {entry.score.overall}</Text>
+          </View>
+          <View style={styles.userContainer}>
+            {entry.photo_url && (
+              <Image
+                source={{ uri: entry.photo_url }}
+                style={styles.avatar}
+              />
+            )}
+            <View style={styles.userInfo}>
+              <Text style={[
+                styles.nameText,
+                user?.id === entry.user_id && styles.currentUserText
+              ]}>
+                {entry.display_name}
+                {user?.id === entry.user_id && ' (You)'}
+              </Text>
+              <View style={styles.statsRow}>
+                <Text style={styles.scoreText}>Score: {entry.score}</Text>
+                <Text style={styles.metricsText}>
+                  Steps: {entry.steps.toLocaleString()} • Distance: {formatDistance(entry.distance, 'metric')}
+                </Text>
+              </View>
+            </View>
           </View>
         </Card>
       ))}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };

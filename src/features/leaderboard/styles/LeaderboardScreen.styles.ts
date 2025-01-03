@@ -8,6 +8,48 @@ export const createStyles = (theme: MD3Theme) => StyleSheet.create({
     backgroundColor: theme.colors.background,
     padding: spacing.lg,
   },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  periodSelector: {
+    marginBottom: spacing.lg,
+  },
+  statsCard: {
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: theme.colors.onSurfaceVariant,
+    marginBottom: spacing.xs,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.onSurface,
+  },
+  achievementsContainer: {
+    marginTop: spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.onSurface,
+    marginBottom: spacing.sm,
+  },
+  achievementChip: {
+    marginRight: spacing.sm,
+    backgroundColor: theme.colors.secondaryContainer,
+  },
   entryContainer: {
     flexDirection: 'row',
     padding: spacing.md,
@@ -15,6 +57,10 @@ export const createStyles = (theme: MD3Theme) => StyleSheet.create({
     borderBottomColor: theme.colors.outline,
     alignItems: 'center',
     marginBottom: spacing.sm,
+  },
+  currentUserEntry: {
+    backgroundColor: theme.colors.primaryContainer,
+    borderRadius: 8,
   },
   rankContainer: {
     width: 40,
@@ -28,28 +74,60 @@ export const createStyles = (theme: MD3Theme) => StyleSheet.create({
   rankText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.onSurfaceVariant,
   },
-  detailsContainer: {
+  topThreeRank: {
+    color: theme.colors.primary,
+    fontWeight: '800',
+  },
+  userContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: spacing.md,
+  },
+  userInfo: {
     flex: 1,
   },
   nameText: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: theme.colors.onSurface,
     marginBottom: 4,
   },
-  metricsText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
+  currentUserText: {
+    color: theme.colors.primary,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   scoreText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.colors.primary,
     fontWeight: '500',
   },
+  streakChip: {
+    backgroundColor: theme.colors.tertiaryContainer,
+    marginLeft: spacing.sm,
+  },
   errorText: {
-    color: 'red',
+    color: theme.colors.error,
     textAlign: 'center',
+  },
+  loadingText: {
+    color: theme.colors.onSurface,
+    marginTop: spacing.md,
+  },
+  metricsText: {
+    fontSize: 12,
+    color: theme.colors.onSurfaceVariant,
+    marginLeft: spacing.sm,
   },
 });
