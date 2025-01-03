@@ -1,10 +1,13 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { HealthMetrics, WeeklyMetrics } from '../types/health';
 import { HealthServiceFactory } from '../services/factory';
 import { HealthService } from '../services/types';
 import AppleHealthKit from 'react-native-health';
 import { getCurrentWeekStart } from '../../../core/constants/metrics';
 import healthMetricsService from '../services/healthMetricsService';
+import { healthMetricsListener } from '../../../services/realtime/listeners/HealthMetricsListener';
+import { HealthMetricType } from '../../../services/database/daos/HealthMetricsDAO';
+import { Logger } from '../../../utils/error/Logger';
 
 const { Permissions } = AppleHealthKit.Constants;
 
@@ -18,12 +21,18 @@ const defaultPermissions = {
   },
 };
 
-const useHealthData = (profileId: string) => {
+interface UseHealthDataOptions {
+  enableRealtime?: boolean;
+  onMetricUpdate?: (metrics: HealthMetrics & WeeklyMetrics) => void;
+}
+
+const useHealthData = (profileId: string, options: UseHealthDataOptions = {}) => {
   const [healthService, setHealthService] = useState<HealthService | null>(null);
   const [metrics, setMetrics] = useState<HealthMetrics & WeeklyMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasPermissions, setHasPermission] = useState(false);
+  const subscriptionIds = useRef<string[]>([]);
 
   const initialize = useCallback(async () => {
     try {
@@ -42,6 +51,68 @@ const useHealthData = (profileId: string) => {
       setError('Failed to initialize health service');
       return false;
     }
+  }, []);
+
+  // Setup realtime subscriptions
+  const setupRealtimeSubscriptions = useCallback(async () => {
+    if (!options.enableRealtime || !profileId) return;
+
+    try {
+      // Subscribe to steps updates
+      const stepsSubscriptionId = await healthMetricsListener.subscribeToMetrics(
+        profileId,
+        HealthMetricType.STEPS,
+        async (metric) => {
+          // Update metrics when we receive new step data
+          setMetrics(current => {
+            if (!current) return current;
+            const updated = {
+              ...current,
+              steps: metric.value
+            };
+            options.onMetricUpdate?.(updated);
+            return updated;
+          });
+        }
+      );
+
+      // Subscribe to distance updates
+      const distanceSubscriptionId = await healthMetricsListener.subscribeToMetrics(
+        profileId,
+        HealthMetricType.DISTANCE,
+        async (metric) => {
+          // Update metrics when we receive new distance data
+          setMetrics(current => {
+            if (!current) return current;
+            const updated = {
+              ...current,
+              distance: metric.value
+            };
+            options.onMetricUpdate?.(updated);
+            return updated;
+          });
+        }
+      );
+
+      subscriptionIds.current = [stepsSubscriptionId, distanceSubscriptionId];
+    } catch (err) {
+      Logger.error('Failed to setup realtime subscriptions', { error: err });
+    }
+  }, [profileId, options.enableRealtime, options.onMetricUpdate]);
+
+  // Cleanup subscriptions
+  const cleanupSubscriptions = useCallback(async () => {
+    for (const id of subscriptionIds.current) {
+      try {
+        await healthMetricsListener.unsubscribe(id);
+      } catch (err) {
+        Logger.error('Failed to unsubscribe from health metrics', { 
+          error: err,
+          subscriptionId: id 
+        });
+      }
+    }
+    subscriptionIds.current = [];
   }, []);
 
   const fetchHealthData = useCallback(async () => {
@@ -90,11 +161,19 @@ const useHealthData = (profileId: string) => {
       const initialized = await initialize();
       if (initialized) {
         await fetchHealthData();
+        if (options.enableRealtime) {
+          await setupRealtimeSubscriptions();
+        }
       }
     };
 
     setupHealthData();
-  }, [initialize, fetchHealthData]);
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      cleanupSubscriptions();
+    };
+  }, [initialize, fetchHealthData, setupRealtimeSubscriptions, cleanupSubscriptions, options.enableRealtime]);
 
   return {
     metrics,
@@ -102,6 +181,7 @@ const useHealthData = (profileId: string) => {
     error,
     refresh,
     hasPermissions,
+    isRealtime: options.enableRealtime && subscriptionIds.current.length > 0,
   };
 };
 
