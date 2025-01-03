@@ -1,6 +1,6 @@
-import { supabase } from '../utils/supabase';
+import { supabase } from '../../../utils/supabase';
 
-import { PrivacyLevel } from '../core/types/base';
+import { PrivacyLevel } from '../../../core/types/base';
 
 interface UserProfile {
   display_name: string;

@@ -1,7 +1,7 @@
-import { supabase } from '../utils/supabase';
-import { Profile } from '../features/profile/types/profile';
-import { User } from '../features/auth/types/auth';
-import { MeasurementSystem, PrivacyLevel } from '../core/types/base';
+import { supabase } from '../../../utils/supabase';
+import { Profile } from '../types/profile';
+import { User } from '../../auth/types/auth';
+import { MeasurementSystem, PrivacyLevel } from '../../../core/types/base';
 
 export interface UserProfile {
   id: string;

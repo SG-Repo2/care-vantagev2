@@ -7,7 +7,7 @@ import * as AuthSession from 'expo-auth-session';
 import { Platform } from 'react-native';
 import { User, mapSupabaseUser } from '../features/auth/types/auth';
 import Constants from 'expo-constants';
-import { profileService } from '../services/profileService';
+import { profileService } from '../features/profile/services/profileService';
 
 WebBrowser.maybeCompleteAuthSession();
 

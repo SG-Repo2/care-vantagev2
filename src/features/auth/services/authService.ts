@@ -1,7 +1,7 @@
-import { supabase } from '../utils/supabase';
+import { supabase } from '../../../utils/supabase';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, mapSupabaseUser } from '../features/auth/types/auth';
+import { User, mapSupabaseUser } from '../types/auth';
 
 class AuthService {
   private static instance: AuthService;
