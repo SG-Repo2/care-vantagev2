@@ -6,6 +6,7 @@ import * as AuthSession from 'expo-auth-session';
 import { Platform } from 'react-native';
 import { User, mapSupabaseUser } from '../features/auth/types/auth';
 import Constants from 'expo-constants';
+import { profileService } from '../services/profileService';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -114,7 +115,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (data.user) {
         console.log('Successfully signed in user:', data.user.id);
-        setUser(data.user ? mapSupabaseUser(data.user) : null);
+        const mappedUser = mapSupabaseUser(data.user);
+        
+        // Check if profile exists
+        const existingProfile = await profileService.getProfile(data.user.id);
+        
+        if (!existingProfile) {
+          // Profile doesn't exist, create a new one
+          console.log('Creating new profile for user:', data.user.id);
+          try {
+            await profileService.createProfile(mappedUser);
+          } catch (profileError) {
+            console.error('Failed to create user profile:', profileError);
+            // Even if profile creation fails, we still want to set the user
+            // They can try updating their profile later
+          }
+        }
+        
+        setUser(mappedUser);
       }
     } catch (err) {
       console.error('Error signing in with Google:', err);
