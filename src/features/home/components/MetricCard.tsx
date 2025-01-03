@@ -1,9 +1,11 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Surface, Text, TouchableRipple, useTheme, ActivityIndicator } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getMetricColor, MetricColorKey } from '../../../theme';
 import { getCurrentWeekStart } from '../../../core/constants/metrics';
+import { Card } from '../../../components/common/atoms/Card';
+import { spacing } from '../../../components/common/theme/spacing';
 
 interface MetricCardProps {
   title: string;
@@ -26,10 +28,8 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 }) => {
   const theme = useTheme();
   const metricColor = getMetricColor(metricType);
-  const surfaceColor = theme.colors.surface;
-  const borderColor = theme.colors.secondary;
-  const borderWidth = 2;
-  
+  const styles = createStyles(theme);
+
   const handlePress = () => {
     if (onPress) {
       onPress(getCurrentWeekStart());
@@ -38,20 +38,20 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 
   const renderContent = () => {
     if (loading) {
-      return <ActivityIndicator size="small" color={metricColor} />;
+      return <Text style={styles.loadingText}>Loading...</Text>;
     }
 
     if (error) {
-      return <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+      return <Text style={styles.errorText}>{error}</Text>;
     }
 
     return (
       <>
         <MaterialCommunityIcons name={icon} size={24} color={metricColor} />
-        <Text variant="titleLarge" style={[styles.value, { color: theme.colors.onSurface }]}>
+        <Text style={[styles.value, { color: theme.colors.onSurface }]}>
           {value}
         </Text>
-        <Text variant="labelMedium" style={[styles.title, { color: theme.colors.onSurfaceVariant }]}>
+        <Text style={[styles.title, { color: theme.colors.onSurfaceVariant }]}>
           {title}
         </Text>
       </>
@@ -59,65 +59,49 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   return (
-    <Surface
+    <Card
       style={[
         styles.container,
-        {
-          backgroundColor: surfaceColor,
-          borderColor: borderColor,
-          shadowColor: metricColor,
-        },
+        { borderColor: metricColor },
       ]}
-      elevation={2}
+      onPress={handlePress}
+      disabled={loading || !!error}
     >
-      <View style={styles.innerContainer}>
-        <TouchableRipple
-          onPress={handlePress}
-          style={styles.touchable}
-          rippleColor={metricColor}
-          disabled={loading || !!error}
-        >
-          <>{renderContent()}</>
-        </TouchableRipple>
+      <View style={styles.content}>
+        {renderContent()}
       </View>
-    </Surface>
+    </Card>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    margin: 8,
-    borderRadius: 16,
+    margin: spacing.sm,
     minHeight: 120,
-    borderWidth: 2,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
-  innerContainer: {
+  content: {
     flex: 1,
-    overflow: 'hidden',
-    borderRadius: 12,
-  },
-  touchable: {
-    flex: 1,
-    padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   value: {
-    marginTop: 8,
+    marginTop: spacing.sm,
+    fontSize: 24,
     fontWeight: '600',
   },
   title: {
-    marginTop: 4,
+    marginTop: spacing.xs,
+    fontSize: 14,
   },
   errorText: {
+    color: theme.colors.error,
     textAlign: 'center',
-    padding: 8,
+    padding: spacing.sm,
+  },
+  loadingText: {
+    color: theme.colors.onSurface,
+    textAlign: 'center',
+    padding: spacing.sm,
   },
 });

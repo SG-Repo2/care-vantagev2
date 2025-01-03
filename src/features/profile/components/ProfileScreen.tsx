@@ -1,9 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { TextInput, Button, Avatar, useTheme, HelperText } from 'react-native-paper';
+import { TextInput, Avatar, useTheme, HelperText } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '../../../context/AuthContext';
-import { User } from '../../../services/authService';
+import type { User } from '../../../features/auth/types/auth';
+import { Button } from '../../../components/common/atoms/Button';
+import { spacing } from '../../../components/common/theme/spacing';
 
 type RootStackParamList = {
   Profile: undefined;
@@ -16,7 +18,7 @@ type ProfileScreenProps = {
 };
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
-  const paperTheme = useTheme();
+  const theme = useTheme();
   const { user, signOut, isLoading } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [editMode, setEditMode] = useState(false);
@@ -24,7 +26,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [updateLoading, setUpdateLoading] = useState(false);
 
   useEffect(() => {
-    setDisplayName(user?.name || '');
+    setDisplayName(user?.displayName || '');
   }, [user]);
 
   const handleLogout = useCallback(async () => {
@@ -55,13 +57,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   }, [displayName]);
 
+  const styles = createStyles(theme);
+
   return (
-    <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
+    <View style={styles.container}>
       <ScrollView style={styles.content}>
         <View style={styles.avatarContainer}>
           <Avatar.Image
             size={100}
-            source={user?.photoUrl ? { uri: user.photoUrl } : { uri: 'https://via.placeholder.com/100' }}
+            source={{ uri: 'https://via.placeholder.com/100' }}
           />
         </View>
 
@@ -79,7 +83,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               {error && <HelperText type="error">{error}</HelperText>}
               <View style={styles.buttonContainer}>
                 <Button
-                  mode="contained"
+                  variant="primary"
+                  size="medium"
                   onPress={handleProfileUpdate}
                   loading={updateLoading}
                   disabled={updateLoading}
@@ -88,10 +93,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                   Save
                 </Button>
                 <Button
-                  mode="outlined"
+                  variant="outline"
+                  size="medium"
                   onPress={() => {
                     setEditMode(false);
-                    setDisplayName(user?.name || '');
+                    setDisplayName(user?.displayName || '');
                     setError(null);
                   }}
                   disabled={updateLoading}
@@ -105,7 +111,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             <>
               <TextInput
                 label="Display Name"
-                value={user?.name || ''}
+                value={user?.displayName || ''}
                 disabled
                 mode="outlined"
               />
@@ -117,14 +123,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               />
               <View style={styles.buttonContainer}>
                 <Button
-                  mode="contained"
+                  variant="primary"
+                  size="medium"
                   onPress={() => setEditMode(true)}
                   style={styles.button}
                 >
                   Edit Profile
                 </Button>
                 <Button
-                  mode="outlined"
+                  variant="outline"
+                  size="medium"
                   onPress={handleLogout}
                   loading={isLoading}
                   disabled={isLoading}
@@ -141,28 +149,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: spacing.lg,
   },
   avatarContainer: {
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: spacing.xl,
   },
   form: {
-    gap: 16,
+    gap: spacing.md,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: spacing.lg,
+    gap: spacing.sm,
   },
   button: {
     flex: 1,
-    marginHorizontal: 4,
   },
 });

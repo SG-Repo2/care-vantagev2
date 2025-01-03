@@ -1,5 +1,7 @@
+import { StyleProp, ViewStyle } from 'react-native';
+
 export interface ButtonProps {
-  variant: 'primary' | 'secondary' | 'outline';
+  variant: 'primary' | 'secondary' | 'outline' | 'text';
   size: 'small' | 'medium' | 'large';
   onPress: () => void;
   disabled?: boolean;
@@ -8,4 +10,5 @@ export interface ButtonProps {
   loading?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
+  style?: StyleProp<ViewStyle>;
 }

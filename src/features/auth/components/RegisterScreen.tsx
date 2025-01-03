@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { useTheme, Button, Text } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../context/AuthContext';
+import { Button } from '../../../components/common/atoms/Button';
+import { spacing } from '../../../components/common/theme/spacing';
 
 type RegisterScreenProps = {
   navigation: StackNavigationProp<AuthStackParamList, 'Register'>;
@@ -11,8 +13,8 @@ type RegisterScreenProps = {
 
 export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const [localError, setLocalError] = useState<string | null>(null);
-  const theme = useTheme();
   const { signInWithGoogle, error: authError, isLoading } = useAuth();
+  const theme = useTheme();
 
   const handleGoogleSignIn = async () => {
     setLocalError(null);
@@ -26,66 +28,72 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
 
   const error = localError || authError;
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: spacing.xl,
+      backgroundColor: theme.colors.background,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      marginBottom: spacing.xl,
+      color: theme.colors.onBackground,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 16,
+      marginBottom: spacing.xl,
+      color: theme.colors.onBackground,
+      textAlign: 'center',
+      opacity: 0.7,
+    },
+    errorText: {
+      fontSize: 14,
+      color: theme.colors.error,
+      marginBottom: spacing.md,
+      textAlign: 'center',
+    },
+    button: {
+      marginBottom: spacing.sm,
+    },
+  });
+
   return (
     <View style={styles.container}>
-      <Text variant="headlineMedium" style={styles.title}>Create Account</Text>
+      <Text style={styles.title}>Create Account</Text>
       
-      <Text variant="bodyMedium" style={styles.subtitle}>
+      <Text style={styles.subtitle}>
         Create an account quickly and easily using your Google account
       </Text>
 
       {error && (
-        <Text variant="bodySmall" style={[styles.error, { color: theme.colors.error }]}>
-          {error}
-        </Text>
+        <Text style={styles.errorText}>{error}</Text>
       )}
 
       <Button
-        mode="contained"
+        variant="primary"
+        size="large"
         onPress={handleGoogleSignIn}
         loading={isLoading}
-        style={styles.googleButton}
         disabled={isLoading}
         icon="google"
+        fullWidth
+        style={styles.button}
       >
         Sign up with Google
       </Button>
 
       <Button
-        mode="text"
+        variant="text"
+        size="medium"
         onPress={() => navigation.navigate('Login')}
-        style={styles.link}
         disabled={isLoading}
+        fullWidth
+        style={styles.button}
       >
         Already have an account? Sign in
       </Button>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  title: {
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  subtitle: {
-    textAlign: 'center',
-    marginBottom: 32,
-    opacity: 0.7,
-  },
-  googleButton: {
-    marginTop: 16,
-  },
-  error: {
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  link: {
-    marginTop: 15,
-  },
-});

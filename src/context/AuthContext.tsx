@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Text } from 'react-native';
 import { supabase } from '../utils/supabase';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
@@ -34,13 +35,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   if (!googleAuth?.iosClientId || !googleAuth?.webClientId || !googleAuth?.androidClientId) {
     throw new Error('Missing Google Auth configuration. Check your app.config.js and .env files.');
   }
-
-  console.log('Auth Configuration:', {
-    androidClientId: googleAuth.androidClientId,
-    iosClientId: googleAuth.iosClientId,
-    webClientId: googleAuth.webClientId,
-    clientId: googleAuth.expoClientId,
-  });
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: Platform.select({
@@ -101,8 +95,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(null);
       setIsLoading(true);
       
-      console.log('Attempting to sign in with token:', idToken);
-      
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
@@ -114,7 +106,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       if (data.user) {
-        console.log('Successfully signed in user:', data.user.id);
         const mappedUser = mapSupabaseUser(data.user);
         
         // Check if profile exists
@@ -122,7 +113,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (!existingProfile) {
           // Profile doesn't exist, create a new one
-          console.log('Creating new profile for user:', data.user.id);
           try {
             await profileService.createProfile(mappedUser);
           } catch (profileError) {
@@ -152,8 +142,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!request) {
         throw new Error('Google Auth request was not initialized');
       }
-      const result = await promptAsync();
-      console.log('Prompt result:', result);
+      await promptAsync();
     } catch (err) {
       console.error('Error initiating Google sign-in:', err);
       setError('Failed to initiate Google sign-in');
@@ -184,6 +173,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         signOut,
       }}
     >
+      {error && (
+        <Text style={{ color: 'red' }}>{error}</Text>
+      )}
       {children}
     </AuthContext.Provider>
   );

@@ -1,13 +1,14 @@
 import { StyleSheet } from 'react-native';
 import { MD3Theme, useTheme } from 'react-native-paper';
+import { spacing } from '../../../components/common/theme/spacing';
 
 const createStyles = (theme: MD3Theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#20B2AA',
+    backgroundColor: theme.colors.background,
   },
   content: {
-    padding: 16,
+    padding: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -17,28 +18,29 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
     color: theme.colors.error,
+    fontSize: 16,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
     elevation: 2,
     shadowColor: theme.colors.primary,
     shadowOffset: {
       width: 0,
       height: 2,
     },
-
-    
+    shadowOpacity: 0.23,
+    shadowRadius: 2.62,
   },
   title: {
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.colors.onBackground,
   },
   leaderboardButton: {
     margin: 0,
@@ -46,8 +48,8 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
   metricsContainer: {
     width: '100%',
     alignItems: 'stretch',
-    gap: 16,
-    paddingHorizontal: 8,
+    gap: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   scrollView: {
     flex: 1,

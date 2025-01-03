@@ -1,8 +1,10 @@
 import React from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
-import { Modal, Portal, Text, IconButton, Surface, useTheme, MD3Theme } from 'react-native-paper';
+import { Modal, Portal, Text, IconButton, useTheme } from 'react-native-paper';
 import { LineChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Card } from '../../../components/common/atoms/Card';
+import { spacing } from '../../../components/common/theme/spacing';
 
 interface MetricModalProps {
   visible: boolean;
@@ -30,7 +32,6 @@ const generateWeekLabels = (startDate: Date): string[] => {
   const labels: string[] = [];
   const currentDate = new Date(startDate);
   
-  // Generate labels for the past 6 days plus today
   for (let i = 0; i < 7; i++) {
     labels.push(formatDateLabel(currentDate));
     currentDate.setDate(currentDate.getDate() + 1);
@@ -49,53 +50,14 @@ export const MetricModal: React.FC<MetricModalProps> = ({
 }) => {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-
-  const styles = StyleSheet.create({
-    modalContainer: {
-      margin: 0,
-      justifyContent: 'flex-end',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    modalContent: {
-      padding: 24,
-      borderTopLeftRadius: 28,
-      borderTopRightRadius: 28,
-      borderWidth: 2,
-      borderColor: theme.colors.secondary,
-    },
-    closeButton: {
-      position: 'absolute',
-      right: 8,
-      top: 8,
-    },
-    modalTitle: {
-      marginTop: 8,
-      marginBottom: 4,
-    },
-    modalValue: {
-      marginBottom: 16,
-    },
-    chartContainer: {
-      alignItems: 'center',
-      marginVertical: 16,
-    },
-    additionalInfoContainer: {
-      marginTop: 16,
-      gap: 12,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-  });
+  const styles = createStyles(theme);
 
   const chartConfig = {
     backgroundColor: theme.colors.surface,
     backgroundGradientFrom: theme.colors.primaryContainer,
     backgroundGradientTo: theme.colors.surface,
     decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(32, 178, 170, ${opacity})`, // Light sea green
+    color: (opacity = 1) => `rgba(32, 178, 170, ${opacity})`,
     labelColor: (opacity = 1) => theme.colors.onSurface,
     style: {
       borderRadius: 16,
@@ -103,7 +65,7 @@ export const MetricModal: React.FC<MetricModalProps> = ({
     propsForDots: {
       r: '6',
       strokeWidth: '2',
-      stroke: '#20B2AA', // Light sea green
+      stroke: '#20B2AA',
       fill: theme.colors.surface,
     },
   };
@@ -116,10 +78,9 @@ export const MetricModal: React.FC<MetricModalProps> = ({
         contentContainerStyle={[
           styles.modalContainer,
           { paddingBottom: insets.bottom },
-          { backgroundColor: theme.colors.surface }
         ]}
       >
-        <Surface style={styles.modalContent} elevation={0}>
+        <Card style={styles.modalContent}>
           <IconButton
             icon="close"
             size={24}
@@ -127,10 +88,8 @@ export const MetricModal: React.FC<MetricModalProps> = ({
             style={styles.closeButton}
           />
 
-          <Text variant="headlineMedium" style={styles.modalTitle}>
-            {title}
-          </Text>
-          <Text variant="displaySmall" style={[styles.modalValue, { color: theme.colors.primary }]}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          <Text style={[styles.modalValue, { color: theme.colors.primary }]}>
             {value}
           </Text>
 
@@ -145,30 +104,78 @@ export const MetricModal: React.FC<MetricModalProps> = ({
                 height={220}
                 chartConfig={chartConfig}
                 bezier
-                style={{
-                  marginVertical: 8,
-                  borderRadius: 16,
-                }}
+                style={styles.chart}
               />
             </View>
           )}
 
           {additionalInfo && additionalInfo.length > 0 && (
-            <Surface style={styles.additionalInfoContainer} elevation={0}>
+            <View style={styles.additionalInfoContainer}>
               {additionalInfo.map((info, index) => (
                 <View key={index} style={styles.infoRow}>
-                  <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-                    {info.label}
-                  </Text>
-                  <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
-                    {info.value}
-                  </Text>
+                  <Text style={styles.infoLabel}>{info.label}</Text>
+                  <Text style={styles.infoValue}>{info.value}</Text>
                 </View>
               ))}
-            </Surface>
+            </View>
           )}
-        </Surface>
+        </Card>
       </Modal>
     </Portal>
   );
 };
+
+const createStyles = (theme: any) => StyleSheet.create({
+  modalContainer: {
+    margin: 0,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    padding: spacing.xl,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
+  closeButton: {
+    position: 'absolute',
+    right: spacing.sm,
+    top: spacing.sm,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    color: theme.colors.onSurface,
+  },
+  modalValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: spacing.lg,
+  },
+  chartContainer: {
+    alignItems: 'center',
+    marginVertical: spacing.lg,
+  },
+  chart: {
+    marginVertical: spacing.sm,
+    borderRadius: 16,
+  },
+  additionalInfoContainer: {
+    marginTop: spacing.lg,
+    gap: spacing.md,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  infoLabel: {
+    fontSize: 16,
+    color: theme.colors.onSurfaceVariant,
+  },
+  infoValue: {
+    fontSize: 18,
+    color: theme.colors.onSurface,
+  },
+});
