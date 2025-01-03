@@ -1,5 +1,37 @@
 import { supabase } from '../utils/supabase';
 
+import { PrivacyLevel } from '../core/types/base';
+
+interface UserProfile {
+  display_name: string;
+  photo_url: string | null;
+  settings: {
+    privacyLevel: PrivacyLevel;
+  };
+}
+
+interface HealthMetric {
+  user_id: string;
+  steps: number;
+  distance: number;
+  score: number;
+  users: UserProfile | null;
+}
+
+interface WeeklyHealthMetric {
+  user_id: string;
+  steps: number;
+  distance: number;
+  score: number;
+  users: UserProfile | null;
+}
+
+interface HealthMetricScore {
+  user_id: string;
+  score: number;
+  users: UserProfile | null;
+}
+
 export interface LeaderboardEntry {
   user_id: string;
   display_name: string;
@@ -11,38 +43,19 @@ export interface LeaderboardEntry {
 }
 
 class LeaderboardService {
-  private static instance: LeaderboardService;
-
-  private constructor() {}
-
-  public static getInstance(): LeaderboardService {
-    if (!LeaderboardService.instance) {
-      LeaderboardService.instance = new LeaderboardService();
-    }
-    return LeaderboardService.instance;
-  }
+  constructor() {}
 
   public async getLeaderboard(date: string): Promise<LeaderboardEntry[]> {
+    // Use the same pattern as weekly leaderboard for consistency
     const { data, error } = await supabase
-      .from('health_metrics')
-      .select(`
-        user_id,
-        steps,
-        distance,
-        score,
-        users (
-          display_name,
-          photo_url
-        )
-      `)
-      .eq('date', date)
-      .order('score', { ascending: false });
+      .rpc('get_daily_leaderboard', {
+        target_date: date
+      });
 
     if (error) throw error;
-
     if (!data) return [];
 
-    return data.map((entry, index) => ({
+    return data.map((entry: HealthMetric, index: number) => ({
       user_id: entry.user_id,
       display_name: entry.users?.display_name || 'Unknown User',
       photo_url: entry.users?.photo_url || null,
@@ -55,64 +68,36 @@ class LeaderboardService {
 
   public async getUserRank(userId: string, date: string): Promise<number | null> {
     const { data, error } = await supabase
-      .from('health_metrics')
-      .select('score')
-      .eq('date', date)
-      .order('score', { ascending: false });
+      .rpc('get_user_rank', {
+        user_uuid: userId,
+        target_date: date
+      });
 
     if (error) throw error;
-    if (!data) return null;
-
-    const userIndex = data.findIndex(entry => entry.user_id === userId);
-    return userIndex === -1 ? null : userIndex + 1;
+    return data;
   }
 
   public async getWeeklyLeaderboard(startDate: string, endDate: string): Promise<LeaderboardEntry[]> {
     const { data, error } = await supabase
-      .from('health_metrics')
-      .select(`
-        user_id,
-        steps,
-        distance,
-        score,
-        users (
-          display_name,
-          photo_url
-        )
-      `)
-      .gte('date', startDate)
-      .lte('date', endDate);
+      .rpc('get_weekly_leaderboard', {
+        start_date: startDate,
+        end_date: endDate
+      });
 
     if (error) throw error;
     if (!data) return [];
 
-    // Aggregate scores by user
-    const userScores = data.reduce((acc, entry) => {
-      const userId = entry.user_id;
-      if (!acc[userId]) {
-        acc[userId] = {
-          user_id: userId,
-          display_name: entry.users?.display_name || 'Unknown User',
-          photo_url: entry.users?.photo_url || null,
-          steps: 0,
-          distance: 0,
-          score: 0
-        };
-      }
-      acc[userId].steps += entry.steps || 0;
-      acc[userId].distance += entry.distance || 0;
-      acc[userId].score += entry.score || 0;
-      return acc;
-    }, {} as Record<string, Omit<LeaderboardEntry, 'rank'>>);
-
-    // Convert to array and sort by score
-    return Object.values(userScores)
-      .sort((a, b) => b.score - a.score)
-      .map((entry, index) => ({
-        ...entry,
-        rank: index + 1
-      }));
+    // Map the data to LeaderboardEntry format
+    return data.map((entry: WeeklyHealthMetric, index: number) => ({
+      user_id: entry.user_id,
+      display_name: entry.users?.display_name || 'Unknown User',
+      photo_url: entry.users?.photo_url || null,
+      steps: entry.steps || 0,
+      distance: entry.distance || 0,
+      score: entry.score || 0,
+      rank: index + 1
+    }));
   }
 }
 
-export default LeaderboardService.getInstance();
+export default new LeaderboardService();
