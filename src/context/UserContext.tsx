@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../features/auth/types/auth';
-import { StorageService } from '../services/storageService';
+import { StorageService } from '../core/storage/StorageService';
 import { profileService } from '../features/profile/services/profileService';
 
 interface UserContextType {

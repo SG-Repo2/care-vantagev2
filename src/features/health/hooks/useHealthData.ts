@@ -5,8 +5,8 @@ import { HealthService } from '../services/types';
 import AppleHealthKit from 'react-native-health';
 import { getCurrentWeekStart } from '../../../core/constants/metrics';
 import healthMetricsService from '../services/healthMetricsService';
-import { healthMetricsListener } from '../../../services/realtime/listeners/HealthMetricsListener';
-import { HealthMetricType } from '../../../services/database/daos/HealthMetricsDAO';
+import { healthMetricsListener } from '../../../data/repositories/health/HealthMetricsListener';
+import { HealthMetricType } from '../../../data/repositories/health/HealthMetricsDAO';
 import { Logger } from '../../../utils/error/Logger';
 
 const { Permissions } = AppleHealthKit.Constants;
