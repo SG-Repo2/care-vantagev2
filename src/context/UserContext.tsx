@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../features/auth/services/authService';
+import { User } from '../features/auth/types/auth';
 import { StorageService } from '../services/storageService';
+import { profileService } from '../features/profile/services/profileService';
 
 interface UserContextType {
   user: User | null;
@@ -15,28 +16,49 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const userData = await StorageService.getUserData();
-        if (userData) {
+  const loadUser = async () => {
+    try {
+      const userData = await StorageService.getUserData();
+      if (userData) {
+        // Get latest profile data from Supabase
+        const profile = await profileService.getProfile(userData.id);
+        if (profile) {
+          // Merge profile data with stored user data
+          setUser({
+            ...userData,
+            displayName: profile.display_name,
+            photoURL: profile.photo_url
+          });
+        } else {
           setUser(userData);
         }
-      } catch (error) {
-        console.error('Error loading user data:', error);
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
     loadUser();
   }, []);
 
   const updateUser = async (newUser: User | null) => {
-    setUser(newUser);
-    if (newUser) {
-      await StorageService.setUserData(newUser);
-    } else {
-      await StorageService.clearAll();
+    try {
+      if (newUser) {
+        // Update profile in Supabase
+        await profileService.updateProfile(newUser.id, {
+          display_name: newUser.displayName,
+          photo_url: newUser.photoURL
+        });
+        await StorageService.setUserData(newUser);
+      } else {
+        await StorageService.clearAll();
+      }
+      setUser(newUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
     }
   };
 

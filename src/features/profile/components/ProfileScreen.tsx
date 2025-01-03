@@ -7,7 +7,7 @@ import type { User } from '../../../features/auth/types/auth';
 import { Button } from '../../../components/common/atoms/Button';
 import { spacing } from '../../../components/common/theme/spacing';
 import { createStyles } from '../styles/ProfileScreen.styles';
-import { profileService } from '../../../services/profileService';
+import { profileService } from '../services/profileService';
 
 type RootStackParamList = {
   Profile: undefined;

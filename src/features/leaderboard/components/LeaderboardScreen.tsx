@@ -4,7 +4,7 @@ import { useTheme, ActivityIndicator, SegmentedButtons } from 'react-native-pape
 import { Card } from '../../../components/common/atoms/Card';
 import { Button } from '../../../components/common/atoms/Button';
 import { useAuth } from '../../../context/AuthContext';
-import leaderboardService, { LeaderboardEntry } from '../../../services/leaderboardService';
+import leaderboardService, { LeaderboardEntry } from '../services/leaderboardService';
 import { createStyles } from '../styles/LeaderboardScreen.styles';
 import { formatDistance } from '../../../core/utils/formatting';
 

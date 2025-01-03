@@ -4,7 +4,7 @@ import { HealthServiceFactory } from '../services/factory';
 import { HealthService } from '../services/types';
 import AppleHealthKit from 'react-native-health';
 import { getCurrentWeekStart } from '../../../core/constants/metrics';
-import healthMetricsService from '../../../services/healthMetricsService';
+import healthMetricsService from '../services/healthMetricsService';
 
 const { Permissions } = AppleHealthKit.Constants;
 
