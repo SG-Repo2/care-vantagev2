@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../context/AuthContext';
 import { Button } from '../../../components/common/atoms/Button';
-import { spacing } from '../../../components/common/theme/spacing';
+import { createStyles } from '../styles/RegisterScreen.styles';
 
 type RegisterScreenProps = {
   navigation: StackNavigationProp<AuthStackParamList, 'Register'>;
@@ -28,36 +28,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
 
   const error = localError || authError;
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: spacing.xl,
-      backgroundColor: theme.colors.background,
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginBottom: spacing.xl,
-      color: theme.colors.onBackground,
-      textAlign: 'center',
-    },
-    subtitle: {
-      fontSize: 16,
-      marginBottom: spacing.xl,
-      color: theme.colors.onBackground,
-      textAlign: 'center',
-      opacity: 0.7,
-    },
-    errorText: {
-      fontSize: 14,
-      color: theme.colors.error,
-      marginBottom: spacing.md,
-      textAlign: 'center',
-    },
-    button: {
-      marginBottom: spacing.sm,
-    },
-  });
+  const styles = createStyles(theme);
 
   return (
     <View style={styles.container}>

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
+
 import healthMetricsService from '../../../services/healthMetricsService';
+import { createStyles } from '../styles/LeaderboardScreen.styles';
 
 interface LeaderboardEntry {
   id: string;
@@ -25,7 +27,7 @@ export const LeaderboardScreen: React.FC = () => {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const theme = useTheme();
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
@@ -99,53 +101,3 @@ export const LeaderboardScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 16,
-  },
-  entryContainer: {
-    flexDirection: 'row',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    alignItems: 'center',
-  },
-  rankContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  rankText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  detailsContainer: {
-    flex: 1,
-  },
-  nameText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  metricsText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
-  },
-  scoreText: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-  },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
-  },
-});

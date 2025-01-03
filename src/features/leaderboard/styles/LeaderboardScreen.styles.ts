@@ -1,111 +1,53 @@
 import { StyleSheet } from 'react-native';
-import { ExtendedTheme } from '../../../theme';
+import { MD3Theme } from 'react-native-paper';
 
-export const createStyles = (theme: ExtendedTheme) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#20B2AA', // Seafoam green
-    },
-    listContainer: {
-      paddingHorizontal: 16,
-      paddingTop: 16,
-    },
-    entryContainer: {
-      backgroundColor: theme.colors.card,
-      borderRadius: 12,
-      marginBottom: 12,
-      padding: 16,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    userEntryContainer: {
-      borderWidth: 2,
-      borderColor: theme.colors.primary,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    rankContainer: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: theme.colors.secondary + '20',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: 12,
-    },
-    rankText: {
-      ...theme.textVariants.body,
-      color: theme.colors.text,
-      fontWeight: 'bold',
-    },
-    userInfo: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    avatar: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      marginRight: 12,
-    },
-    nameText: {
-      ...theme.textVariants.body,
-      color: theme.colors.text,
-      fontWeight: '600',
-    },
-    scoreContainer: {
-      backgroundColor: theme.colors.secondary + '10',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-    },
-    scoreText: {
-      ...theme.textVariants.body,
-      color: theme.colors.text,
-      fontWeight: 'bold',
-    },
-    detailsContainer: {
-      marginTop: 12,
-      paddingTop: 12,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.border,
-    },
-    metricRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    metricLabel: {
-      ...theme.textVariants.caption,
-      color: theme.colors.textSecondary,
-    },
-    metricValue: {
-      ...theme.textVariants.body,
-      color: theme.colors.text,
-      fontWeight: '500',
-    },
-    expandButton: {
-      padding: 8,
-      marginLeft: 8,
-    },
-    loadingContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    errorText: {
-      ...theme.textVariants.body,
-      color: theme.colors.error,
-      textAlign: 'center',
-      margin: 16,
-    },
-  });
+export const createStyles = (theme: MD3Theme) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 16,
+  },
+  entryContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    alignItems: 'center',
+  },
+  rankContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surfaceVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  rankText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  detailsContainer: {
+    flex: 1,
+  },
+  nameText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  metricsText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  scoreText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+  },
+});

@@ -6,6 +6,7 @@ import { AuthStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../context/AuthContext';
 import { Button } from '../../../components/common/atoms/Button';
 import { spacing } from '../../../components/common/theme/spacing';
+import { createStyles } from '../styles/LoginScreen.styles';
 
 type LoginScreenProps = {
   navigation: StackNavigationProp<AuthStackParamList, 'Login'>;
@@ -40,32 +41,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const error = localError || authError;
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: spacing.xl,
-      backgroundColor: theme.colors.background,
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginBottom: spacing.xl,
-      color: theme.colors.onBackground,
-      textAlign: 'center',
-    },
-    input: {
-      marginBottom: spacing.md,
-    },
-    errorText: {
-      fontSize: 14,
-      color: theme.colors.error,
-      marginBottom: spacing.md,
-      textAlign: 'center',
-    },
-    button: {
-      marginBottom: spacing.sm,
-    },
-  });
+  const styles = createStyles(theme);
 
   return (
     <View style={styles.container}>

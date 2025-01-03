@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
 import { TextInput, Avatar, useTheme, HelperText } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '../../../context/AuthContext';
 import type { User } from '../../../features/auth/types/auth';
 import { Button } from '../../../components/common/atoms/Button';
 import { spacing } from '../../../components/common/theme/spacing';
+import { createStyles } from '../styles/ProfileScreen.styles';
 
 type RootStackParamList = {
   Profile: undefined;
@@ -149,29 +150,3 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   );
 };
 
-const createStyles = (theme: any) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  avatarContainer: {
-    alignItems: 'center',
-    marginVertical: spacing.xl,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-  button: {
-    flex: 1,
-  },
-});
