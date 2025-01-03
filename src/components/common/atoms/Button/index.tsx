@@ -52,7 +52,9 @@ export const Button: React.FC<ButtonProps> = ({
       ) : (
         <View style={styles.iconContainer}>
           {icon && iconPosition === 'left' && (
-            <View style={styles.iconLeft}>{icon}</View>
+            <View style={styles.iconLeft}>
+              {typeof icon === 'string' ? <Text>{icon}</Text> : icon}
+            </View>
           )}
           <Text style={[
             styles.textBase,
@@ -61,7 +63,9 @@ export const Button: React.FC<ButtonProps> = ({
             {children}
           </Text>
           {icon && iconPosition === 'right' && (
-            <View style={styles.iconRight}>{icon}</View>
+            <View style={styles.iconRight}>
+              {typeof icon === 'string' ? <Text>{icon}</Text> : icon}
+            </View>
           )}
         </View>
       )}
