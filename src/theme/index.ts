@@ -29,6 +29,13 @@ export interface ExtendedTheme extends MD3Theme, NavigationTheme {
     calories: string;
     sleep: string;
   };
+  layout: {
+    borderRadius: {
+      small: number;
+      medium: number;
+      large: number;
+    };
+  };
 }
 
 // Custom colors for metrics
@@ -38,6 +45,15 @@ const metricColors = {
   score: '#9B59B6',      // Purpureus
   calories: '#FF6B6B',   // Light red
   sleep: '#9B59B6',      // Purpureus
+};
+
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48
 };
 
 export const lightColors: MD3Colors = {
@@ -100,6 +116,13 @@ export const lightTheme = {
   },
   metrics: metricColors,
   textVariants,
+  layout: {
+    borderRadius: {
+      small: 4,
+      medium: 8,
+      large: 16
+    }
+  }
 };
 
 export const darkTheme = {
@@ -111,6 +134,13 @@ export const darkTheme = {
   },
   metrics: metricColors,
   textVariants,
+  layout: {
+    borderRadius: {
+      small: 4,
+      medium: 8,
+      large: 16
+    }
+  }
 };
 
 // Create a custom theme that combines MD3Theme and NavigationTheme
@@ -127,6 +157,13 @@ export const customLightTheme: ExtendedTheme = {
   },
   textVariants,
   metrics: metricColors,
+  layout: {
+    borderRadius: {
+      small: 4,
+      medium: 8,
+      large: 16
+    }
+  }
 };
 
 export const customDarkTheme: ExtendedTheme = {
@@ -142,6 +179,13 @@ export const customDarkTheme: ExtendedTheme = {
   },
   textVariants,
   metrics: metricColors,
+  layout: {
+    borderRadius: {
+      small: 4,
+      medium: 8,
+      large: 16
+    }
+  }
 };
 
 export type AppTheme = ExtendedTheme;
