@@ -130,4 +130,17 @@ export const createStyles = (theme: MD3Theme) => StyleSheet.create({
     color: theme.colors.onSurfaceVariant,
     marginLeft: spacing.sm,
   },
+  privateAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: spacing.md,
+    backgroundColor: theme.colors.surfaceVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  privateAvatarText: {
+    fontSize: 20,
+    color: theme.colors.onSurfaceVariant,
+  },
 });

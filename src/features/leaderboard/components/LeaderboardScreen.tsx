@@ -17,6 +17,8 @@ const LeaderboardEntryItem = memo(({ item, isCurrentUser }: { item: LeaderboardE
   const theme = useTheme();
   const styles = createStyles(theme);
 
+  const isPrivate = item.profile.privacyLevel === 'private' && !isCurrentUser;
+
   return (
     <Card style={[
       styles.entryContainer,
@@ -31,26 +33,35 @@ const LeaderboardEntryItem = memo(({ item, isCurrentUser }: { item: LeaderboardE
         </Text>
       </View>
       <View style={styles.userContainer}>
-        {item.profile.photoUrl && (
+        {!isPrivate && item.profile.photoUrl && (
           <Image
             source={{ uri: item.profile.photoUrl }}
             style={styles.avatar}
           />
+        )}
+        {isPrivate && (
+          <View style={[styles.avatar, styles.privateAvatar]}>
+            <Text style={styles.privateAvatarText}>🔒</Text>
+          </View>
         )}
         <View style={styles.userInfo}>
           <Text style={[
             styles.nameText,
             isCurrentUser && styles.currentUserText
           ]}>
-            {item.profile.displayName}
+            {isPrivate ? 'Private User' : item.profile.displayName}
             {isCurrentUser && ' (You)'}
             {item.profile.privacyLevel === 'private' && ' 🔒'}
           </Text>
           <View style={styles.statsRow}>
-            <Text style={styles.scoreText}>Score: {item.score}</Text>
-            <Text style={styles.metricsText}>
-              Steps: {item.steps.toLocaleString()} • Distance: {formatDistance(item.distance, 'metric')}
+            <Text style={styles.scoreText}>
+              Score: {isPrivate ? '---' : item.score}
             </Text>
+            {!isPrivate && (
+              <Text style={styles.metricsText}>
+                Steps: {item.steps.toLocaleString()} • Distance: {formatDistance(item.distance, 'metric')}
+              </Text>
+            )}
           </View>
         </View>
       </View>
