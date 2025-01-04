@@ -1,5 +1,8 @@
--- Drop existing select policy for health_metrics
+-- Drop existing policies to avoid conflicts
 DROP POLICY IF EXISTS "Users can read their own health metrics" ON health_metrics;
+DROP POLICY IF EXISTS "Users can read public health metrics" ON health_metrics;
+DROP POLICY IF EXISTS "Users can insert their own health metrics" ON health_metrics;
+DROP POLICY IF EXISTS "Users can update their own health metrics" ON health_metrics;
 
 -- Create new policy that allows reading public health metrics
 CREATE POLICY "Users can read public health metrics"
@@ -13,6 +16,18 @@ USING (
     AND (users.settings->>'privacyLevel')::text = 'public'
   )
 );
+
+-- Recreate insert and update policies
+CREATE POLICY "Users can insert their own health metrics"
+ON health_metrics
+FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own health metrics"
+ON health_metrics
+FOR UPDATE
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 -- Add composite index for more efficient leaderboard queries
 CREATE INDEX IF NOT EXISTS idx_health_metrics_date_score 
