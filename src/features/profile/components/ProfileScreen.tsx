@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
-import { TextInput, Avatar, useTheme, HelperText } from 'react-native-paper';
+import { TextInput, Avatar, useTheme, HelperText, SegmentedButtons, Text } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '../../../context/AuthContext';
 import type { User } from '../../../features/auth/types/auth';
+import type { PrivacyLevel } from '../../../core/types/base';
 import { Button } from '../../../components/common/atoms/Button';
 import { spacing } from '../../../components/common/theme/spacing';
 import { createStyles } from '../styles/ProfileScreen.styles';
@@ -23,12 +24,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const theme = useTheme();
   const { user, signOut, isLoading } = useAuth();
   const [displayName, setDisplayName] = useState('');
+  const [privacyLevel, setPrivacyLevel] = useState<PrivacyLevel>('private');
   const [editMode, setEditMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updateLoading, setUpdateLoading] = useState(false);
 
   useEffect(() => {
     setDisplayName(user?.displayName || '');
+    // Load privacy settings from user profile
+    const loadProfile = async () => {
+      if (user?.id) {
+        try {
+          const profile = await profileService.getProfile(user.id);
+          if (profile?.settings?.privacyLevel) {
+            setPrivacyLevel(profile.settings.privacyLevel);
+          }
+        } catch (err) {
+          console.error('[ProfileScreen] Error loading profile:', err);
+        }
+      }
+    };
+    loadProfile();
   }, [user]);
 
   const handleLogout = useCallback(async () => {
@@ -56,7 +72,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       setError(null);
       
       await profileService.updateProfile(user.id, {
-        display_name: displayName.trim()
+        display_name: displayName.trim(),
+        settings: {
+          privacyLevel: privacyLevel,
+          // Preserve other settings
+          measurementSystem: 'metric',
+          notifications: true,
+          dailyGoals: {
+            steps: 10000,
+            sleep: 480,
+            water: 2000
+          }
+        }
       });
       
       setEditMode(false);
@@ -66,7 +93,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     } finally {
       setUpdateLoading(false);
     }
-  }, [displayName, user?.id]);
+  }, [displayName, privacyLevel, user?.id]);
 
   const styles = createStyles(theme);
 
@@ -80,7 +107,22 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           />
         </View>
 
-        <View style={styles.form}>
+          <View style={styles.form}>
+            <View style={styles.section}>
+              <Text variant="titleMedium" style={styles.sectionTitle}>Privacy Settings</Text>
+              <Text variant="bodySmall" style={styles.sectionDescription}>
+                Control how your health data appears in the leaderboard
+              </Text>
+              <SegmentedButtons
+                value={privacyLevel}
+                onValueChange={value => setPrivacyLevel(value as PrivacyLevel)}
+                buttons={[
+                  { value: 'private', label: 'Private' },
+                  { value: 'public', label: 'Public' }
+                ]}
+                style={styles.privacySelector}
+              />
+            </View>
           {editMode ? (
             <>
               <TextInput

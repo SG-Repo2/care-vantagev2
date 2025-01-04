@@ -27,4 +27,18 @@ export const createStyles = (theme: MD3Theme) => StyleSheet.create({
   button: {
     flex: 1,
   },
+  section: {
+    marginBottom: spacing.xl,
+  },
+  sectionTitle: {
+    marginBottom: spacing.xs,
+    color: theme.colors.onSurface,
+  },
+  sectionDescription: {
+    marginBottom: spacing.md,
+    color: theme.colors.onSurfaceVariant,
+  },
+  privacySelector: {
+    marginBottom: spacing.md,
+  },
 });

@@ -1,5 +1,4 @@
 import { supabase } from '../../../utils/supabase';
-
 import { PrivacyLevel } from '../../../core/types/base';
 
 interface UserProfile {
@@ -26,12 +25,6 @@ interface WeeklyHealthMetric {
   users: UserProfile | null;
 }
 
-interface HealthMetricScore {
-  user_id: string;
-  score: number;
-  users: UserProfile | null;
-}
-
 export interface LeaderboardEntry {
   profileId: string;
   profile: {
@@ -50,17 +43,8 @@ export interface LeaderboardEntry {
 class LeaderboardService {
   constructor() {}
 
-  public async getLeaderboard(date: string): Promise<LeaderboardEntry[]> {
-    // Use the same pattern as weekly leaderboard for consistency
-    const { data, error } = await supabase
-      .rpc('get_daily_leaderboard', {
-        target_date: date
-      });
-
-    if (error) throw error;
-    if (!data) return [];
-
-    return data.map((entry: HealthMetric, index: number) => ({
+  private mapToLeaderboardEntry(entry: HealthMetric | WeeklyHealthMetric, index: number): LeaderboardEntry {
+    return {
       profileId: entry.user_id,
       profile: {
         id: entry.user_id,
@@ -73,7 +57,21 @@ class LeaderboardService {
       distance: entry.distance || 0,
       score: entry.score || 0,
       rank: index + 1
-    }));
+    };
+  }
+
+  public async getLeaderboard(date: string): Promise<LeaderboardEntry[]> {
+    const { data, error } = await supabase
+      .rpc('get_daily_leaderboard', {
+        target_date: date
+      });
+
+    if (error) throw error;
+    if (!data) return [];
+
+    return data.map((entry: HealthMetric, index: number) => 
+      this.mapToLeaderboardEntry(entry, index)
+    );
   }
 
   public async getUserRank(userId: string, date: string): Promise<number | null> {
@@ -97,16 +95,9 @@ class LeaderboardService {
     if (error) throw error;
     if (!data) return [];
 
-    // Map the data to LeaderboardEntry format
-    return data.map((entry: WeeklyHealthMetric, index: number) => ({
-      user_id: entry.user_id,
-      display_name: entry.users?.display_name || 'Unknown User',
-      photo_url: entry.users?.photo_url || null,
-      steps: entry.steps || 0,
-      distance: entry.distance || 0,
-      score: entry.score || 0,
-      rank: index + 1
-    }));
+    return data.map((entry: WeeklyHealthMetric, index: number) => 
+      this.mapToLeaderboardEntry(entry, index)
+    );
   }
 }
 

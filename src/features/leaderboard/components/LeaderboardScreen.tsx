@@ -44,6 +44,7 @@ const LeaderboardEntryItem = memo(({ item, isCurrentUser }: { item: LeaderboardE
           ]}>
             {item.profile.displayName}
             {isCurrentUser && ' (You)'}
+            {item.profile.privacyLevel === 'private' && ' 🔒'}
           </Text>
           <View style={styles.statsRow}>
             <Text style={styles.scoreText}>Score: {item.score}</Text>
@@ -110,7 +111,7 @@ export const LeaderboardScreen: React.FC = () => {
 
   const getItem = (data: LeaderboardEntry[], index: number) => data[index];
   const getItemCount = (data: LeaderboardEntry[]) => data.length;
-  const keyExtractor = (item: LeaderboardEntry) => item.profile.userId;
+  const keyExtractor = (item: LeaderboardEntry) => item.profileId;
 
   const sortedEntries = useMemo(() =>
     leaderboardData.sort((a, b) => (a.rank || Infinity) - (b.rank || Infinity)),
@@ -145,7 +146,7 @@ export const LeaderboardScreen: React.FC = () => {
         renderItem={({ item }: LeaderboardItem) => (
           <LeaderboardEntryItem
             item={item}
-            isCurrentUser={user?.id === item.profile.userId}
+            isCurrentUser={user?.id === item.profileId}
           />
         )}
         keyExtractor={keyExtractor}
