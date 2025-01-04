@@ -33,9 +33,14 @@ interface HealthMetricScore {
 }
 
 export interface LeaderboardEntry {
-  user_id: string;
-  display_name: string;
-  photo_url: string | null;
+  profileId: string;
+  profile: {
+    id: string;
+    userId: string;
+    displayName: string;
+    photoUrl: string | null;
+    privacyLevel: PrivacyLevel;
+  };
   steps: number;
   distance: number;
   score: number;
@@ -56,9 +61,14 @@ class LeaderboardService {
     if (!data) return [];
 
     return data.map((entry: HealthMetric, index: number) => ({
-      user_id: entry.user_id,
-      display_name: entry.users?.display_name || 'Unknown User',
-      photo_url: entry.users?.photo_url || null,
+      profileId: entry.user_id,
+      profile: {
+        id: entry.user_id,
+        userId: entry.user_id,
+        displayName: entry.users?.display_name || 'Unknown User',
+        photoUrl: entry.users?.photo_url || null,
+        privacyLevel: entry.users?.settings?.privacyLevel || 'public'
+      },
       steps: entry.steps || 0,
       distance: entry.distance || 0,
       score: entry.score || 0,

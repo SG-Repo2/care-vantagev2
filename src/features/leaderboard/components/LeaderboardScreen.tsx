@@ -1,14 +1,61 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, Image } from 'react-native';
+import React, { useEffect, useState, useMemo, memo } from 'react';
+import { View, Text, RefreshControl, Image, VirtualizedList } from 'react-native';
 import { useTheme, ActivityIndicator, SegmentedButtons } from 'react-native-paper';
 import { Card } from '../../../components/common/atoms/Card';
-import { Button } from '../../../components/common/atoms/Button';
 import { useAuth } from '../../../context/AuthContext';
 import leaderboardService, { LeaderboardEntry } from '../services/leaderboardService';
 import { createStyles } from '../styles/LeaderboardScreen.styles';
 import { formatDistance } from '../../../core/utils/formatting';
 
 type PeriodType = 'daily' | 'weekly';
+
+interface LeaderboardItem {
+  item: LeaderboardEntry;
+}
+
+const LeaderboardEntryItem = memo(({ item, isCurrentUser }: { item: LeaderboardEntry, isCurrentUser: boolean }) => {
+  const theme = useTheme();
+  const styles = createStyles(theme);
+
+  return (
+    <Card style={[
+      styles.entryContainer,
+      isCurrentUser && styles.currentUserEntry
+    ]}>
+      <View style={styles.rankContainer}>
+        <Text style={[
+          styles.rankText,
+          item.rank !== undefined && item.rank <= 3 ? styles.topThreeRank : undefined
+        ]}>
+          #{item.rank ?? '-'}
+        </Text>
+      </View>
+      <View style={styles.userContainer}>
+        {item.profile.photoUrl && (
+          <Image
+            source={{ uri: item.profile.photoUrl }}
+            style={styles.avatar}
+          />
+        )}
+        <View style={styles.userInfo}>
+          <Text style={[
+            styles.nameText,
+            isCurrentUser && styles.currentUserText
+          ]}>
+            {item.profile.displayName}
+            {isCurrentUser && ' (You)'}
+          </Text>
+          <View style={styles.statsRow}>
+            <Text style={styles.scoreText}>Score: {item.score}</Text>
+            <Text style={styles.metricsText}>
+              Steps: {item.steps.toLocaleString()} • Distance: {formatDistance(item.distance, 'metric')}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </Card>
+  );
+});
 
 export const LeaderboardScreen: React.FC = () => {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
@@ -61,6 +108,14 @@ export const LeaderboardScreen: React.FC = () => {
     setRefreshing(false);
   }, [periodType]);
 
+  const getItem = (data: LeaderboardEntry[], index: number) => data[index];
+  const getItemCount = (data: LeaderboardEntry[]) => data.length;
+  const keyExtractor = (item: LeaderboardEntry) => item.profile.userId;
+
+  const sortedEntries = useMemo(() =>
+    leaderboardData.sort((a, b) => (a.rank || Infinity) - (b.rank || Infinity)),
+    [leaderboardData]
+  );
 
   if (loading && !refreshing) {
     return (
@@ -85,50 +140,26 @@ export const LeaderboardScreen: React.FC = () => {
         style={styles.periodSelector}
       />
 
-      <ScrollView
+      <VirtualizedList
+        data={sortedEntries}
+        renderItem={({ item }: LeaderboardItem) => (
+          <LeaderboardEntryItem
+            item={item}
+            isCurrentUser={user?.id === item.profile.userId}
+          />
+        )}
+        keyExtractor={keyExtractor}
+        getItemCount={getItemCount}
+        getItem={getItem}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-      >
-      {leaderboardData.map((entry) => (
-        <Card key={entry.user_id} style={[
-          styles.entryContainer,
-          user?.id === entry.user_id && styles.currentUserEntry
-        ]}>
-          <View style={styles.rankContainer}>
-            <Text style={[
-              styles.rankText,
-              entry.rank !== undefined && entry.rank <= 3 ? styles.topThreeRank : undefined
-            ]}>
-              #{entry.rank ?? '-'}
-            </Text>
-          </View>
-          <View style={styles.userContainer}>
-            {entry.photo_url && (
-              <Image
-                source={{ uri: entry.photo_url }}
-                style={styles.avatar}
-              />
-            )}
-            <View style={styles.userInfo}>
-              <Text style={[
-                styles.nameText,
-                user?.id === entry.user_id && styles.currentUserText
-              ]}>
-                {entry.display_name}
-                {user?.id === entry.user_id && ' (You)'}
-              </Text>
-              <View style={styles.statsRow}>
-                <Text style={styles.scoreText}>Score: {entry.score}</Text>
-                <Text style={styles.metricsText}>
-                  Steps: {entry.steps.toLocaleString()} • Distance: {formatDistance(entry.distance, 'metric')}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </Card>
-      ))}
-      </ScrollView>
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        updateCellsBatchingPeriod={50}
+        removeClippedSubviews={true}
+      />
     </View>
   );
 };

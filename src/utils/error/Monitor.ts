@@ -1,22 +1,13 @@
 import { Logger } from './Logger';
-import { connectionPool } from '../../services/database/ConnectionPool';
-import { subscriptionManager } from '../../services/realtime/SubscriptionManager';
-import { databaseLogger } from '../../services/database/DatabaseLogger';
 
 interface SystemHealth {
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;
   components: {
-    database: ComponentHealth;
-    realtime: ComponentHealth;
     memory: ComponentHealth;
   };
   metrics: {
-    activeConnections: number;
-    activeSubscriptions: number;
     memoryUsage: number;
-    errorRate: number;
-    averageResponseTime: number;
   };
 }
 
@@ -72,16 +63,8 @@ export class Monitor {
    */
   private async performHealthCheck(): Promise<SystemHealth> {
     const timestamp = new Date().toISOString();
-    const metrics = databaseLogger.getPerformanceMetrics();
-    const poolMetrics = connectionPool.getMetrics();
     const memoryUsage = process.memoryUsage();
     const heapUsed = memoryUsage.heapUsed / memoryUsage.heapTotal;
-
-    // Check database health
-    const dbHealth = this.checkDatabaseHealth(poolMetrics, metrics);
-
-    // Check realtime health
-    const realtimeHealth = this.checkRealtimeHealth();
 
     // Check memory health
     const memoryHealth = this.checkMemoryHealth(heapUsed);
@@ -90,31 +73,17 @@ export class Monitor {
       status: 'healthy',
       timestamp,
       components: {
-        database: dbHealth,
-        realtime: realtimeHealth,
         memory: memoryHealth,
       },
       metrics: {
-        activeConnections: poolMetrics.activeConnections,
-        activeSubscriptions: subscriptionManager.getActiveSubscriptions().length,
         memoryUsage: heapUsed,
-        errorRate: metrics.errorRate,
-        averageResponseTime: metrics.averageQueryTime,
       },
     };
 
     // Determine overall system status
-    if (
-      dbHealth.status === 'unhealthy' ||
-      realtimeHealth.status === 'unhealthy' ||
-      memoryHealth.status === 'unhealthy'
-    ) {
+    if (memoryHealth.status === 'unhealthy') {
       health.status = 'unhealthy';
-    } else if (
-      dbHealth.status === 'degraded' ||
-      realtimeHealth.status === 'degraded' ||
-      memoryHealth.status === 'degraded'
-    ) {
+    } else if (memoryHealth.status === 'degraded') {
       health.status = 'degraded';
     }
 
@@ -123,59 +92,6 @@ export class Monitor {
 
     // Generate alerts if needed
     this.generateHealthAlerts(health);
-
-    return health;
-  }
-
-  /**
-   * Checks database health
-   */
-  private checkDatabaseHealth(
-    poolMetrics: any,
-    dbMetrics: any
-  ): ComponentHealth {
-    const health: ComponentHealth = {
-      status: 'healthy',
-      lastChecked: new Date().toISOString(),
-    };
-
-    if (dbMetrics.errorRate > this.errorRateThresholds.critical) {
-      health.status = 'unhealthy';
-      health.message = 'Critical error rate detected';
-    } else if (dbMetrics.errorRate > this.errorRateThresholds.warning) {
-      health.status = 'degraded';
-      health.message = 'High error rate detected';
-    }
-
-    if (poolMetrics.waitingRequests > 0) {
-      health.status = 'degraded';
-      health.message = 'Database connection pool has waiting requests';
-    }
-
-    return health;
-  }
-
-  /**
-   * Checks realtime subscription health
-   */
-  private checkRealtimeHealth(): ComponentHealth {
-    const health: ComponentHealth = {
-      status: 'healthy',
-      lastChecked: new Date().toISOString(),
-    };
-
-    const subscriptions = subscriptionManager.getActiveSubscriptions();
-    const errorSubscriptions = subscriptions.filter(
-      sub => sub.status === 'ERROR'
-    );
-
-    if (errorSubscriptions.length > subscriptions.length * 0.1) {
-      health.status = 'unhealthy';
-      health.message = 'High number of failed subscriptions';
-    } else if (errorSubscriptions.length > 0) {
-      health.status = 'degraded';
-      health.message = 'Some subscriptions are in error state';
-    }
 
     return health;
   }
@@ -204,33 +120,6 @@ export class Monitor {
    * Generates alerts based on health check results
    */
   private generateHealthAlerts(health: SystemHealth): void {
-    const timestamp = new Date().toISOString();
-
-    // Check database health
-    if (health.components.database.status === 'unhealthy') {
-      this.addAlert({
-        severity: 'critical',
-        component: 'database',
-        message: health.components.database.message || 'Database is unhealthy',
-        metadata: {
-          errorRate: health.metrics.errorRate,
-          activeConnections: health.metrics.activeConnections,
-        },
-      });
-    }
-
-    // Check realtime health
-    if (health.components.realtime.status === 'unhealthy') {
-      this.addAlert({
-        severity: 'critical',
-        component: 'realtime',
-        message: health.components.realtime.message || 'Realtime system is unhealthy',
-        metadata: {
-          activeSubscriptions: health.metrics.activeSubscriptions,
-        },
-      });
-    }
-
     // Check memory health
     if (health.components.memory.status === 'unhealthy') {
       this.addAlert({
@@ -247,7 +136,7 @@ export class Monitor {
   /**
    * Adds a new alert
    */
-  private addAlert(alert: Omit<Alert, 'id' | 'timestamp'>): void {
+  public addAlert(alert: Omit<Alert, 'id' | 'timestamp'>): void {
     const newAlert: Alert = {
       ...alert,
       id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,

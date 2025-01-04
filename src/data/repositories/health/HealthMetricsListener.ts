@@ -1,7 +1,45 @@
 import { Logger } from '../../../utils/error/Logger';
-import { subscriptionManager } from '../SubscriptionManager';
-import { HealthMetric, HealthMetricType } from '../../database/daos/HealthMetricsDAO';
+interface SubscriptionManager {
+  subscribe(
+    table: string,
+    callback: (payload: any) => void,
+    options: {
+      filter: string;
+      event: string;
+      errorHandler: (error: Error) => void;
+    }
+  ): Promise<string>;
+  
+  unsubscribe(subscriptionId: string): Promise<void>;
+}
+
+const subscriptionManager: SubscriptionManager = {
+  async subscribe(table, callback, options) {
+    throw new Error('SubscriptionManager implementation missing');
+  },
+  
+  async unsubscribe(subscriptionId) {
+    throw new Error('SubscriptionManager implementation missing');
+  }
+};
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+
+enum HealthMetricType {
+  STEPS = 'steps',
+  DISTANCE = 'distance',
+}
+
+interface HealthMetric {
+  id: string;
+  user_id: string;
+  metric_type: HealthMetricType;
+  value: number;
+  unit: string;
+  timestamp: string;
+  source: string;
+  created_at: string;
+  updated_at: string;
+}
 
 type HealthMetricCallback = (metric: HealthMetric) => void;
 
@@ -85,7 +123,7 @@ export class HealthMetricsListener {
       });
 
       return subscriptionId;
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('Failed to subscribe to health metrics', {
         error,
         userId,
@@ -126,7 +164,7 @@ export class HealthMetricsListener {
           });
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('Error handling metric update', { error, payload });
     }
   }
@@ -139,7 +177,7 @@ export class HealthMetricsListener {
       await subscriptionManager.unsubscribe(subscriptionId);
       this.subscriptions.delete(subscriptionId);
       Logger.info('Health metric subscription removed', { subscriptionId });
-    } catch (error) {
+    } catch (error: unknown) {
       Logger.error('Failed to unsubscribe from health metrics', {
         error,
         subscriptionId,

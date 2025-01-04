@@ -6,8 +6,12 @@ import AppleHealthKit from 'react-native-health';
 import { getCurrentWeekStart } from '../../../core/constants/metrics';
 import healthMetricsService from '../services/healthMetricsService';
 import { healthMetricsListener } from '../../../data/repositories/health/HealthMetricsListener';
-import { HealthMetricType } from '../../../data/repositories/health/HealthMetricsDAO';
 import { Logger } from '../../../utils/error/Logger';
+
+enum HealthMetricType {
+  STEPS = 'steps',
+  DISTANCE = 'distance',
+}
 
 const { Permissions } = AppleHealthKit.Constants;
 
@@ -40,78 +44,114 @@ const useHealthData = (profileId: string, options: UseHealthDataOptions = {}) =>
       setHealthService(service);
       
       const initialized = await service.initialize(defaultPermissions);
-      if (initialized) {
-        const permissions = await service.hasPermissions();
-        setHasPermission(permissions);
-        return permissions;
+      if (!initialized) {
+        throw new Error('Health service failed to initialize');
       }
-      return false;
+
+      const permissions = await service.hasPermissions();
+      setHasPermission(permissions);
+      
+      if (!permissions) {
+        Logger.warn('Health permissions not granted');
+      }
+      
+      return permissions;
     } catch (err) {
-      console.error('Health service initialization error:', err);
+      Logger.error('Health service initialization error', { error: err });
       setError('Failed to initialize health service');
-      return false;
+      throw err; // Re-throw to allow error boundary handling
     }
   }, []);
 
   // Setup realtime subscriptions
   const setupRealtimeSubscriptions = useCallback(async () => {
-    if (!options.enableRealtime || !profileId) return;
+    if (!options.enableRealtime || !profileId) {
+      Logger.debug('Realtime subscriptions disabled');
+      return;
+    }
 
     try {
-      // Subscribe to steps updates
-      const stepsSubscriptionId = await healthMetricsListener.subscribeToMetrics(
-        profileId,
-        HealthMetricType.STEPS,
-        async (metric) => {
-          // Update metrics when we receive new step data
-          setMetrics(current => {
-            if (!current) return current;
-            const updated = {
-              ...current,
-              steps: metric.value
-            };
-            options.onMetricUpdate?.(updated);
-            return updated;
-          });
-        }
-      );
+      const subscriptions = await Promise.allSettled([
+        healthMetricsListener.subscribeToMetrics(
+          profileId,
+          HealthMetricType.STEPS,
+          async (metric) => {
+            setMetrics(current => {
+              if (!current) return current;
+              const updated = {
+                ...current,
+                steps: metric.value
+              };
+              options.onMetricUpdate?.(updated);
+              return updated;
+            });
+          }
+        ),
+        healthMetricsListener.subscribeToMetrics(
+          profileId,
+          HealthMetricType.DISTANCE,
+          async (metric) => {
+            setMetrics(current => {
+              if (!current) return current;
+              const updated = {
+                ...current,
+                distance: metric.value
+              };
+              options.onMetricUpdate?.(updated);
+              return updated;
+            });
+          }
+        )
+      ]);
 
-      // Subscribe to distance updates
-      const distanceSubscriptionId = await healthMetricsListener.subscribeToMetrics(
-        profileId,
-        HealthMetricType.DISTANCE,
-        async (metric) => {
-          // Update metrics when we receive new distance data
-          setMetrics(current => {
-            if (!current) return current;
-            const updated = {
-              ...current,
-              distance: metric.value
-            };
-            options.onMetricUpdate?.(updated);
-            return updated;
-          });
-        }
-      );
+      // Filter successful subscriptions
+      const successfulSubscriptions = subscriptions
+        .filter(result => result.status === 'fulfilled')
+        .map(result => (result as PromiseFulfilledResult<string>).value);
 
-      subscriptionIds.current = [stepsSubscriptionId, distanceSubscriptionId];
+      if (successfulSubscriptions.length > 0) {
+        subscriptionIds.current = successfulSubscriptions;
+        Logger.info('Realtime subscriptions established', {
+          count: successfulSubscriptions.length
+        });
+      } else {
+        Logger.warn('No realtime subscriptions could be established');
+      }
     } catch (err) {
-      Logger.error('Failed to setup realtime subscriptions', { error: err });
+      Logger.error('Failed to setup realtime subscriptions', {
+        error: err,
+        profileId
+      });
+      throw err;
     }
   }, [profileId, options.enableRealtime, options.onMetricUpdate]);
 
   // Cleanup subscriptions
   const cleanupSubscriptions = useCallback(async () => {
-    for (const id of subscriptionIds.current) {
-      try {
-        await healthMetricsListener.unsubscribe(id);
-      } catch (err) {
-        Logger.error('Failed to unsubscribe from health metrics', { 
-          error: err,
-          subscriptionId: id 
-        });
-      }
-    }
+    if (subscriptionIds.current.length === 0) return;
+
+    const results = await Promise.allSettled(
+      subscriptionIds.current.map(id =>
+        healthMetricsListener.unsubscribe(id)
+          .catch(err => {
+            Logger.error('Failed to unsubscribe from health metrics', {
+              error: err,
+              subscriptionId: id
+            });
+            throw err;
+          })
+      )
+    );
+
+    const successfulUnsubscribes = results.filter(
+      result => result.status === 'fulfilled'
+    ).length;
+
+    Logger.info('Cleaned up subscriptions', {
+      total: subscriptionIds.current.length,
+      successful: successfulUnsubscribes
+    });
+
     subscriptionIds.current = [];
   }, []);
 

@@ -3,6 +3,12 @@ export interface LeaderboardMetrics {
   distance: number;
 }
 
+export enum PrivacyLevel {
+  PUBLIC = 'public',
+  FRIENDS_ONLY = 'friends_only',
+  PRIVATE = 'private'
+}
+
 export interface CategoryScores {
   steps: number;
   distance: number;
@@ -14,10 +20,19 @@ export interface UserScore {
   bonusPoints: number;
 }
 
-export interface LeaderboardEntry {
+export interface UserProfile {
   id: string;
-  name: string;
-  avatarUrl: string;
+  userId: string; // Links to auth user
+  displayName: string;
+  photoUrl: string | null;
+  privacyLevel: PrivacyLevel;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeaderboardEntry {
+  profileId: string;
+  profile: UserProfile;
   metrics: LeaderboardMetrics;
   score: UserScore;
   rank: number;
