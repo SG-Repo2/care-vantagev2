@@ -37,10 +37,28 @@ ON health_metrics(date, score DESC);
 CREATE INDEX IF NOT EXISTS idx_users_privacy_level 
 ON users((settings->>'privacyLevel'));
 
--- Add index for combined date range and score queries
-CREATE INDEX IF NOT EXISTS idx_health_metrics_date_range_score 
-ON health_metrics(date, score DESC) 
-WHERE date >= CURRENT_DATE - INTERVAL '7 days';
+-- Add index for date and score queries (without dynamic date filtering)
+CREATE INDEX IF NOT EXISTS idx_health_metrics_date_score_range 
+ON health_metrics USING btree (date DESC, score DESC);
+
+-- Add function to get recent health metrics efficiently
+CREATE OR REPLACE FUNCTION get_recent_health_metrics(days_ago integer)
+RETURNS TABLE (
+    user_id UUID,
+    date DATE,
+    score INTEGER
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        hm.user_id,
+        hm.date,
+        hm.score
+    FROM health_metrics hm
+    WHERE hm.date >= (CURRENT_DATE - (days_ago || ' days')::interval)::date
+    ORDER BY hm.date DESC, hm.score DESC;
+END;
+$$ LANGUAGE plpgsql STABLE;
 
 -- Update get_user_rank function to respect privacy settings
 CREATE OR REPLACE FUNCTION get_user_rank(user_uuid UUID, target_date DATE)
