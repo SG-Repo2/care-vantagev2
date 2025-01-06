@@ -4,10 +4,20 @@ export type User = {
   id: string;
   email: string;
   displayName?: string;
-  photoURL?: string;
+  photoURL?: string | null;
   lastSignOutAt?: string;
   createdAt?: string;
   updatedAt?: string;
+  settings: {
+    measurementSystem: 'metric' | 'imperial';
+    notifications: boolean;
+    privacyLevel: 'private' | 'friends' | 'public';
+    dailyGoals: {
+      steps: number;
+      sleep: number;
+      water: number;
+    };
+  };
 };
 
 export const mapSupabaseUser = (user: SupabaseUser): User => ({
@@ -18,6 +28,16 @@ export const mapSupabaseUser = (user: SupabaseUser): User => ({
   createdAt: user.created_at,
   updatedAt: user.updated_at,
   lastSignOutAt: user.last_sign_in_at,
+  settings: {
+    measurementSystem: 'metric',
+    notifications: true,
+    privacyLevel: 'private',
+    dailyGoals: {
+      steps: 10000,
+      sleep: 480,
+      water: 2000
+    }
+  }
 });
 
 export type AuthState = {

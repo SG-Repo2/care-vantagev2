@@ -17,6 +17,7 @@ interface AuthContextType {
   error: string | null;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  updateUser: (user: User) => void;
 }
 
 interface AuthProviderProps {
@@ -171,6 +172,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         error,
         signInWithGoogle,
         signOut,
+        updateUser: setUser,
       }}
     >
       {error && (
