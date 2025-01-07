@@ -83,26 +83,21 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 
   return (
     <Animated.View style={[{ width: '100%' }, animatedStyle]}>
-      <Pressable
-        onPressIn={() => pressed.value = true}
-        onPressOut={() => pressed.value = false}
+      <Card
         onPress={handlePress}
         disabled={loading || !!error}
+        style={[
+          styles.container,
+          {
+            borderColor: metricColor,
+            backgroundColor: loading || error ? theme.colors.surface : 'transparent'
+          }
+        ]}
       >
-        <Card
-          style={[
-            styles.container,
-            { 
-              borderColor: metricColor,
-              backgroundColor: loading || error ? theme.colors.surface : 'transparent'
-            }
-          ]}
-        >
-          <View style={styles.content}>
-            {renderContent()}
-          </View>
-        </Card>
-      </Pressable>
+        <View style={styles.content}>
+          {renderContent()}
+        </View>
+      </Card>
     </Animated.View>
   );
 };

@@ -105,13 +105,13 @@ export const HomeScreen: React.FC = () => {
 
   if (loading && !refreshing) {
     return (
-      <AnimatedSurface 
-        style={[styles.container, styles.centered]}
+      <AnimatedSurface
+        style={[styles.container, styles.centered, styles.surface]}
         entering={SlideInDown}
       >
         <LinearGradient
           colors={[theme.colors.background, theme.colors.surface]}
-          style={styles.loadingGradient}
+          style={[styles.loadingGradient, { backgroundColor: theme.colors.surface }]}
         >
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Loading your health data...</Text>
@@ -128,7 +128,7 @@ export const HomeScreen: React.FC = () => {
       >
         <LinearGradient
           colors={[theme.colors.errorContainer, theme.colors.surface]}
-          style={styles.errorGradient}
+          style={[styles.errorGradient, { backgroundColor: theme.colors.surface }]}
         >
           <Text variant="titleMedium" style={styles.errorText}>{error}</Text>
           <IconButton 

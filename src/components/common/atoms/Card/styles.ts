@@ -16,6 +16,7 @@ export const createStyles = (theme: any) => StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 2,
+    overflow: 'visible',
   },
   disabled: {
     opacity: 0.5,

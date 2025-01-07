@@ -8,6 +8,9 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  surface: {
+    backgroundColor: theme.colors.surface,
+  },
   content: {
     padding: spacing.lg,
     alignItems: 'center',
