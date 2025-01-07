@@ -1,7 +1,10 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 import { MD3Theme, useTheme } from 'react-native-paper';
 import { spacing } from '../../../components/common/theme/spacing';
 import { layout } from '../../../components/common/theme/layout';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const GRID_PADDING = spacing.xl;
 
 const createStyles = (theme: MD3Theme) => StyleSheet.create({
   container: {
@@ -12,7 +15,7 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   content: {
-    padding: spacing.xl,
+    flexGrow: 1,
     paddingTop: spacing.md,
   },
   errorContainer: {
@@ -30,7 +33,7 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
   },
   header: {
     marginBottom: spacing.xl,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: GRID_PADDING,
   },
   headerTop: {
     flexDirection: 'row',
@@ -49,7 +52,7 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     backgroundColor: theme.colors.surfaceVariant,
   },
   scoreContainer: {
-    borderRadius: 32,
+    borderRadius: 24,
     overflow: 'hidden',
     marginVertical: spacing.md,
     shadowColor: theme.colors.shadow,
@@ -79,9 +82,12 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     letterSpacing: -1,
   },
   metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingHorizontal: GRID_PADDING - spacing.md / 2, // Adjust for card margins
     width: '100%',
-    flexDirection: 'column',
-    gap: spacing.md,
   },
   scrollView: {
     flex: 1,
@@ -104,14 +110,14 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     padding: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 32,
+    borderRadius: 24,
     backgroundColor: theme.colors.surfaceVariant,
   },
   errorGradient: {
     padding: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 32,
+    borderRadius: 24,
     backgroundColor: theme.colors.errorContainer,
   },
 });

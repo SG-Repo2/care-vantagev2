@@ -25,6 +25,12 @@ import { METRICS } from '../../../core/constants/metrics';
 import { MetricType } from '../../health/types/health';
 
 const DEFAULT_MEASUREMENT_SYSTEM: MeasurementSystem = 'imperial';
+const GOALS = {
+  steps: 10000,
+  calories: 2500,
+  distance: 5, // miles or km depending on measurement system
+  score: 100
+};
 
 interface ModalData {
   type: MetricType;
@@ -63,7 +69,7 @@ export const HomeScreen: React.FC = () => {
   }));
 
   useEffect(() => {
-    if (metrics?.steps && metrics.steps >= 10000 && previousSteps < 10000) {
+    if (metrics?.steps && metrics.steps >= GOALS.steps && previousSteps < GOALS.steps) {
       setShowCelebration(true);
     }
     if (metrics?.steps) {
@@ -198,6 +204,7 @@ export const HomeScreen: React.FC = () => {
             onPress={() => metrics && handleMetricPress('steps', metrics)}
             loading={loading}
             error={error}
+            goal={GOALS.steps}
           />
           <MetricCard
             title="Calories"
@@ -207,6 +214,7 @@ export const HomeScreen: React.FC = () => {
             onPress={() => metrics && handleMetricPress('calories', metrics)}
             loading={loading}
             error={error}
+            goal={GOALS.calories}
           />
           <MetricCard
             title="Distance"
@@ -216,6 +224,17 @@ export const HomeScreen: React.FC = () => {
             onPress={() => metrics && handleMetricPress('distance', metrics)}
             loading={loading}
             error={error}
+            goal={GOALS.distance}
+          />
+          <MetricCard
+            title="Score"
+            value={(metrics?.score || 0).toString()}
+            icon="star"
+            metricType="score"
+            onPress={() => metrics && handleMetricPress('score', metrics)}
+            loading={loading}
+            error={error}
+            goal={GOALS.score}
           />
         </Animated.View>
 

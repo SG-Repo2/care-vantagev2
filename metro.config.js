@@ -8,6 +8,7 @@ module.exports = {
     ...defaultConfig.resolver,
     sourceExts: [...defaultConfig.resolver.sourceExts, 'jsx', 'js', 'ts', 'tsx'],
     resolverMainFields: ['react-native', 'browser', 'main'],
+    assetExts: [...defaultConfig.resolver.assetExts, 'lottie', 'json'],
     // Add .expo directory to watchFolders
     watchFolders: [
       ...defaultConfig.resolver.watchFolders || [],
