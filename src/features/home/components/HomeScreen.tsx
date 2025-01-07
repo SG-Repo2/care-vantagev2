@@ -4,6 +4,13 @@ import { useTheme, Text, Surface, ActivityIndicator, IconButton } from 'react-na
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import LinearGradient from 'react-native-linear-gradient';
+import Animated, { 
+  useAnimatedStyle, 
+  withSpring, 
+  SlideInDown 
+} from 'react-native-reanimated';
+
 import useHealthData from '../../health/hooks/useHealthData';
 import { formatDistance, formatScore } from '../../../core/utils/formatting';
 import { MetricCard } from './MetricCard';
@@ -15,10 +22,8 @@ import GoalCelebration from './GoalCelebration';
 import { useStyles } from '../styles/HomeScreen.styles';
 import { useAuth } from '../../../context/AuthContext';
 import { METRICS } from '../../../core/constants/metrics';
-
 import { MetricType } from '../../health/types/health';
 
-// Default measurement system - TODO: Get from user preferences
 const DEFAULT_MEASUREMENT_SYSTEM: MeasurementSystem = 'imperial';
 
 interface ModalData {
@@ -38,6 +43,8 @@ interface ModalData {
 
 type NavigationProp = NativeStackNavigationProp<TabParamList, 'Home'>;
 
+const AnimatedSurface = Animated.createAnimatedComponent(Surface);
+
 export const HomeScreen: React.FC = () => {
   const theme = useTheme();
   const styles = useStyles();
@@ -49,6 +56,11 @@ export const HomeScreen: React.FC = () => {
   const [selectedMetric, setSelectedMetric] = useState<ModalData | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [previousSteps, setPreviousSteps] = useState(0);
+
+  const scoreAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: withSpring(metrics?.score ? 1 : 0.8) }],
+    opacity: withSpring(metrics?.score ? 1 : 0.6),
+  }));
 
   useEffect(() => {
     if (metrics?.steps && metrics.steps >= 10000 && previousSteps < 10000) {
@@ -72,39 +84,61 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleMetricPress = (type: MetricType, metrics: HealthMetrics & WeeklyMetrics) => {
-    console.log('Metric pressed:', type);
-    
     let modalData: ModalData = {
       type,
       title: type.charAt(0).toUpperCase() + type.slice(1),
-      value: type === 'distance' ? formatDistance(metrics[type], DEFAULT_MEASUREMENT_SYSTEM) : metrics[type].toString(),
+      value: type === 'distance' 
+        ? formatDistance(metrics[type], DEFAULT_MEASUREMENT_SYSTEM) 
+        : metrics[type].toString(),
       data: {
         labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        values: type === 'steps' ? metrics.weeklySteps : [0, 0, 0, 0, 0, 0, metrics[type]],
+        values: type === 'steps' 
+          ? metrics.weeklySteps 
+          : [0, 0, 0, 0, 0, 0, metrics[type]],
         startDate: type === 'steps' ? metrics.weekStartDate : undefined
       },
     };
 
-    console.log('Setting modal data:', modalData);
     setSelectedMetric(modalData);
     setModalVisible(true);
-    console.log('Modal visible state set to true');
   };
 
   if (loading && !refreshing) {
     return (
-      <Surface style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </Surface>
+      <AnimatedSurface 
+        style={[styles.container, styles.centered]}
+        entering={SlideInDown}
+      >
+        <LinearGradient
+          colors={[theme.colors.background, theme.colors.surface]}
+          style={styles.loadingGradient}
+        >
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading your health data...</Text>
+        </LinearGradient>
+      </AnimatedSurface>
     );
   }
 
   if (error) {
     return (
-      <Surface style={[styles.container, styles.centered]}>
-        <Text variant="titleMedium" style={styles.errorText}>{error}</Text>
-        <IconButton icon="refresh" onPress={refresh} />
-      </Surface>
+      <AnimatedSurface 
+        style={[styles.container, styles.centered]}
+        entering={SlideInDown}
+      >
+        <LinearGradient
+          colors={[theme.colors.errorContainer, theme.colors.surface]}
+          style={styles.errorGradient}
+        >
+          <Text variant="titleMedium" style={styles.errorText}>{error}</Text>
+          <IconButton 
+            icon="refresh" 
+            mode="contained"
+            onPress={refresh}
+            style={styles.retryButton}
+          />
+        </LinearGradient>
+      </AnimatedSurface>
     );
   }
 
@@ -115,10 +149,15 @@ export const HomeScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+          />
         }
       >
-        <View style={styles.header}>
+        <Animated.View style={[styles.header]} entering={SlideInDown}>
           <View style={styles.headerTop}>
             <Text variant="headlineMedium" style={styles.title}>
               Health Dashboard
@@ -131,15 +170,26 @@ export const HomeScreen: React.FC = () => {
               disabled={!metrics?.steps && !metrics?.distance && !metrics?.score}
             />
           </View>
-          <View style={styles.scoreContainer}>
-            <Text variant="titleLarge" style={styles.scoreLabel}>Score</Text>
-            <Text variant="displaySmall" style={styles.scoreValue}>
-              {metrics?.score || 0}
-            </Text>
-          </View>
-        </View>
 
-        <View style={styles.metricsGrid}>
+          <Animated.View style={[styles.scoreContainer, scoreAnimatedStyle]}>
+            <LinearGradient
+              colors={[theme.colors.primaryContainer, theme.colors.surface]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.scoreGradient}
+            >
+              <Text variant="titleLarge" style={styles.scoreLabel}>Score</Text>
+              <Text variant="displaySmall" style={styles.scoreValue}>
+                {metrics?.score || 0}
+              </Text>
+            </LinearGradient>
+          </Animated.View>
+        </Animated.View>
+
+        <Animated.View 
+          style={styles.metricsGrid}
+          entering={SlideInDown.delay(200)}
+        >
           <MetricCard
             title="Steps"
             value={(metrics?.steps || 0).toLocaleString()}
@@ -167,7 +217,7 @@ export const HomeScreen: React.FC = () => {
             loading={loading}
             error={error}
           />
-        </View>
+        </Animated.View>
 
         {selectedMetric && (
           <MetricModal

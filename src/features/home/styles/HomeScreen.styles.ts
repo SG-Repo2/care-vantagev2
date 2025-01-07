@@ -42,11 +42,25 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     margin: 0,
   },
   scoreContainer: {
-    alignItems: 'center',
-    backgroundColor: theme.colors.primaryContainer,
     borderRadius: layout.borderRadius.large,
-    padding: spacing.md,
+    overflow: 'hidden',
     marginVertical: spacing.md,
+  },
+  scoreGradient: {
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  loadingGradient: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: layout.borderRadius.large,
+  },
+  errorGradient: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: layout.borderRadius.large,
   },
   scoreLabel: {
     color: theme.colors.onPrimaryContainer,
@@ -68,6 +82,13 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    color: theme.colors.onSurface,
+  },
+  retryButton: {
+    marginTop: spacing.md,
   },
 });
 
