@@ -1,25 +1,26 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
   withSpring,
   withTiming,
-  useAnimatedProps,
-  Easing
+  Easing,
+  runOnJS
 } from 'react-native-reanimated';
-import LottieView from 'lottie-react-native';
 import { getMetricColor, MetricColorKey } from '../../../theme';
 import { getCurrentWeekStart } from '../../../core/constants/metrics';
 import { Card } from '../../../components/common/atoms/Card';
+import { MetricIcon } from '../../../components/common/atoms/metrics/MetricIcon';
+import { MetricValue } from '../../../components/common/atoms/metrics/MetricValue';
+import { MetricProgress } from '../../../components/common/atoms/metrics/MetricProgress';
 import { useStyles } from '../styles/MetricCard.styles';
 
 interface MetricCardProps {
   title: string;
   value: string | number;
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  icon: string;
   metricType: MetricColorKey;
   onPress?: (startDate?: Date) => void;
   loading?: boolean;
@@ -27,9 +28,7 @@ interface MetricCardProps {
   goal?: number;
 }
 
-const AnimatedLottieView = Animated.createAnimatedComponent(LottieView);
-
-export const MetricCard: React.FC<MetricCardProps> = ({
+export const MetricCard = React.memo<MetricCardProps>(({
   title,
   value,
   icon,
@@ -45,20 +44,22 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   const pressed = useSharedValue(false);
   const progress = useSharedValue(0);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: withSpring(pressed.value ? 0.98 : 1, {
-      damping: 10,
-      stiffness: 100,
-      mass: 1
-    }) }]
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    const scale = withSpring(pressed.value ? 0.98 : 1, {
+      damping: 15,
+      stiffness: 150,
+      mass: 1,
+      overshootClamping: true,
+      restSpeedThreshold: 0.1,
+      restDisplacementThreshold: 0.1
+    });
 
-  const animatedLottieProps = useAnimatedProps(() => {
     return {
-      progress: progress.value
+      transform: [{ scale }]
     };
   });
 
+  // Update progress with proper worklet
   useEffect(() => {
     const numericValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
     const targetProgress = Math.min(numericValue / goal, 1);
@@ -69,26 +70,13 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     });
   }, [value, goal]);
 
-  const handlePress = () => {
+  const handlePress = useCallback(() => {
     if (onPress) {
       onPress(getCurrentWeekStart());
     }
-  };
+  }, [onPress]);
 
-  const getLottieSource = () => {
-    switch (metricType) {
-      case 'steps':
-        return require('../../../assets/lottie/walking.json');
-      case 'calories':
-        return require('../../../assets/lottie/fire.json');
-      case 'distance':
-        return require('../../../assets/lottie/distance.json');
-      default:
-        return require('../../../assets/lottie/walking.json');
-    }
-  };
-
-  const renderContent = () => {
+  const renderContent = useCallback(() => {
     if (loading) {
       return <Text style={styles.loadingText}>Loading...</Text>;
     }
@@ -100,27 +88,33 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     return (
       <>
         <View style={styles.iconContainer}>
-          <AnimatedLottieView
-            source={getLottieSource()}
-            autoPlay
-            loop
-            style={{ width: '100%', height: '100%' }}
-            animatedProps={animatedLottieProps}
-            colorFilters={[{
-              keypath: "**",
-              color: metricColor
-            }]}
+          <MetricIcon
+            type={metricType}
+            size={styles.iconContainer.width}
+            color={metricColor}
+            progress={progress}
           />
         </View>
-        <Text style={styles.value}>
-          {value}
-        </Text>
+        <MetricValue
+          value={value}
+          type={metricType}
+          style={styles.value}
+        />
+        <View style={styles.chartContainer}>
+          <MetricProgress
+            current={typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value}
+            goal={goal}
+            type={metricType}
+            color={metricColor}
+            progress={progress}
+          />
+        </View>
         <Text style={styles.title}>
           {title}
         </Text>
       </>
     );
-  };
+  }, [loading, error, metricType, metricColor, value, goal, styles, title, progress]);
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
@@ -130,6 +124,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         gradientColors={[metricColor, `${metricColor}80`]}
         gradientStart={{ x: 0, y: 0 }}
         gradientEnd={{ x: 1, y: 1 }}
+        testID={`metric-card-${metricType}`}
       >
         <View style={styles.content}>
           {renderContent()}
@@ -137,4 +132,14 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       </Card>
     </Animated.View>
   );
-};
+}, (prevProps, nextProps) => {
+  // Implement deep comparison for complex props
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.loading === nextProps.loading &&
+    prevProps.error === nextProps.error &&
+    prevProps.goal === nextProps.goal &&
+    prevProps.title === nextProps.title &&
+    prevProps.metricType === nextProps.metricType
+  );
+});

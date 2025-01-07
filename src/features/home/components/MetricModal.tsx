@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Dimensions, Animated } from 'react-native';
 import { Modal, Portal, Text, IconButton, useTheme } from 'react-native-paper';
 import { useStyles } from '../styles/MetricModal.styles';
-import { LineChart } from 'react-native-chart-kit';
+import { LineChart, BarChart, ProgressChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '../../../components/common/atoms/Card';
 import { spacing } from '../../../components/common/theme/spacing';
@@ -110,19 +110,58 @@ export const MetricModal: React.FC<MetricModalProps> = ({
             </Text>
 
             {data && data.values.length > 0 && (
-              <View style={styles.chartContainer}>
-                <LineChart
-                  data={{
-                    labels: data.startDate ? generateWeekLabels(data.startDate) : data.labels,
-                    datasets: [{ data: data.values }],
-                  }}
-                  width={Dimensions.get('window').width - 48}
-                  height={220}
-                  chartConfig={chartConfig}
-                  bezier
-                  style={styles.chart}
-                />
-              </View>
+              <>
+                {metricType === 'calories' && (
+                  <View style={styles.calorieCharts}>
+                    <View style={styles.chartRow}>
+                      <ProgressChart
+                        data={{
+                          labels: ['Progress'],
+                          data: [data.values[data.values.length - 1] / 2000], // Assuming 2000 calorie goal
+                          colors: ['#FF6347']
+                        }}
+                        width={Dimensions.get('window').width - 48}
+                        height={160}
+                        chartConfig={{
+                          ...chartConfig,
+                          color: (opacity = 1) => `rgba(255, 99, 71, ${opacity})`
+                        }}
+                        hideLegend
+                      />
+                      <BarChart
+                        data={{
+                          labels: ['6AM', '9AM', '12PM', '3PM', '6PM', '9PM'],
+                          datasets: [{
+                            data: [120, 300, 450, 600, 400, 200] // Example hourly data
+                          }]
+                        }}
+                        width={Dimensions.get('window').width - 48}
+                        height={160}
+                        chartConfig={{
+                          ...chartConfig,
+                          color: (opacity = 1) => `rgba(255, 99, 71, ${opacity})`
+                        }}
+                        yAxisLabel=""
+                        yAxisSuffix=""
+                        verticalLabelRotation={30}
+                      />
+                    </View>
+                  </View>
+                )}
+                <View style={styles.chartContainer}>
+                  <LineChart
+                    data={{
+                      labels: data.startDate ? generateWeekLabels(data.startDate) : data.labels,
+                      datasets: [{ data: data.values }],
+                    }}
+                    width={Dimensions.get('window').width - 48}
+                    height={220}
+                    chartConfig={chartConfig}
+                    bezier
+                    style={styles.chart}
+                  />
+                </View>
+              </>
             )}
 
             {additionalInfo && additionalInfo.length > 0 && (

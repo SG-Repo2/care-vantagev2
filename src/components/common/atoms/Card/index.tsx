@@ -1,9 +1,7 @@
 import React from 'react';
-import { Pressable, StyleProp, ViewStyle } from 'react-native';
-import { useTheme } from 'react-native-paper';
-import LinearGradient from 'react-native-linear-gradient';
-import { spacing } from '../../theme/spacing';
-import { createStyles } from './styles';
+import { StyleProp, ViewStyle } from 'react-native';
+import { BaseCard } from './BaseCard';
+import { GradientCard } from './GradientCard';
 
 interface CardProps {
   children: React.ReactNode;
@@ -13,40 +11,21 @@ interface CardProps {
   gradientColors?: string[];
   gradientStart?: { x: number; y: number };
   gradientEnd?: { x: number; y: number };
+  elevation?: number;
+  testID?: string;
 }
 
 export const Card: React.FC<CardProps> = ({
-  children,
-  style,
-  onPress,
-  disabled = false,
   gradientColors,
-  gradientStart = { x: 0, y: 0 },
-  gradientEnd = { x: 1, y: 1 }
+  ...props
 }) => {
-  const theme = useTheme();
-  const styles = createStyles(theme);
+  if (gradientColors) {
+    return <GradientCard gradientColors={gradientColors} {...props} />;
+  }
 
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        style,
-        disabled && styles.disabled,
-        pressed && styles.pressed,
-      ]}
-      onPress={onPress}
-      disabled={disabled}
-    >
-      {gradientColors && (
-        <LinearGradient
-          colors={gradientColors}
-          start={gradientStart}
-          end={gradientEnd}
-          style={styles.gradientContainer}
-        />
-      )}
-      {children}
-    </Pressable>
-  );
+  return <BaseCard {...props} />;
 };
+
+// Export all card variants for direct usage when needed
+export { BaseCard, type BaseCardProps } from './BaseCard';
+export { GradientCard, type GradientCardProps } from './GradientCard';

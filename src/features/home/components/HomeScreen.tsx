@@ -15,6 +15,7 @@ import useHealthData from '../../health/hooks/useHealthData';
 import { formatDistance, formatScore } from '../../../core/utils/formatting';
 import { MetricCard } from './MetricCard';
 import { MetricModal } from './MetricModal';
+import { Dimensions } from 'react-native';
 import { HealthMetrics, WeeklyMetrics } from '../../health/types/health';
 import { TabParamList } from '../../../navigation/types';
 import { MeasurementSystem } from '../../../core/types/base';

@@ -1,10 +1,13 @@
 import { StyleSheet, Dimensions } from 'react-native';
 import { MD3Theme, useTheme } from 'react-native-paper';
 import { spacing } from '../../../components/common/theme/spacing';
-import { layout } from '../../../components/common/theme/layout';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const GRID_PADDING = spacing.xl;
+
+// Grid layout constants (matching MetricCard)
+const GRID_MARGIN = spacing.md;
+const CARD_GAP = spacing.sm;
+const GRID_WIDTH = SCREEN_WIDTH - (GRID_MARGIN * 2);
 
 const createStyles = (theme: MD3Theme) => StyleSheet.create({
   container: {
@@ -22,24 +25,24 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl,
+    padding: spacing.md,
   },
   errorText: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     color: theme.colors.onError,
     fontSize: 16,
     fontWeight: '500',
     textAlign: 'center',
   },
   header: {
-    marginBottom: spacing.xl,
-    paddingHorizontal: GRID_PADDING,
+    marginBottom: spacing.md,
+    paddingHorizontal: GRID_MARGIN,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
   title: {
     fontSize: 28,
@@ -52,9 +55,9 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     backgroundColor: theme.colors.surfaceVariant,
   },
   scoreContainer: {
-    borderRadius: 24,
+    borderRadius: 16,
     overflow: 'hidden',
-    marginVertical: spacing.md,
+    marginVertical: spacing.sm,
     shadowColor: theme.colors.shadow,
     shadowOffset: {
       width: 0,
@@ -65,7 +68,7 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     elevation: 4,
   },
   scoreGradient: {
-    padding: spacing.xl,
+    padding: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -84,10 +87,11 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: GRID_PADDING - spacing.md / 2, // Adjust for card margins
-    width: '100%',
+    marginHorizontal: GRID_MARGIN,
+    gap: CARD_GAP,
+    width: GRID_WIDTH,
   },
   scrollView: {
     flex: 1,
@@ -97,27 +101,27 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     color: theme.colors.onSurface,
     fontSize: 16,
     fontWeight: '500',
   },
   retryButton: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     backgroundColor: theme.colors.errorContainer,
   },
   loadingGradient: {
-    padding: spacing.xl,
+    padding: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: theme.colors.surfaceVariant,
   },
   errorGradient: {
-    padding: spacing.xl,
+    padding: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: theme.colors.errorContainer,
   },
 });

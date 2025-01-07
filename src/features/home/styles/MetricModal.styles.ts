@@ -75,6 +75,14 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.onSurface,
   },
+  calorieCharts: {
+    marginBottom: spacing.lg,
+  },
+  chartRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
 });
 
 export const useStyles = () => {
