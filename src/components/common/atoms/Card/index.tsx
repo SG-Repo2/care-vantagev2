@@ -1,16 +1,29 @@
 import React from 'react';
-import { Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from 'react-native-paper';
+import LinearGradient from 'react-native-linear-gradient';
 import { spacing } from '../../theme/spacing';
+import { createStyles } from './styles';
 
 interface CardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   onPress?: () => void;
   disabled?: boolean;
+  gradientColors?: string[];
+  gradientStart?: { x: number; y: number };
+  gradientEnd?: { x: number; y: number };
 }
 
-export const Card: React.FC<CardProps> = ({ children, style, onPress, disabled = false }) => {
+export const Card: React.FC<CardProps> = ({
+  children,
+  style,
+  onPress,
+  disabled = false,
+  gradientColors,
+  gradientStart = { x: 0, y: 0 },
+  gradientEnd = { x: 1, y: 1 }
+}) => {
   const theme = useTheme();
   const styles = createStyles(theme);
 
@@ -25,32 +38,15 @@ export const Card: React.FC<CardProps> = ({ children, style, onPress, disabled =
       onPress={onPress}
       disabled={disabled}
     >
+      {gradientColors && (
+        <LinearGradient
+          colors={gradientColors}
+          start={gradientStart}
+          end={gradientEnd}
+          style={styles.gradientContainer}
+        />
+      )}
       {children}
     </Pressable>
   );
 };
-
-const createStyles = (theme: any) => StyleSheet.create({
-  container: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.outline,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 2,
-    overflow: 'visible',
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  pressed: {
-    opacity: 0.8,
-  },
-});
