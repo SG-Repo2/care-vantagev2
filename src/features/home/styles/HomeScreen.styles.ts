@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { MD3Theme, useTheme } from 'react-native-paper';
 import { spacing } from '../../../components/common/theme/spacing';
+import { layout } from '../../../components/common/theme/layout';
 
 const createStyles = (theme: MD3Theme) => StyleSheet.create({
   container: {
@@ -23,19 +24,14 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     fontSize: 16,
   },
   header: {
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    elevation: 2,
-    shadowColor: theme.colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
+    marginBottom: spacing.md,
   },
   title: {
     fontSize: 24,
@@ -45,9 +41,24 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
   leaderboardButton: {
     margin: 0,
   },
-  metricsContainer: {
+  scoreContainer: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.primaryContainer,
+    borderRadius: layout.borderRadius.large,
+    padding: spacing.md,
+    marginVertical: spacing.md,
+  },
+  scoreLabel: {
+    color: theme.colors.onPrimaryContainer,
+    marginBottom: spacing.xs,
+  },
+  scoreValue: {
+    color: theme.colors.primary,
+    fontWeight: 'bold',
+  },
+  metricsGrid: {
     width: '100%',
-    alignItems: 'stretch',
+    flexDirection: 'column',
     gap: spacing.lg,
     paddingHorizontal: spacing.md,
   },

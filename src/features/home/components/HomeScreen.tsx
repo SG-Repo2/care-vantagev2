@@ -14,11 +14,12 @@ import { MeasurementSystem } from '../../../core/types/base';
 import GoalCelebration from './GoalCelebration';
 import { useStyles } from '../styles/HomeScreen.styles';
 import { useAuth } from '../../../context/AuthContext';
+import { METRICS } from '../../../core/constants/metrics';
+
+import { MetricType } from '../../health/types/health';
 
 // Default measurement system - TODO: Get from user preferences
 const DEFAULT_MEASUREMENT_SYSTEM: MeasurementSystem = 'imperial';
-
-type MetricType = 'steps' | 'distance' | 'score';
 
 interface ModalData {
   type: MetricType;
@@ -118,25 +119,42 @@ export const HomeScreen: React.FC = () => {
         }
       >
         <View style={styles.header}>
-          <Text variant="headlineMedium" style={styles.title}>
-            Health Dashboard
-          </Text>
-          <IconButton
-            icon="trophy"
-            mode="contained"
-            onPress={handleLeaderboardPress}
-            style={styles.leaderboardButton}
-            disabled={!metrics?.steps && !metrics?.distance && !metrics?.score}
-          />
+          <View style={styles.headerTop}>
+            <Text variant="headlineMedium" style={styles.title}>
+              Health Dashboard
+            </Text>
+            <IconButton
+              icon="trophy"
+              mode="contained"
+              onPress={handleLeaderboardPress}
+              style={styles.leaderboardButton}
+              disabled={!metrics?.steps && !metrics?.distance && !metrics?.score}
+            />
+          </View>
+          <View style={styles.scoreContainer}>
+            <Text variant="titleLarge" style={styles.scoreLabel}>Score</Text>
+            <Text variant="displaySmall" style={styles.scoreValue}>
+              {metrics?.score || 0}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.metricsContainer}>
+        <View style={styles.metricsGrid}>
           <MetricCard
             title="Steps"
-            value={metrics?.steps?.toLocaleString() || '0'}
+            value={(metrics?.steps || 0).toLocaleString()}
             icon="walk"
             metricType="steps"
             onPress={() => metrics && handleMetricPress('steps', metrics)}
+            loading={loading}
+            error={error}
+          />
+          <MetricCard
+            title="Calories"
+            value={(metrics?.calories || 0).toLocaleString()}
+            icon="fire"
+            metricType="calories"
+            onPress={() => metrics && handleMetricPress('calories', metrics)}
             loading={loading}
             error={error}
           />
@@ -146,15 +164,6 @@ export const HomeScreen: React.FC = () => {
             icon="map-marker-distance"
             metricType="distance"
             onPress={() => metrics && handleMetricPress('distance', metrics)}
-            loading={loading}
-            error={error}
-          />
-          <MetricCard
-            title="Score"
-            value={formatScore(metrics?.score || 0)}
-            icon="star"
-            metricType="score"
-            onPress={() => metrics && handleMetricPress('score', metrics)}
             loading={loading}
             error={error}
           />

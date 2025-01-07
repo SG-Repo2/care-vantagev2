@@ -16,6 +16,7 @@ export interface HealthMetrics {
   date: string;
   steps: number;
   distance: number;
+  calories: number;
   score: number;
   source: DataSource;
   createdAt: Date;
@@ -27,7 +28,7 @@ export interface WeeklyMetrics {
   weekStartDate: Date;
 }
 
-export type MetricType = 'steps' | 'distance' | 'score';
+export type MetricType = 'steps' | 'distance' | 'calories' | 'score';
 
 export interface HealthState {
   isInitialized: boolean;

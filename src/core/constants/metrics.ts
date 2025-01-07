@@ -21,3 +21,14 @@ export const getCurrentWeekStart = (): Date => {
   startDate.setHours(0, 0, 0, 0);
   return startDate;
 };
+
+export type MetricColorKey =
+  | 'calories'
+  | 'distance'
+  | 'score';
+
+export const METRICS = [
+  { key: 'calories', label: 'Calories' },
+  { key: 'distance', label: 'Distance' },
+  { key: 'score', label: 'Score' },
+];

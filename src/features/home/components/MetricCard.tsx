@@ -52,7 +52,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 
     return (
       <>
-        <MaterialCommunityIcons name={icon} size={24} color={metricColor} />
+        <MaterialCommunityIcons name={icon} size={32} color={metricColor} />
         <Text style={[styles.value, { color: theme.colors.onSurface }]}>
           {value}
         </Text>
@@ -67,7 +67,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     <Card
       style={[
         styles.container,
-        { borderColor: metricColor },
+        { borderColor: metricColor }
       ]}
       onPress={handlePress}
       disabled={loading || !!error}

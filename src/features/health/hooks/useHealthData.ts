@@ -196,6 +196,14 @@ const useHealthData = (profileId: string, options: UseHealthDataOptions = {}) =>
     await fetchHealthData();
   }, [fetchHealthData]);
 
+  const fetchCalories = () => {
+    // Implement data retrieval...
+  };
+
+  const fetchDistance = () => {
+    // Implement data retrieval...
+  };
+
   useEffect(() => {
     const setupHealthData = async () => {
       const initialized = await initialize();
@@ -222,6 +230,8 @@ const useHealthData = (profileId: string, options: UseHealthDataOptions = {}) =>
     refresh,
     hasPermissions,
     isRealtime: options.enableRealtime && subscriptionIds.current.length > 0,
+    fetchCalories,
+    fetchDistance,
   };
 };
 

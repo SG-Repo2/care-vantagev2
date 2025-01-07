@@ -193,5 +193,14 @@ export type MetricColorKey = keyof typeof metricColors;
 
 // Helper function to get metric color
 export const getMetricColor = (metricType: MetricColorKey): string => {
-  return metricColors[metricType] || metricColors.score;
+  switch (metricType) {
+    case 'calories':
+      return '#EE7752';
+    case 'distance':
+      return '#88E0EF';
+    case 'score':
+      return '#F15848';
+    default:
+      return '#CCCCCC';
+  }
 };

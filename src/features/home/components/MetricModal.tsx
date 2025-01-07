@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Dimensions } from 'react-native';
+import { View, Dimensions, Animated } from 'react-native';
 import { Modal, Portal, Text, IconButton, useTheme } from 'react-native-paper';
 import { useStyles } from '../styles/MetricModal.styles';
 import { LineChart } from 'react-native-chart-kit';
@@ -21,6 +21,7 @@ interface MetricModalProps {
     label: string;
     value: string | number;
   }[];
+  metricType?: string;
 }
 
 const formatDateLabel = (date: Date): string => {
@@ -48,10 +49,23 @@ export const MetricModal: React.FC<MetricModalProps> = ({
   value,
   data,
   additionalInfo,
+  metricType,
 }) => {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useStyles();
+  const animatedValue = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.spring(animatedValue, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const animatedStyle = {
+    transform: [{ scale: animatedValue }],
+  };
 
   const chartConfig = {
     backgroundColor: theme.colors.surface,
@@ -81,46 +95,48 @@ export const MetricModal: React.FC<MetricModalProps> = ({
           { paddingBottom: insets.bottom },
         ]}
       >
-        <Card style={styles.modalContent}>
-          <IconButton
-            icon="close"
-            size={24}
-            onPress={onClose}
-            style={styles.closeButton}
-          />
+        <Animated.View style={animatedStyle}>
+          <Card style={styles.modalContent}>
+            <IconButton
+              icon="close"
+              size={24}
+              onPress={onClose}
+              style={styles.closeButton}
+            />
 
-          <Text style={styles.modalTitle}>{title}</Text>
-          <Text style={[styles.modalValue, { color: theme.colors.primary }]}>
-            {value}
-          </Text>
+            <Text style={styles.modalTitle}>{title}</Text>
+            <Text style={[styles.modalValue, { color: theme.colors.primary }]}>
+              {value}
+            </Text>
 
-          {data && data.values.length > 0 && (
-            <View style={styles.chartContainer}>
-              <LineChart
-                data={{
-                  labels: data.startDate ? generateWeekLabels(data.startDate) : data.labels,
-                  datasets: [{ data: data.values }],
-                }}
-                width={Dimensions.get('window').width - 48}
-                height={220}
-                chartConfig={chartConfig}
-                bezier
-                style={styles.chart}
-              />
-            </View>
-          )}
+            {data && data.values.length > 0 && (
+              <View style={styles.chartContainer}>
+                <LineChart
+                  data={{
+                    labels: data.startDate ? generateWeekLabels(data.startDate) : data.labels,
+                    datasets: [{ data: data.values }],
+                  }}
+                  width={Dimensions.get('window').width - 48}
+                  height={220}
+                  chartConfig={chartConfig}
+                  bezier
+                  style={styles.chart}
+                />
+              </View>
+            )}
 
-          {additionalInfo && additionalInfo.length > 0 && (
-            <View style={styles.additionalInfoContainer}>
-              {additionalInfo.map((info, index) => (
-                <View key={index} style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>{info.label}</Text>
-                  <Text style={styles.infoValue}>{info.value}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </Card>
+            {additionalInfo && additionalInfo.length > 0 && (
+              <View style={styles.additionalInfoContainer}>
+                {additionalInfo.map((info, index) => (
+                  <View key={index} style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>{info.label}</Text>
+                    <Text style={styles.infoValue}>{info.value}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </Card>
+        </Animated.View>
       </Modal>
     </Portal>
   );
