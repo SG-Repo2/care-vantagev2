@@ -1,13 +1,7 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { MD3Theme, useTheme } from 'react-native-paper';
 import { spacing } from '../../../components/common/theme/spacing';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-
-// Grid layout constants (matching MetricCard)
-const GRID_MARGIN = spacing.md;
-const CARD_GAP = spacing.sm;
-const GRID_WIDTH = SCREEN_WIDTH - (GRID_MARGIN * 2);
+import { layout } from '../constants/layout';
 
 const createStyles = (theme: MD3Theme) => StyleSheet.create({
   container: {
@@ -36,7 +30,7 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
   },
   header: {
     marginBottom: spacing.md,
-    paddingHorizontal: GRID_MARGIN,
+    paddingHorizontal: layout.GRID_MARGIN,
   },
   headerTop: {
     flexDirection: 'row',
@@ -58,6 +52,7 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginVertical: spacing.sm,
+    height: 120,
     shadowColor: theme.colors.shadow,
     shadowOffset: {
       width: 0,
@@ -72,6 +67,17 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  scoreContent: {
+    alignItems: 'flex-start',
+  },
+  rankContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surfaceVariant,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+  },
   scoreLabel: {
     color: theme.colors.onPrimaryContainer,
     fontSize: 18,
@@ -84,14 +90,30 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -1,
   },
+  rankLabel: {
+    color: theme.colors.onSurfaceVariant,
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: spacing.xs,
+    opacity: 0.9,
+  },
+  rankValue: {
+    color: theme.colors.primary,
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginHorizontal: GRID_MARGIN,
-    gap: CARD_GAP,
-    width: GRID_WIDTH,
+    marginHorizontal: layout.GRID_MARGIN,
+    rowGap: layout.CARD_GAP,
+    columnGap: layout.CARD_GAP,
+    width: layout.GRID_WIDTH,
+    paddingBottom: spacing.md,
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,

@@ -8,6 +8,7 @@ import { UserProvider } from './src/context/UserContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { LogBox } from 'react-native';
 import 'react-native-url-polyfill/auto';
+import { lightTheme } from './src/theme';
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -17,7 +18,7 @@ LogBox.ignoreLogs([
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <PaperProvider>
+      <PaperProvider theme={lightTheme}>
         <AppProvider>
           <AuthProvider>
             <UserProvider>

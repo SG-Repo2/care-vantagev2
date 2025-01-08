@@ -1,21 +1,18 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withSpring,
-  withTiming,
-  Easing,
-  runOnJS
-} from 'react-native-reanimated';
+import { useSharedValue } from 'react-native-reanimated';
 import { getMetricColor, MetricColorKey } from '../../../theme';
 import { getCurrentWeekStart } from '../../../core/constants/metrics';
 import { Card } from '../../../components/common/atoms/Card';
 import { MetricIcon } from '../../../components/common/atoms/metrics/MetricIcon';
 import { MetricValue } from '../../../components/common/atoms/metrics/MetricValue';
 import { MetricProgress } from '../../../components/common/atoms/metrics/MetricProgress';
+import { MetricProgressWheel } from '../../../components/common/atoms/metrics/MetricProgressWheel';
 import { useStyles } from '../styles/MetricCard.styles';
+import { layout } from '../constants/layout';
+
+const ALL_METRIC_TYPES: MetricColorKey[] = ['steps', 'calories', 'distance'];
 
 interface MetricCardProps {
   title: string;
@@ -36,39 +33,19 @@ export const MetricCard = React.memo<MetricCardProps>(({
   onPress,
   loading,
   error,
-  goal = 10000, // Default goal, especially for steps
+  goal = 10000,
 }) => {
   const theme = useTheme();
   const styles = useStyles();
   const metricColor = getMetricColor(metricType);
-  const pressed = useSharedValue(false);
   const progress = useSharedValue(0);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const scale = withSpring(pressed.value ? 0.98 : 1, {
-      damping: 15,
-      stiffness: 150,
-      mass: 1,
-      overshootClamping: true,
-      restSpeedThreshold: 0.1,
-      restDisplacementThreshold: 0.1
-    });
-
-    return {
-      transform: [{ scale }]
-    };
-  });
-
-  // Update progress with proper worklet
-  useEffect(() => {
-    const numericValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
-    const targetProgress = Math.min(numericValue / goal, 1);
-    
-    progress.value = withTiming(targetProgress, {
-      duration: 1000,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-    });
-  }, [value, goal]);
+  // Randomly select a color from other metric types
+  const alternateColor = useMemo(() => {
+    const otherTypes = ALL_METRIC_TYPES.filter(type => type !== metricType);
+    const randomType = otherTypes[Math.floor(Math.random() * otherTypes.length)];
+    return getMetricColor(randomType);
+  }, [metricType]);
 
   const handlePress = useCallback(() => {
     if (onPress) {
@@ -76,70 +53,66 @@ export const MetricCard = React.memo<MetricCardProps>(({
     }
   }, [onPress]);
 
-  const renderContent = useCallback(() => {
-    if (loading) {
-      return <Text style={styles.loadingText}>Loading...</Text>;
-    }
-
-    if (error) {
-      return <Text style={styles.errorText}>{error}</Text>;
-    }
-
+  if (loading) {
     return (
-      <>
-        <View style={styles.iconContainer}>
-          <MetricIcon
-            type={metricType}
-            size={styles.iconContainer.width}
-            color={metricColor}
-            progress={progress}
-          />
-        </View>
-        <MetricValue
-          value={value}
-          type={metricType}
-          style={styles.value}
-        />
-        <View style={styles.chartContainer}>
-          <MetricProgress
-            current={typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value}
-            goal={goal}
-            type={metricType}
-            color={metricColor}
-            progress={progress}
-          />
-        </View>
-        <Text style={styles.title}>
-          {title}
-        </Text>
-      </>
+      <View style={styles.container}>
+        <Card disabled>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </Card>
+      </View>
     );
-  }, [loading, error, metricType, metricColor, value, goal, styles, title, progress]);
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Card disabled>
+          <Text style={styles.errorText}>{error}</Text>
+        </Card>
+      </View>
+    );
+  }
+
+  const currentValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
+  const progressValue = Math.min(currentValue / goal, 1);
+  progress.value = progressValue;
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <View style={styles.container}>
       <Card
         onPress={handlePress}
-        disabled={loading || !!error}
-        gradientColors={[metricColor, `${metricColor}80`]}
+        gradientColors={[metricColor, metricColor]}
         gradientStart={{ x: 0, y: 0 }}
         gradientEnd={{ x: 1, y: 1 }}
         testID={`metric-card-${metricType}`}
       >
         <View style={styles.content}>
-          {renderContent()}
+          <View style={styles.progressWheelContainer}>
+            <MetricProgressWheel
+              size={layout.CARD_WIDTH * 0.7}
+              strokeWidth={8}
+              progress={progress}
+              alternateColor={alternateColor}
+            />
+          </View>
+          <View style={styles.iconContainer}>
+            <MetricIcon
+              type={metricType}
+              size={styles.iconContainer.width}
+              color={metricColor}
+              progress={progress}
+            />
+          </View>
+          <MetricValue
+            value={value}
+            type={metricType}
+            style={styles.value}
+          />
+          <Text style={styles.title}>
+            {title}
+          </Text>
         </View>
       </Card>
-    </Animated.View>
-  );
-}, (prevProps, nextProps) => {
-  // Implement deep comparison for complex props
-  return (
-    prevProps.value === nextProps.value &&
-    prevProps.loading === nextProps.loading &&
-    prevProps.error === nextProps.error &&
-    prevProps.goal === nextProps.goal &&
-    prevProps.title === nextProps.title &&
-    prevProps.metricType === nextProps.metricType
+    </View>
   );
 });

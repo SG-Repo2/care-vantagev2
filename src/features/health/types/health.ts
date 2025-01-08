@@ -1,15 +1,5 @@
 import { DataSource } from '../../../core/types/base';
 
-export interface HealthScore {
-  overall: number;
-  categories: {
-    steps: number;
-    distance: number;
-  };
-  dailyVictory: boolean;
-  bonusPoints: number;
-}
-
 export interface HealthMetrics {
   id: string;
   profileId: string;
@@ -28,7 +18,7 @@ export interface WeeklyMetrics {
   weekStartDate: Date;
 }
 
-export type MetricType = 'steps' | 'distance' | 'calories' | 'score';
+export type MetricType = 'steps' | 'calories' | 'distance' | 'score';
 
 export interface HealthState {
   isInitialized: boolean;

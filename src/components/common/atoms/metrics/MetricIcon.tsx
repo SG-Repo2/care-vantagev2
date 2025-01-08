@@ -75,7 +75,7 @@ export const MetricIcon: React.FC<MetricIconProps> = ({
       animatedProps={animatedProps}
       colorFilters={[{
         keypath: "**",
-        color: color
+        color: "#FFFFFF"
       }]}
     />
   );

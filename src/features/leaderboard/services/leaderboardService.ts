@@ -1,104 +1,82 @@
-import { supabase } from '../../../utils/supabase';
+import { LeaderboardEntry } from '../types/leaderboard';
 import { PrivacyLevel } from '../../../core/types/base';
 
-interface UserProfile {
-  display_name: string;
-  photo_url: string | null;
-  settings: {
-    privacyLevel: PrivacyLevel;
-  };
-}
-
-interface HealthMetric {
-  user_id: string;
-  steps: number;
-  distance: number;
-  score: number;
-  users: UserProfile | null;
-}
-
-interface WeeklyHealthMetric {
-  user_id: string;
-  steps: number;
-  distance: number;
-  score: number;
-  users: UserProfile | null;
-}
-
-export interface LeaderboardEntry {
-  profileId: string;
-  profile: {
-    id: string;
-    userId: string;
-    displayName: string;
-    photoUrl: string | null;
-    privacyLevel: PrivacyLevel;
-  };
-  steps: number;
-  distance: number;
-  score: number;
-  rank?: number;
-}
-
 class LeaderboardService {
-  constructor() {}
+  private mockData: LeaderboardEntry[] = [];
 
-  private mapToLeaderboardEntry(entry: HealthMetric | WeeklyHealthMetric, index: number): LeaderboardEntry {
-    return {
-      profileId: entry.user_id,
-      profile: {
-        id: entry.user_id,
-        userId: entry.user_id,
-        displayName: entry.users?.display_name || 'Unknown User',
-        photoUrl: entry.users?.photo_url || null,
-        privacyLevel: entry.users?.settings?.privacyLevel || 'public'
+  async getLeaderboard(date: string): Promise<LeaderboardEntry[]> {
+    // Generate mock data
+    const mockEntries: LeaderboardEntry[] = [
+      {
+        profileId: 'current-user',
+        profile: {
+          id: 'current-user',
+          userId: 'current-user',
+          displayName: 'You',
+          photoUrl: null,
+          privacyLevel: 'public'
+        },
+        steps: 8500,
+        distance: 6.2,
+        score: 85,
+        rank: 3
       },
-      steps: entry.steps || 0,
-      distance: entry.distance || 0,
-      score: entry.score || 0,
-      rank: index + 1
-    };
+      {
+        profileId: 'user-1',
+        profile: {
+          id: 'user-1',
+          userId: 'user-1',
+          displayName: 'Sarah Johnson',
+          photoUrl: 'https://i.pravatar.cc/150?img=47',
+          privacyLevel: 'public'
+        },
+        steps: 9200,
+        distance: 7.1,
+        score: 92,
+        rank: 1
+      },
+      {
+        profileId: 'user-2',
+        profile: {
+          id: 'user-2',
+          userId: 'user-2',
+          displayName: 'Michael Chen',
+          photoUrl: 'https://i.pravatar.cc/150?img=32',
+          privacyLevel: 'public'
+        },
+        steps: 8800,
+        distance: 6.8,
+        score: 88,
+        rank: 2
+      },
+      {
+        profileId: 'user-3',
+        profile: {
+          id: 'user-3',
+          userId: 'user-3',
+          displayName: 'Private User',
+          photoUrl: null,
+          privacyLevel: 'private'
+        },
+        steps: 7500,
+        distance: 5.5,
+        score: 75,
+        rank: 4
+      }
+    ];
+
+    this.mockData = mockEntries;
+    return mockEntries;
   }
 
-  public async getLeaderboard(date: string): Promise<LeaderboardEntry[]> {
-    const { data, error } = await supabase
-      .rpc('get_daily_leaderboard', {
-        target_date: date
-      });
-
-    if (error) throw error;
-    if (!data) return [];
-
-    return data.map((entry: HealthMetric, index: number) => 
-      this.mapToLeaderboardEntry(entry, index)
-    );
+  async getWeeklyLeaderboard(startDate: string, endDate: string): Promise<LeaderboardEntry[]> {
+    return this.mockData;
   }
 
-  public async getUserRank(userId: string, date: string): Promise<number | null> {
-    const { data, error } = await supabase
-      .rpc('get_user_rank', {
-        user_uuid: userId,
-        target_date: date
-      });
-
-    if (error) throw error;
-    return data;
-  }
-
-  public async getWeeklyLeaderboard(startDate: string, endDate: string): Promise<LeaderboardEntry[]> {
-    const { data, error } = await supabase
-      .rpc('get_weekly_leaderboard', {
-        start_date: startDate,
-        end_date: endDate
-      });
-
-    if (error) throw error;
-    if (!data) return [];
-
-    return data.map((entry: WeeklyHealthMetric, index: number) => 
-      this.mapToLeaderboardEntry(entry, index)
-    );
+  async getUserRank(userId: string): Promise<number> {
+    const userEntry = this.mockData.find(entry => entry.profileId === userId);
+    return userEntry?.rank || 3;
   }
 }
 
-export default new LeaderboardService();
+export default new LeaderboardService(); 

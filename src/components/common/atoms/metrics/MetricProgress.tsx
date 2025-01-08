@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from 'react-native-paper';
-import { ProgressChart } from 'react-native-chart-kit';
 import Animated, { 
+  useAnimatedStyle, 
   useAnimatedReaction,
   runOnJS,
-  useSharedValue
+  useSharedValue,
+  withSpring
 } from 'react-native-reanimated';
 import { MetricColorKey } from '../../../../theme';
 
@@ -25,57 +26,53 @@ export const MetricProgress: React.FC<MetricProgressProps> = ({
   goal,
   type,
   color,
-  width = Dimensions.get('window').width * 0.3,
-  height = 120,
+  width = 120,
+  height = 4,
   style,
-  progress,
+  progress: externalProgress,
 }) => {
   const theme = useTheme();
-  const localProgress = useSharedValue(Math.min(current / goal, 1));
-  const [chartProgress, setChartProgress] = React.useState(localProgress.value);
+  const progress = useSharedValue(Math.min(current / goal, 1));
 
-  // Safely update state from the UI thread
-  const updateChartProgress = React.useCallback((value: number) => {
-    setChartProgress(value);
-  }, []);
+  const animatedStyle = useAnimatedStyle(() => ({
+    width: `${progress.value * 100}%`
+  }));
 
   useAnimatedReaction(
-    () => progress?.value ?? localProgress.value,
+    () => externalProgress?.value ?? progress.value,
     (currentProgress) => {
-      runOnJS(updateChartProgress)(currentProgress);
+      progress.value = currentProgress;
     },
-    [progress, localProgress]
+    [externalProgress]
   );
 
   return (
-    <View style={[styles.container, style]}>
-      <ProgressChart
-        data={{
-          labels: ['Progress'],
-          data: [chartProgress],
-          colors: [color]
-        }}
-        width={width}
-        height={height}
-        chartConfig={{
-          backgroundGradientFrom: theme.colors.surface,
-          backgroundGradientTo: theme.colors.surface,
-          color: (opacity = 1) => color,
-          strokeWidth: 4,
-          barPercentage: 0.5,
-          useShadowColorFromDataset: false
-        }}
-        hideLegend
-        withCustomBarColorFromData
-        radius={32}
-      />
+    <View style={[styles.container, { width, height }, style]}>
+      <View style={[styles.track, { backgroundColor: `${color}40` }]}>
+        <Animated.View
+          style={[
+            styles.progress,
+            { backgroundColor: color },
+            animatedStyle,
+          ]}
+        />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  track: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progress: {
+    height: '100%',
+    borderRadius: 4,
   },
 });

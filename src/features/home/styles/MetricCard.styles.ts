@@ -1,84 +1,76 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { MD3Theme, useTheme } from 'react-native-paper';
 import { spacing } from '../../../components/common/theme/spacing';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-// Constants for grid layout
-const GRID_MARGIN = spacing.md; // Margin around the entire grid
-const CARD_GAP = spacing.sm; // Gap between cards
-const GRID_WIDTH = SCREEN_WIDTH - (GRID_MARGIN * 2); // Available width for grid
-const CARD_SIZE = (GRID_WIDTH - CARD_GAP) / 2; // Each card takes up half the space
+import { layout } from '../constants/layout';
 
 const createStyles = (theme: MD3Theme) => StyleSheet.create({
   container: {
-    width: CARD_SIZE,
-    height: CARD_SIZE, // Make it square
-    margin: 0, // Remove margin as we'll handle spacing in the grid
-    borderRadius: 16,
-    overflow: 'hidden',
+    width: layout.CARD_WIDTH,
+    height: layout.CARD_HEIGHT,
+    margin: 0,
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.sm,
+    padding: 0,
     height: '100%',
+    width: '100%',
   },
   iconContainer: {
     position: 'absolute',
-    left: '10%',
-    top: '20%',
-    width: CARD_SIZE * 0.4,
-    height: CARD_SIZE * 0.4,
+    left: '50%',
+    top: '50%',
+    width: layout.CARD_WIDTH * 0.5,
+    height: layout.CARD_WIDTH * 0.5,
+    transform: [
+      { translateX: -layout.CARD_WIDTH * 0.25 },
+      { translateY: -layout.CARD_WIDTH * 0.25 }
+    ],
     opacity: 0.9,
+    zIndex: 2,
+  },
+  progressWheelContainer: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: layout.CARD_WIDTH * 0.7,
+    height: layout.CARD_WIDTH * 0.7,
+    transform: [
+      { translateX: -layout.CARD_WIDTH * 0.35 },
+      { translateY: -layout.CARD_WIDTH * 0.35 }
+    ],
+    opacity: 0.8,
+    zIndex: 1,
   },
   value: {
     position: 'absolute',
-    right: spacing.sm,
-    top: '25%',
-    fontSize: CARD_SIZE * 0.25,
+    right: spacing.md,
+    top: spacing.md,
+    fontSize: layout.CARD_WIDTH * 0.18,
     fontWeight: '800',
     textAlign: 'right',
-    color: theme.colors.onPrimary,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-    maxWidth: '60%',
+    color: '#FFFFFF',
+    maxWidth: '50%',
+    zIndex: 3,
   },
   title: {
     position: 'absolute',
-    bottom: spacing.sm,
-    left: spacing.sm,
-    right: spacing.sm,
-    fontSize: CARD_SIZE * 0.15,
+    bottom: spacing.md,
+    left: spacing.md,
+    fontSize: layout.CARD_WIDTH * 0.14,
     fontWeight: '600',
-    textAlign: 'left',
-    color: theme.colors.onPrimary,
-    opacity: 0.9,
-    lineHeight: CARD_SIZE * 0.18,
-  },
-  chartContainer: {
-    position: 'absolute',
-    bottom: '20%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
+    color: '#FFFFFF',
+    zIndex: 3,
   },
   errorText: {
-    color: theme.colors.onError,
+    color: theme.colors.error,
     textAlign: 'center',
-    padding: spacing.sm,
-    fontSize: CARD_SIZE * 0.12,
-    fontWeight: '500',
+    fontSize: layout.CARD_WIDTH * 0.1,
   },
   loadingText: {
-    color: theme.colors.onPrimary,
+    color: theme.colors.onSurface,
     textAlign: 'center',
-    padding: spacing.sm,
-    fontSize: CARD_SIZE * 0.12,
-    fontWeight: '500',
+    fontSize: layout.CARD_WIDTH * 0.1,
   },
 });
 

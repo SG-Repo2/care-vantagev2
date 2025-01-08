@@ -3,20 +3,22 @@ import { spacing } from '../../theme/spacing';
 
 export const createStyles = (theme: any) => StyleSheet.create({
   container: {
-    backgroundColor: theme.colors.surface,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'transparent',
     borderRadius: 24,
-    padding: spacing.lg,
+    padding: 0,
+    margin: 0,
     borderWidth: 0,
     shadowColor: theme.colors.shadow,
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 8,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
     overflow: 'hidden',
-    transform: [{ scale: 1 }],
   },
   pressed: {
     transform: [{ scale: 0.98 }],
@@ -33,6 +35,5 @@ export const createStyles = (theme: any) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 24,
   },
 });

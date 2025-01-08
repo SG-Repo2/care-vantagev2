@@ -31,7 +31,7 @@ export const BaseCard: React.FC<BaseCardProps> = ({
         elevation !== undefined && { elevation },
         style,
         disabled && styles.disabled,
-        pressed && styles.pressed,
+        pressed && !disabled && styles.pressed,
       ]}
       onPress={onPress}
       disabled={disabled}
