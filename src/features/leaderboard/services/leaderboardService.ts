@@ -1,11 +1,20 @@
 import { LeaderboardEntry } from '../types/leaderboard';
-import { PrivacyLevel } from '../../../core/types/base';
 
-class LeaderboardService {
+export class LeaderboardService {
   private mockData: LeaderboardEntry[] = [];
 
   async getLeaderboard(date: string): Promise<LeaderboardEntry[]> {
-    // Generate mock data
+    const activityBlurbs = [
+      "I love morning yoga sessions!",
+      "Running with my dog keeps me going",
+      "Dance workouts are my favorite",
+      "Swimming laps every evening",
+      "Hiking on weekends energizes me",
+      "Basketball with friends is my jam",
+      "Daily meditation and stretching",
+      "Rock climbing keeps me strong"
+    ];
+
     const mockEntries: LeaderboardEntry[] = [
       {
         profileId: 'current-user',
@@ -13,55 +22,119 @@ class LeaderboardService {
           id: 'current-user',
           userId: 'current-user',
           displayName: 'You',
-          photoUrl: null,
+          photoUrl: 'https://i.pravatar.cc/150?img=68',
           privacyLevel: 'public'
         },
-        steps: 8500,
-        distance: 6.2,
-        score: 85,
-        rank: 3
+        steps: 0,
+        distance: 0,
+        score: 850,
+        rank: 3,
+        activityBlurb: activityBlurbs[0]
       },
       {
         profileId: 'user-1',
         profile: {
           id: 'user-1',
           userId: 'user-1',
-          displayName: 'Sarah Johnson',
+          displayName: 'Sarah',
           photoUrl: 'https://i.pravatar.cc/150?img=47',
           privacyLevel: 'public'
         },
-        steps: 9200,
-        distance: 7.1,
-        score: 92,
-        rank: 1
+        steps: 0,
+        distance: 0,
+        score: 1000,
+        rank: 1,
+        activityBlurb: activityBlurbs[1]
       },
       {
         profileId: 'user-2',
         profile: {
           id: 'user-2',
           userId: 'user-2',
-          displayName: 'Michael Chen',
+          displayName: 'Michael',
           photoUrl: 'https://i.pravatar.cc/150?img=32',
           privacyLevel: 'public'
         },
-        steps: 8800,
-        distance: 6.8,
-        score: 88,
-        rank: 2
+        steps: 0,
+        distance: 0,
+        score: 925,
+        rank: 2,
+        activityBlurb: activityBlurbs[2]
       },
       {
         profileId: 'user-3',
         profile: {
           id: 'user-3',
           userId: 'user-3',
-          displayName: 'Private User',
+          displayName: 'Private',
           photoUrl: null,
           privacyLevel: 'private'
         },
-        steps: 7500,
-        distance: 5.5,
-        score: 75,
-        rank: 4
+        steps: 0,
+        distance: 0,
+        score: 800,
+        rank: 4,
+        activityBlurb: activityBlurbs[3]
+      },
+      {
+        profileId: 'user-4',
+        profile: {
+          id: 'user-4',
+          userId: 'user-4',
+          displayName: 'Emma',
+          photoUrl: 'https://i.pravatar.cc/150?img=45',
+          privacyLevel: 'public'
+        },
+        steps: 0,
+        distance: 0,
+        score: 750,
+        rank: 5,
+        activityBlurb: activityBlurbs[4]
+      },
+      {
+        profileId: 'user-5',
+        profile: {
+          id: 'user-5',
+          userId: 'user-5',
+          displayName: 'James',
+          photoUrl: 'https://i.pravatar.cc/150?img=53',
+          privacyLevel: 'public'
+        },
+        steps: 0,
+        distance: 0,
+        score: 675,
+        rank: 6,
+        activityBlurb: activityBlurbs[5]
+      },
+      {
+        profileId: 'user-6',
+        profile: {
+          id: 'user-6',
+          userId: 'user-6',
+          displayName: 'Private',
+          photoUrl: null,
+          privacyLevel: 'private'
+        },
+        steps: 0,
+        distance: 0,
+        score: 600,
+        rank: 7,
+        activityBlurb: activityBlurbs[6]
+      },
+      {
+        profileId: 'user-7',
+        profile: {
+          id: 'user-7',
+          userId: 'user-7',
+          displayName: 'Lisa',
+          photoUrl: 'https://i.pravatar.cc/150?img=44',
+          privacyLevel: 'public'
+        },
+        steps: 0,
+        distance: 0,
+        score: 500,
+        rank: 8,
+        activityBlurb: activityBlurbs[7]
       }
     ];
 
@@ -79,4 +152,4 @@ class LeaderboardService {
   }
 }
 
-export default new LeaderboardService(); 
+export default new LeaderboardService();

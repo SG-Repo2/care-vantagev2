@@ -1,12 +1,10 @@
 import React, { useEffect, useState, useMemo, memo } from 'react';
-import { View, Text, RefreshControl, Image, VirtualizedList } from 'react-native';
-import { useTheme, ActivityIndicator, SegmentedButtons } from 'react-native-paper';
-import { Card } from '../../../components/common/atoms/Card';
+import { View, Text, RefreshControl, Image, VirtualizedList, Animated } from 'react-native';
+import { useTheme, ActivityIndicator, SegmentedButtons, Card } from 'react-native-paper';
 import { useAuth } from '../../../context/AuthContext';
-import leaderboardService, { LeaderboardEntry } from '../services/leaderboardService';
+import leaderboardService from '../services/leaderboardService';
+import { LeaderboardEntry } from '../types/leaderboard';
 import { createStyles } from '../styles/LeaderboardScreen.styles';
-import { formatDistance } from '../../../core/utils/formatting';
-
 type PeriodType = 'daily' | 'weekly';
 
 interface LeaderboardItem {
@@ -16,23 +14,34 @@ interface LeaderboardItem {
 const LeaderboardEntryItem = memo(({ item, isCurrentUser }: { item: LeaderboardEntry, isCurrentUser: boolean }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
+  const scoreScale = new Animated.Value(0.5);
 
   const isPrivate = item.profile.privacyLevel === 'private' && !isCurrentUser;
+
+  useEffect(() => {
+    Animated.spring(scoreScale, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   return (
     <Card style={[
       styles.entryContainer,
       isCurrentUser && styles.currentUserEntry
     ]}>
-      <View style={styles.rankContainer}>
-        <Text style={[
-          styles.rankText,
-          item.rank !== undefined && item.rank <= 3 ? styles.topThreeRank : undefined
-        ]}>
-          #{item.rank ?? '-'}
-        </Text>
-      </View>
-      <View style={styles.userContainer}>
+      <Card.Content style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={styles.rankContainer}>
+          <Text style={[
+            styles.rankText,
+            item.rank !== undefined && item.rank <= 3 ? styles.topThreeRank : undefined
+          ]}>
+            #{item.rank ?? '-'}
+          </Text>
+        </View>
+        <View style={styles.userContainer}>
         {!isPrivate && item.profile.photoUrl && (
           <Image
             source={{ uri: item.profile.photoUrl }}
@@ -45,26 +54,44 @@ const LeaderboardEntryItem = memo(({ item, isCurrentUser }: { item: LeaderboardE
           </View>
         )}
         <View style={styles.userInfo}>
-          <Text style={[
-            styles.nameText,
-            isCurrentUser && styles.currentUserText
-          ]}>
-            {isPrivate ? 'Private User' : item.profile.displayName}
-            {isCurrentUser && ' (You)'}
-            {item.profile.privacyLevel === 'private' && ' 🔒'}
-          </Text>
-          <View style={styles.statsRow}>
-            <Text style={styles.scoreText}>
-              Score: {isPrivate ? '---' : item.score}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={[
+              styles.nameText,
+              isCurrentUser && styles.currentUserText,
+              { marginLeft: 10 }
+            ]}>
+              {isPrivate ? 'Private User' : item.profile.displayName}
+              {isCurrentUser && ' (You)'}
+              {item.profile.privacyLevel === 'private' && ' 🔒'}
             </Text>
-            {!isPrivate && (
-              <Text style={styles.metricsText}>
-                Steps: {item.steps.toLocaleString()} • Distance: {formatDistance(item.distance, 'metric')}
+            <Animated.View style={[
+              {
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: -8
+              },
+              { transform: [{ scale: scoreScale }] }
+            ]}>
+              <Text style={[
+                styles.scoreText,
+                {
+                  textShadowColor: 'rgba(0, 0, 0, 0.1)',
+                  textShadowOffset: { width: 1, height: 1 },
+                  textShadowRadius: 1
+                }
+              ]}>
+                {isPrivate ? '---' : `🏆 ${item.score}`}
               </Text>
-            )}
+            </Animated.View>
           </View>
+          {!isPrivate && item.activityBlurb && (
+            <Text style={[styles.metricsText, { marginTop: 4 }]}>
+              {item.activityBlurb}
+            </Text>
+          )}
         </View>
       </View>
+      </Card.Content>
     </Card>
   );
 });
@@ -128,6 +155,14 @@ export const LeaderboardScreen: React.FC = () => {
     leaderboardData.sort((a, b) => (a.rank || Infinity) - (b.rank || Infinity)),
     [leaderboardData]
   );
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   if (loading && !refreshing) {
     return (

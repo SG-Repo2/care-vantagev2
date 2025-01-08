@@ -13,4 +13,5 @@ export interface LeaderboardEntry {
   distance: number;
   score: number;
   rank?: number;
+  activityBlurb?: string;
 }

@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import { useSharedValue } from 'react-native-reanimated';
+import { useSharedValue, withRepeat, withSpring, useAnimatedStyle } from 'react-native-reanimated';
 import { getMetricColor, MetricColorKey } from '../../../theme';
 import { getCurrentWeekStart } from '../../../core/constants/metrics';
 import { Card } from '../../../components/common/atoms/Card';
@@ -77,6 +77,20 @@ export const MetricCard = React.memo<MetricCardProps>(({
   const progressValue = Math.min(currentValue / goal, 1);
   progress.value = progressValue;
 
+  const pulseStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{
+        scale: progress.value >= 1 
+          ? withRepeat(
+              withSpring(1.05, { damping: 2, stiffness: 80 }),
+              -1,
+              true
+            )
+          : 1
+      }]
+    };
+  }, []);
+
   return (
     <View style={styles.container}>
       <Card
@@ -85,6 +99,7 @@ export const MetricCard = React.memo<MetricCardProps>(({
         gradientStart={{ x: 0, y: 0 }}
         gradientEnd={{ x: 1, y: 1 }}
         testID={`metric-card-${metricType}`}
+        style={pulseStyle}
       >
         <View style={styles.content}>
           <View style={styles.progressWheelContainer}>
@@ -100,7 +115,6 @@ export const MetricCard = React.memo<MetricCardProps>(({
               type={metricType}
               size={styles.iconContainer.width}
               color={metricColor}
-              progress={progress}
             />
           </View>
           <MetricValue
