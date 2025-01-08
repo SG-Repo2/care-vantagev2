@@ -26,8 +26,8 @@ export const MetricProgress: React.FC<MetricProgressProps> = ({
   goal,
   type,
   color,
-  width = 120,
-  height = 4,
+  width = 100,
+  height = 3,
   style,
   progress: externalProgress,
 }) => {

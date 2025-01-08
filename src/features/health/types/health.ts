@@ -1,20 +1,18 @@
 import { DataSource } from '../../../core/types/base';
 
 export interface HealthMetrics {
-  id: string;
-  profileId: string;
-  date: string;
   steps: number;
   distance: number;
   calories: number;
   heartRate: number;
-  source: DataSource;
-  createdAt: Date;
-  updatedAt: Date;
+  score?: number;
 }
 
 export interface WeeklyMetrics {
   weeklySteps: number[];
+  weeklyCalories: number[];
+  weeklyDistance: number[];
+  weeklyHeartRate: number[];
   weekStartDate: Date;
 }
 

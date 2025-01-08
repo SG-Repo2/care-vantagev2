@@ -94,16 +94,56 @@ export const HomeScreen: React.FC = () => {
     let modalData: ModalData = {
       type,
       title: type.charAt(0).toUpperCase() + type.slice(1),
-      value: type === 'distance' 
-        ? formatDistance(metrics[type], DEFAULT_MEASUREMENT_SYSTEM) 
+      value: type === 'distance'
+        ? formatDistance(metrics[type], DEFAULT_MEASUREMENT_SYSTEM)
         : metrics[type].toString(),
       data: {
         labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        values: type === 'steps' 
-          ? metrics.weeklySteps 
-          : [0, 0, 0, 0, 0, 0, metrics[type]],
-        startDate: type === 'steps' ? metrics.weekStartDate : undefined
+        values: (() => {
+          switch (type) {
+            case 'steps':
+              return metrics.weeklySteps;
+            case 'calories':
+              return metrics.weeklyCalories;
+            case 'distance':
+              return metrics.weeklyDistance;
+            case 'heartRate':
+              return metrics.weeklyHeartRate;
+            default:
+              return [0, 0, 0, 0, 0, 0, metrics[type]];
+          }
+        })(),
+        startDate: metrics.weekStartDate
       },
+      additionalInfo: (() => {
+        switch (type) {
+          case 'steps':
+            return [
+              { label: 'Daily Average', value: Math.round(metrics.weeklySteps.reduce((a, b) => a + b, 0) / 7).toLocaleString() },
+              { label: 'Best Day', value: Math.max(...metrics.weeklySteps).toLocaleString() },
+            ];
+          case 'calories':
+            return [
+              { label: 'Daily Average', value: `${Math.round(metrics.weeklyCalories.reduce((a, b) => a + b, 0) / 7)} cal` },
+              { label: 'Best Day', value: `${Math.max(...metrics.weeklyCalories)} cal` },
+              { label: 'Weekly Total', value: `${metrics.weeklyCalories.reduce((a, b) => a + b, 0)} cal` },
+            ];
+          case 'distance':
+            return [
+              { label: 'Daily Average', value: formatDistance(metrics.weeklyDistance.reduce((a, b) => a + b, 0) / 7, DEFAULT_MEASUREMENT_SYSTEM) },
+              { label: 'Best Day', value: formatDistance(Math.max(...metrics.weeklyDistance), DEFAULT_MEASUREMENT_SYSTEM) },
+              { label: 'Weekly Total', value: formatDistance(metrics.weeklyDistance.reduce((a, b) => a + b, 0), DEFAULT_MEASUREMENT_SYSTEM) },
+            ];
+          case 'heartRate':
+            return [
+              { label: 'Average HR', value: `${Math.round(metrics.weeklyHeartRate.reduce((a, b) => a + b, 0) / 7)} bpm` },
+              { label: 'Peak HR', value: `${Math.max(...metrics.weeklyHeartRate)} bpm` },
+              { label: 'Resting HR', value: `${Math.min(...metrics.weeklyHeartRate)} bpm` },
+            ];
+          default:
+            return undefined;
+        }
+      })(),
     };
 
     setSelectedMetric(modalData);
@@ -166,8 +206,8 @@ export const HomeScreen: React.FC = () => {
       >
         <Animated.View style={[styles.header]} entering={SlideInDown}>
           <View style={styles.headerTop}>
-            <Text variant="headlineMedium" style={styles.title}>
-              Health Dashboard
+            <Text variant="headlineMedium" style={styles.welcomeText}>
+              Welcome back, Sean
             </Text>
             <IconButton
               icon="trophy"
@@ -178,20 +218,43 @@ export const HomeScreen: React.FC = () => {
             />
           </View>
 
-          <Animated.View style={[styles.scoreContainer, scoreAnimatedStyle]}>
+            <Animated.View style={[styles.scoreContainer, scoreAnimatedStyle]}>
             <LinearGradient
               colors={[theme.colors.primaryContainer, theme.colors.surface]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.scoreGradient}
             >
-              <Text variant="titleLarge" style={styles.scoreLabel}>Score</Text>
-              <Text variant="displaySmall" style={styles.scoreValue}>
-                {metrics?.score || 0}
+              <Text variant="headlineMedium" style={[styles.dashboardTitle, { marginBottom: 4 }]}>
+              Health Dashboard
               </Text>
+              
+              <View style={styles.metricsRow}>
+              <View style={styles.metricColumn}>
+                <Text variant="titleMedium" style={styles.metricLabel}>Ranking</Text>
+                <Text variant="headlineSmall" style={styles.metricValue}>
+                #12
+                </Text>
+              </View>
+              
+              <View style={styles.metricColumn}>
+                <Text variant="titleMedium" style={styles.metricLabel}>Score</Text>
+                <Text variant="headlineSmall" style={styles.metricValue}>
+                {metrics?.score || 0}
+                </Text>
+              </View>
+              
+              <View style={styles.metricColumn}>
+                <Text variant="titleMedium" style={styles.metricLabel}>Streak</Text>
+                <Text variant="headlineSmall" style={styles.metricValue}>
+                5 🔥
+                </Text>
+              </View>
+              </View>
             </LinearGradient>
+            </Animated.View>
           </Animated.View>
-        </Animated.View>
+
 
         <Animated.View 
           style={styles.metricsGrid}

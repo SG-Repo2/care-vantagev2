@@ -38,7 +38,7 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  title: {
+  welcomeText: {
     fontSize: 28,
     fontWeight: '800',
     color: theme.colors.onBackground,
@@ -52,7 +52,8 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginVertical: spacing.sm,
-    height: 120,
+    height: 150,
+    marginTop: 1,
     shadowColor: theme.colors.shadow,
     shadowOffset: {
       width: 0,
@@ -65,7 +66,37 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
   scoreGradient: {
     padding: spacing.md,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    height: '100%',
+  },
+  dashboardTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: theme.colors.onPrimaryContainer,
+    marginBottom: spacing.sm,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: spacing.sm,
+  },
+  metricColumn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  metricLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: theme.colors.onPrimaryContainer,
+    opacity: 0.8,
+    marginBottom: spacing.xs,
+  },
+  metricValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.onPrimaryContainer,
   },
   scoreContent: {
     alignItems: 'flex-start',
