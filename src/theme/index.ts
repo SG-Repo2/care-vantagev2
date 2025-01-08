@@ -189,7 +189,7 @@ export const customDarkTheme: ExtendedTheme = {
 };
 
 export type AppTheme = ExtendedTheme;
-export type MetricColorKey = keyof typeof metricColors;
+export type MetricColorKey = 'steps' | 'calories' | 'distance' | 'heartRate';
 
 // Helper function to get metric color
 export const getMetricColor = (metricType: MetricColorKey): string => {
@@ -198,8 +198,10 @@ export const getMetricColor = (metricType: MetricColorKey): string => {
       return '#EE7752';
     case 'distance':
       return '#88E0EF';
-    case 'score':
-      return '#F15848';
+    case 'heartRate':
+      return '#FF5E7D';
+    case 'steps':
+      return '#23C552';
     default:
       return '#CCCCCC';
   }

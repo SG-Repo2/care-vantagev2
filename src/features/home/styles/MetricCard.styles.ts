@@ -15,30 +15,24 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     padding: 0,
     height: '100%',
     width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconContainer: {
     position: 'absolute',
-    left: '50%',
-    top: '50%',
-    width: layout.CARD_WIDTH * 0.5,
-    height: layout.CARD_WIDTH * 0.5,
-    transform: [
-      { translateX: -layout.CARD_WIDTH * 0.25 },
-      { translateY: -layout.CARD_WIDTH * 0.25 }
-    ],
+    width: layout.CARD_WIDTH * 0.4,
+    height: layout.CARD_WIDTH * 0.4,
+    alignItems: 'center',
+    justifyContent: 'center',
     opacity: 0.9,
     zIndex: 2,
   },
   progressWheelContainer: {
     position: 'absolute',
-    left: '50%',
-    top: '50%',
     width: layout.CARD_WIDTH * 0.7,
     height: layout.CARD_WIDTH * 0.7,
-    transform: [
-      { translateX: -layout.CARD_WIDTH * 0.35 },
-      { translateY: -layout.CARD_WIDTH * 0.35 }
-    ],
+    alignItems: 'center',
+    justifyContent: 'center',
     opacity: 0.8,
     zIndex: 1,
   },

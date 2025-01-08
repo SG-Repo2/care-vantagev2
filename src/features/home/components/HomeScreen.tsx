@@ -30,7 +30,7 @@ const GOALS = {
   steps: 10000,
   calories: 2500,
   distance: 5, // miles or km depending on measurement system
-  score: 100
+  heartRate: 120 // beats per minute
 };
 
 interface ModalData {
@@ -228,14 +228,14 @@ export const HomeScreen: React.FC = () => {
             goal={GOALS.distance}
           />
           <MetricCard
-            title="Score"
-            value={(metrics?.score || 0).toString()}
-            icon="star"
-            metricType="score"
-            onPress={() => metrics && handleMetricPress('score', metrics)}
+            title="Heart Rate"
+            value={`${metrics?.heartRate || 0} bpm`}
+            icon="heart-pulse"
+            metricType="heartRate"
+            onPress={() => metrics && handleMetricPress('heartRate', metrics)}
             loading={loading}
             error={error}
-            goal={GOALS.score}
+            goal={GOALS.heartRate}
           />
         </Animated.View>
 

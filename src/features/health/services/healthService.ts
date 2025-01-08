@@ -10,7 +10,7 @@ class HealthService {
       steps: 8500,
       distance: 6.2,
       calories: 2200,
-      score: 85,
+      heartRate: 72,
       source: 'apple_health',
       createdAt: new Date(),
       updatedAt: new Date(),
