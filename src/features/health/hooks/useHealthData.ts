@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { HealthMetrics, WeeklyMetrics } from '../types/health';
 import { HealthServiceFactory } from '../services/factory';
 import { HEALTH_METRICS } from '../../../core/constants/metrics';
+import { profileService } from '../../../features/profile/services/profileService';
 
 const useHealthData = (userId: string) => {
   const [metrics, setMetrics] = useState<HealthMetrics & WeeklyMetrics | null>(null);
@@ -57,6 +58,18 @@ const useHealthData = (userId: string) => {
       mounted = false;
       if (healthService) {
         healthService.cleanup?.();
+      }
+      // Sync health data to database when component unmounts
+      if (metrics && userId) {
+        const today = new Date().toISOString().split('T')[0];
+        profileService.updateHealthMetrics(userId, today, {
+          steps: metrics.steps,
+          distance: metrics.distance,
+          heartrate: metrics.heartRate,
+          calories: metrics.calories
+        }).catch(err => {
+          console.error('Failed to sync health data on unmount:', err);
+        });
       }
     };
   }, []);
