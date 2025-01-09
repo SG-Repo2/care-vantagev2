@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import { View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useSharedValue, withRepeat, withSpring, useAnimatedStyle } from 'react-native-reanimated';
@@ -39,7 +39,7 @@ export const MetricCard = React.memo<MetricCardProps>(({
   const styles = useStyles();
   const metricColor = getMetricColor(metricType);
   const progress = useSharedValue(0);
-
+  
   // Randomly select a color from other metric types
   const alternateColor = useMemo(() => {
     const otherTypes = ALL_METRIC_TYPES.filter(type => type !== metricType);
@@ -52,6 +52,29 @@ export const MetricCard = React.memo<MetricCardProps>(({
       onPress(getCurrentWeekStart());
     }
   }, [onPress]);
+
+  // Calculate progress value
+  const currentValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
+  const progressValue = Math.min(currentValue / goal, 1);
+
+  // Update progress value
+  useEffect(() => {
+    progress.value = progressValue;
+  }, [progressValue]);
+
+  const pulseStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{
+        scale: progress.value >= 1 
+          ? withRepeat(
+              withSpring(1.05, { damping: 2, stiffness: 80 }),
+              -1,
+              true
+            )
+          : 1
+      }]
+    };
+  }, [progress.value]);
 
   if (loading) {
     return (
@@ -72,24 +95,6 @@ export const MetricCard = React.memo<MetricCardProps>(({
       </View>
     );
   }
-
-  const currentValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
-  const progressValue = Math.min(currentValue / goal, 1);
-  progress.value = progressValue;
-
-  const pulseStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{
-        scale: progress.value >= 1 
-          ? withRepeat(
-              withSpring(1.05, { damping: 2, stiffness: 80 }),
-              -1,
-              true
-            )
-          : 1
-      }]
-    };
-  }, []);
 
   return (
     <View style={styles.container}>

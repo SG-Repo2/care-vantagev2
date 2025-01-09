@@ -11,6 +11,7 @@ const useHealthData = (userId: string) => {
 
   // Initialize health service
   useEffect(() => {
+    let mounted = true;
     const initializeHealthService = async () => {
       try {
         const service = await HealthServiceFactory.getService();
@@ -21,11 +22,13 @@ const useHealthData = (userId: string) => {
               'DistanceWalkingRunning',
               'HeartRate',
               'ActiveEnergyBurned',
-              
             ],
             write: [],
           }
         });
+        
+        if (!mounted) return;
+
         if (!initialized) {
           throw new Error('Failed to initialize health service');
         }
@@ -36,15 +39,26 @@ const useHealthData = (userId: string) => {
             throw new Error('Health data permissions not granted');
           }
         }
-        setHealthService(service);
+        if (mounted) {
+          setHealthService(service);
+        }
       } catch (err) {
         console.error('Error initializing health service:', err);
-        setError('Failed to initialize health service');
-        setLoading(false);
+        if (mounted) {
+          setError('Failed to initialize health service');
+          setLoading(false);
+        }
       }
     };
 
     initializeHealthService();
+    
+    return () => {
+      mounted = false;
+      if (healthService) {
+        healthService.cleanup?.();
+      }
+    };
   }, []);
 
   // Load health data
