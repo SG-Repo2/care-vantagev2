@@ -21,9 +21,7 @@ const useHealthData = (userId: string) => {
               'DistanceWalkingRunning',
               'HeartRate',
               'ActiveEnergyBurned',
-              'BodyMass',
-              'Height',
-              'BodyMassIndex',
+              
             ],
             write: [],
           }
