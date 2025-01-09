@@ -125,3 +125,9 @@ GoogleService-Info.plist
 .repomix*
 repomix*
 src/repomix-output.txt
+src/components/components.txt
+src/context/context
+src/core/core.txt
+src/features/health/health-repo.txt
+src/features/home/home-repo.txt
+src/context/context.txt

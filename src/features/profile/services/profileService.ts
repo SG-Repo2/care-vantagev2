@@ -3,6 +3,50 @@ import { Profile } from '../types/profile';
 import { User } from '../../auth/types/auth';
 import { MeasurementSystem, PrivacyLevel } from '../../../core/types/base';
 
+export interface HealthMetrics {
+  steps: number;
+  distance: number;
+  heartrate: number;
+  calories: number;
+}
+
+function calculateHealthScore(metrics: HealthMetrics): number {
+  // Base weights for each metric
+  const weights = {
+    steps: 0.4,      // 40% weight for steps
+    distance: 0.2,   // 20% weight for distance
+    heartrate: 0.2,  // 20% weight for heart rate
+    calories: 0.2    // 20% weight for calories
+  };
+
+  // Normalize metrics to a 0-100 scale
+  const normalizedSteps = Math.min(metrics.steps / 10000 * 100, 100); // 10000 steps as target
+  const normalizedDistance = Math.min(metrics.distance / 8 * 100, 100); // 8km as target
+  const normalizedHeartrate = calculateHeartrateScore(metrics.heartrate);
+  const normalizedCalories = Math.min(metrics.calories / 500 * 100, 100); // 500 calories as target
+
+  // Calculate weighted score
+  const score = Math.round(
+    normalizedSteps * weights.steps +
+    normalizedDistance * weights.distance +
+    normalizedHeartrate * weights.heartrate +
+    normalizedCalories * weights.calories
+  );
+
+  return Math.min(Math.max(score, 0), 100); // Ensure score is between 0 and 100
+}
+
+function calculateHeartrateScore(heartrate: number): number {
+  // Optimal heart rate zones (simplified)
+  if (heartrate >= 60 && heartrate <= 100) {
+    return 100; // Perfect resting heart rate
+  } else if (heartrate < 60) {
+    return Math.max(60, heartrate) / 60 * 100; // Score for low heart rate
+  } else {
+    return Math.max(0, (180 - heartrate) / 80 * 100); // Score decreases as heart rate increases above 100
+  }
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -95,5 +139,57 @@ export const profileService = {
 
   async updateProfilePhoto(userId: string, photoURL: string): Promise<UserProfile> {
     return this.updateProfile(userId, { photo_url: photoURL });
+  },
+
+  async updateHealthMetrics(userId: string, date: string, metrics: HealthMetrics): Promise<void> {
+    const { error } = await supabase
+      .from('health_metrics')
+      .upsert({
+        user_id: userId,
+        date,
+        steps: metrics.steps,
+        distance: metrics.distance,
+        heartrate: metrics.heartrate,
+        calories: metrics.calories,
+        score: calculateHealthScore(metrics)
+      });
+
+    if (error) {
+      console.error('Error updating health metrics:', error);
+      throw error;
+    }
+  },
+
+  async getHealthMetrics(userId: string, date: string): Promise<HealthMetrics | null> {
+    const { data, error } = await supabase
+      .from('health_metrics')
+      .select('steps, distance, heartrate, calories')
+      .eq('user_id', userId)
+      .eq('date', date)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching health metrics:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  async getDailyHealthMetrics(userId: string, startDate: string, endDate: string): Promise<HealthMetrics[]> {
+    const { data, error } = await supabase
+      .from('health_metrics')
+      .select('steps, distance, heartrate, calories, date')
+      .eq('user_id', userId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching daily health metrics:', error);
+      throw error;
+    }
+
+    return data || [];
   }
 };
