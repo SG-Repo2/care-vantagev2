@@ -69,6 +69,48 @@ class AuthService {
     return AuthService.instance;
   }
 
+  public async signInWithEmail(email: string, password: string): Promise<void> {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      
+      if (data.user) {
+        this.currentUser = await this.createAppUserFromSupabaseUser(data.user);
+        this.notifyListeners();
+      } else {
+        throw new Error('No user data returned from authentication');
+      }
+    } catch (error) {
+      console.error('Email sign in error:', error);
+      throw error;
+    }
+  }
+
+  public async signUpWithEmail(email: string, password: string): Promise<void> {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      
+      if (data.user) {
+        this.currentUser = await this.createAppUserFromSupabaseUser(data.user);
+        this.notifyListeners();
+      } else {
+        throw new Error('No user data returned from registration');
+      }
+    } catch (error) {
+      console.error('Email sign up error:', error);
+      throw error;
+    }
+  }
+
   public async signInWithGoogle(idToken: string): Promise<void> {
     try {
       const { data, error } = await supabase.auth.signInWithIdToken({

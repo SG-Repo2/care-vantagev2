@@ -15,6 +15,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   error: string | null;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   updateUser: (user: User) => void;
@@ -30,6 +32,69 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+    } catch (err) {
+      console.error('Email sign-in error:', err);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to sign in with email');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      
+      if (data.user) {
+        const mappedUser = mapSupabaseUser(data.user);
+        
+        // Check if profile exists
+        const existingProfile = await profileService.getProfile(data.user.id);
+        
+        if (!existingProfile) {
+          // Profile doesn't exist, create a new one
+          try {
+            await profileService.createProfile(mappedUser);
+          } catch (profileError) {
+            console.error('Failed to create user profile:', profileError);
+            // Even if profile creation fails, we still want to set the user
+            // They can try updating their profile later
+          }
+        }
+        
+        setUser(mappedUser);
+      }
+    } catch (err) {
+      console.error('Email sign-up error:', err);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to sign up with email');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const googleAuth = Constants.expoConfig?.extra?.googleAuth;
   
@@ -170,6 +235,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         user,
         isLoading,
         error,
+        signInWithEmail,
+        signUpWithEmail,
         signInWithGoogle,
         signOut,
         updateUser: setUser,

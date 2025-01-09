@@ -32,12 +32,8 @@ module.exports = {
           'health-records',
           'HKQuantityTypeIdentifierStepCount',
           'HKQuantityTypeIdentifierHeartRate',
-          'HKQuantityTypeIdentifierBodyMass',
-          'HKQuantityTypeIdentifierHeight',
-          'HKQuantityTypeIdentifierBodyMassIndex',
           'HKQuantityTypeIdentifierActiveEnergyBurned',
-          'HKQuantityTypeIdentifierDistanceWalkingRunning',
-          'HKQuantityTypeIdentifierWalkingSpeed'
+          'HKQuantityTypeIdentifierDistanceWalkingRunning'
         ],
         'com.apple.developer.healthkit.background-delivery': true
       },

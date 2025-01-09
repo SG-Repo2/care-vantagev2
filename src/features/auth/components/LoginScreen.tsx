@@ -17,7 +17,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
-  const { signInWithGoogle, error: authError, isLoading } = useAuth();
+  const { signInWithEmail, signInWithGoogle, error: authError, isLoading } = useAuth();
   const theme = useTheme();
 
   const handleLogin = async () => {
@@ -25,9 +25,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setLocalError('Please enter both email and password');
       return;
     }
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters');
+      return;
+    }
     setLocalError(null);
-    // Email/password login not implemented in this version
-    setLocalError('Email/password login is not available. Please use Google Sign-In.');
+    try {
+      await signInWithEmail(email, password);
+    } catch (err) {
+      console.error('Login error:', err);
+      setLocalError(err instanceof Error ? err.message : 'Failed to sign in');
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -91,11 +99,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           size="large"
           onPress={handleLogin}
           loading={isLoading}
-          disabled={isLoading || !email || !password}
+          disabled={isLoading || !email || !password || password.length < 6}
           fullWidth
           style={[styles.button, styles.primaryButton]}
         >
-          Sign In
+          Sign In with Email
         </Button>
 
         <View style={styles.dividerContainer}>

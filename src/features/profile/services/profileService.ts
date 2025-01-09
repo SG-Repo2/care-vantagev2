@@ -68,35 +68,52 @@ export interface UserProfile {
 
 export const profileService = {
   async createProfile(user: User): Promise<UserProfile> {
-    const { data, error } = await supabase
-      .from('users')
-      .insert([
-        {
-          id: user.id,
-          email: user.email,
-          display_name: user.displayName || user.email.split('@')[0],
-          photo_url: user.photoURL || null,
-          settings: {
-            measurementSystem: 'metric',
-            notifications: true,
-            privacyLevel: 'private',
-            dailyGoals: {
-              steps: 10000,
-              sleep: 480,
-              water: 2000
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert([
+          {
+            id: user.id,
+            email: user.email,
+            display_name: user.displayName || user.email.split('@')[0],
+            photo_url: user.photoURL || null,
+            settings: {
+              measurementSystem: 'metric',
+              notifications: true,
+              privacyLevel: 'private',
+              dailyGoals: {
+                steps: 10000,
+                sleep: 480,
+                water: 2000
+              }
             }
           }
-        }
-      ])
-      .select()
-      .single();
+        ])
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error creating profile:', error);
+      if (error) {
+        if (error.code === '42501') {
+          throw new Error('Permission denied: Unable to create user profile. Please check database permissions.');
+        } else if (error.code === '23505') {
+          // If profile already exists, try to fetch it
+          const { data: existingProfile, error: fetchError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+            
+          if (fetchError) throw fetchError;
+          if (existingProfile) return existingProfile;
+        }
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in createProfile:', error);
       throw error;
     }
-
-    return data;
   },
 
   async getProfile(userId: string): Promise<UserProfile | null> {
