@@ -34,7 +34,10 @@ module.exports = {
           'HKQuantityTypeIdentifierHeartRate',
           'HKQuantityTypeIdentifierBodyMass',
           'HKQuantityTypeIdentifierHeight',
-          'HKQuantityTypeIdentifierBodyMassIndex'
+          'HKQuantityTypeIdentifierBodyMassIndex',
+          'HKQuantityTypeIdentifierActiveEnergyBurned',
+          'HKQuantityTypeIdentifierDistanceWalkingRunning',
+          'HKQuantityTypeIdentifierWalkingSpeed'
         ],
         'com.apple.developer.healthkit.background-delivery': true
       },
