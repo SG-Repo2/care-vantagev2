@@ -11,8 +11,9 @@ if (!HealthConnectModule) {
 interface NativeHealthConnectInterface {
   isAvailable(): Promise<boolean>;
   requestPermissions(permissions: string[]): Promise<boolean>;
-  getDailySteps(startTime: number, endTime: number): Promise<number>;
-  getDailyDistance(startTime: number, endTime: number): Promise<number>;
+  getDailySteps(startTime: string, endTime: string): Promise<number>;
+  getDailyDistance(startTime: string, endTime: string): Promise<number>;
+  hasPermissions(permissions: string[]): Promise<boolean>;
 }
 
 const NativeHealthConnect: NativeHealthConnectInterface = {
@@ -20,6 +21,7 @@ const NativeHealthConnect: NativeHealthConnectInterface = {
   requestPermissions: HealthConnectModule.requestPermissions,
   getDailySteps: HealthConnectModule.getDailySteps,
   getDailyDistance: HealthConnectModule.getDailyDistance,
+  hasPermissions: HealthConnectModule.hasPermissions,
 };
 
 export default NativeHealthConnect;

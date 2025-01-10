@@ -15,6 +15,7 @@ import com.facebook.soloader.SoLoader
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
+import com.groebe1kenobi.carevantage.health.HealthConnectPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -22,9 +23,9 @@ class MainApplication : Application(), ReactApplication {
         this,
         object : DefaultReactNativeHost(this) {
           override fun getPackages(): List<ReactPackage> {
-            val packages = PackageList(this).packages
-            // Packages that cannot be autolinked yet can be added manually here, for example:
-            // packages.add(new MyReactNativePackage());
+            val packages = PackageList(this).packages.toMutableList()
+            // Packages that cannot be autolinked yet can be added manually here
+            packages.add(HealthConnectPackage())
             return packages
           }
 
