@@ -15,5 +15,6 @@ export interface HealthService {
   getMetrics(date?: Date): Promise<HealthMetrics>;
   getDailySteps(date?: Date): Promise<number>;
   getDailyDistance(date?: Date): Promise<number>;
+  getDailyHeartRate(date?: Date): Promise<number>;
   getWeeklySteps(startDate: Date): Promise<number[]>;
 }

@@ -37,34 +37,29 @@ export abstract class BaseHealthService implements HealthService {
       throw new Error('Health service not initialized');
     }
 
-    const [steps, distance] = await Promise.all([
+    const [steps, distance, heartRate, calories] = await Promise.all([
       this.getDailySteps(date),
       this.getDailyDistance(date),
+      this.getDailyHeartRate(date),
+      Promise.resolve(0), // Placeholder for calories until implemented
     ]);
 
-    const now = new Date();
-    const id = `metrics_${now.getTime()}`;
-
     const metrics: HealthMetrics = {
-      id,
-      profileId: '', // Set from the calling context
-      date: date.toISOString(),
       steps,
       distance,
+      heartRate,
+      calories,
       score: 0,
-      source: this.source,
-      createdAt: now,
-      updatedAt: now,
     };
 
-    const score = HealthScoring.calculateScore(metrics);
-    metrics.score = score.overall;
+    metrics.score = HealthScoring.calculateScore(metrics).overall;
 
     return metrics;
   }
 
   abstract getDailySteps(date?: Date): Promise<number>;
   abstract getDailyDistance(date?: Date): Promise<number>;
+  abstract getDailyHeartRate(date?: Date): Promise<number>;
   
   async getWeeklySteps(startDate: Date): Promise<number[]> {
     if (!this.initialized) {

@@ -193,4 +193,44 @@ class HealthConnectModule(reactContext: ReactApplicationContext) : ReactContextB
             }
         }
     }
+
+    @ReactMethod
+    fun getDailyHeartRate(startTime: String, endTime: String, promise: Promise) {
+        scope.launch {
+            try {
+                val client = getClient(reactApplicationContext)
+                if (client == null) {
+                    promise.reject("ERROR", "Health Connect is not available")
+                    return@launch
+                }
+
+                val timeRangeFilter = TimeRangeFilter.between(
+                    Instant.parse(startTime),
+                    Instant.parse(endTime)
+                )
+
+                val response = client.readRecords(
+                    ReadRecordsRequest(
+                        recordType = HeartRateRecord::class,
+                        timeRangeFilter = timeRangeFilter
+                    )
+                )
+
+                var totalHeartRate = 0.0
+                var count = 0
+                response.records.forEach { record ->
+                    record.samples.forEach { sample ->
+                        totalHeartRate += sample.beatsPerMinute
+                        count++
+                    }
+                }
+
+                // Return average heart rate, or 0 if no readings
+                val averageHeartRate = if (count > 0) totalHeartRate / count else 0.0
+                promise.resolve(averageHeartRate)
+            } catch (e: Exception) {
+                promise.reject("ERROR", e.message)
+            }
+        }
+    }
 }

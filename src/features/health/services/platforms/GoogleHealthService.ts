@@ -1,122 +1,175 @@
-import { Platform, NativeModules } from 'react-native';
+import { Platform, NativeModules, InteractionManager } from 'react-native';
 import { HealthServiceConfig } from '../types';
 import { BaseHealthService } from '../base';
-
-const { HealthConnectModule } = NativeModules;
+import NativeHealthConnectModule from '../NativeHealthConnect';
 
 export class GoogleHealthService extends BaseHealthService {
   protected source = 'health_connect' as const;
   protected config: HealthServiceConfig | null = null;
 
   protected async doInitialize(config: HealthServiceConfig): Promise<boolean> {
-    if (Platform.OS !== 'android') {
-      return false;
-    }
-
-    this.config = config;
-    try {
-      const isAvailable = await HealthConnectModule.isAvailable();
-      if (!isAvailable) {
-        console.warn('Health Connect is not available on this device');
-        return false;
+    return new Promise((resolve) => {
+      if (Platform.OS !== 'android') {
+        resolve(false);
+        return;
       }
-      return true;
-    } catch (error) {
-      console.error('Failed to initialize Health Connect:', error);
-      return false;
-    }
+
+      InteractionManager.runAfterInteractions(async () => {
+        try {
+          this.config = config;
+          const isAvailable = await NativeHealthConnectModule.isAvailable();
+          if (!isAvailable) {
+            console.warn('Health Connect is not available on this device');
+            resolve(false);
+            return;
+          }
+          resolve(true);
+        } catch (error) {
+          console.error('Failed to initialize Health Connect:', error);
+          resolve(false);
+        }
+      });
+    });
   }
 
   protected async doRequestPermissions(): Promise<boolean> {
-    if (Platform.OS !== 'android' || !this.config) {
-      return false;
-    }
+    return new Promise((resolve) => {
+      if (Platform.OS !== 'android' || !this.config) {
+        resolve(false);
+        return;
+      }
 
-    try {
-      const permissions = [
-        'android.permission.health.READ_STEPS',
-        'android.permission.health.READ_DISTANCE',
-        'android.permission.health.READ_HEART_RATE',
-        'android.permission.health.READ_ACTIVE_CALORIES_BURNED'
-      ];
-      return await HealthConnectModule.requestPermissions(permissions);
-    } catch (error) {
-      console.error('Failed to request Health Connect permissions:', error);
-      return false;
-    }
+      InteractionManager.runAfterInteractions(async () => {
+        try {
+          const permissions = [
+            'android.permission.health.READ_STEPS',
+            'android.permission.health.READ_DISTANCE',
+            'android.permission.health.READ_HEART_RATE',
+            'android.permission.health.READ_ACTIVE_CALORIES_BURNED'
+          ];
+          const result = await NativeHealthConnectModule.requestPermissions(permissions);
+          resolve(result);
+        } catch (error) {
+          console.error('Failed to request Health Connect permissions:', error);
+          resolve(false);
+        }
+      });
+    });
   }
 
   protected async doHasPermissions(): Promise<boolean> {
-    if (Platform.OS !== 'android' || !this.config) {
-      return false;
-    }
+    return new Promise((resolve) => {
+      if (Platform.OS !== 'android' || !this.config) {
+        resolve(false);
+        return;
+      }
 
-    try {
-      const permissions = [
-        'android.permission.health.READ_STEPS',
-        'android.permission.health.READ_DISTANCE',
-        'android.permission.health.READ_HEART_RATE',
-        'android.permission.health.READ_ACTIVE_CALORIES_BURNED'
-      ];
-      return await HealthConnectModule.hasPermissions(permissions);
-    } catch (error) {
-      console.error('Failed to check Health Connect permissions:', error);
-      return false;
-    }
+      InteractionManager.runAfterInteractions(async () => {
+        try {
+          const permissions = [
+            'android.permission.health.READ_STEPS',
+            'android.permission.health.READ_DISTANCE',
+            'android.permission.health.READ_HEART_RATE',
+            'android.permission.health.READ_ACTIVE_CALORIES_BURNED'
+          ];
+          const result = await NativeHealthConnectModule.hasPermissions(permissions);
+          resolve(result);
+        } catch (error) {
+          console.error('Failed to check Health Connect permissions:', error);
+          resolve(false);
+        }
+      });
+    });
   }
 
   async getDailySteps(date: Date = new Date()): Promise<number> {
-    if (Platform.OS !== 'android' || !this.initialized) {
-      return 0;
-    }
+    return new Promise((resolve) => {
+      if (Platform.OS !== 'android' || !this.initialized) {
+        resolve(0);
+        return;
+      }
 
-    try {
-      const startTime = new Date(date);
-      startTime.setHours(0, 0, 0, 0);
-      const endTime = new Date(date);
-      endTime.setHours(23, 59, 59, 999);
+      InteractionManager.runAfterInteractions(async () => {
+        try {
+          const startTime = new Date(date);
+          startTime.setHours(0, 0, 0, 0);
+          const endTime = new Date(date);
+          endTime.setHours(23, 59, 59, 999);
 
-      const steps = await HealthConnectModule.getDailySteps(
-        startTime.toISOString(),
-        endTime.toISOString()
-      );
-      return steps;
-    } catch (error) {
-      console.error('Failed to get steps from Health Connect:', error);
-      return 0;
-    }
+          const steps = await NativeHealthConnectModule.getDailySteps(
+            startTime.toISOString(),
+            endTime.toISOString()
+          );
+          resolve(steps);
+        } catch (error) {
+          console.error('Failed to get steps from Health Connect:', error);
+          resolve(0);
+        }
+      });
+    });
   }
 
   async getDailyDistance(date: Date = new Date()): Promise<number> {
-    if (Platform.OS !== 'android' || !this.initialized) {
-      return 0;
-    }
+    return new Promise((resolve) => {
+      if (Platform.OS !== 'android' || !this.initialized) {
+        resolve(0);
+        return;
+      }
 
-    try {
-      const startTime = new Date(date);
-      startTime.setHours(0, 0, 0, 0);
-      const endTime = new Date(date);
-      endTime.setHours(23, 59, 59, 999);
+      InteractionManager.runAfterInteractions(async () => {
+        try {
+          const startTime = new Date(date);
+          startTime.setHours(0, 0, 0, 0);
+          const endTime = new Date(date);
+          endTime.setHours(23, 59, 59, 999);
 
-      const distance = await HealthConnectModule.getDailyDistance(
-        startTime.toISOString(),
-        endTime.toISOString()
-      );
-      return distance / 1000; // Convert meters to kilometers
-    } catch (error) {
-      console.error('Failed to get distance from Health Connect:', error);
-      return 0;
-    }
+          const distance = await NativeHealthConnectModule.getDailyDistance(
+            startTime.toISOString(),
+            endTime.toISOString()
+          );
+          resolve(distance / 1000); // Convert meters to kilometers
+        } catch (error) {
+          console.error('Failed to get distance from Health Connect:', error);
+          resolve(0);
+        }
+      });
+    });
   }
 
   async getDailyHeartRate(date: Date = new Date()): Promise<number> {
-    // Placeholder implementation - Health Connect heart rate to be implemented
-    return 0;
+    return new Promise((resolve) => {
+      if (Platform.OS !== 'android' || !this.initialized) {
+        resolve(0);
+        return;
+      }
+
+      InteractionManager.runAfterInteractions(async () => {
+        try {
+          const startTime = new Date(date);
+          startTime.setHours(0, 0, 0, 0);
+          const endTime = new Date(date);
+          endTime.setHours(23, 59, 59, 999);
+
+          const heartRate = await NativeHealthConnectModule.getDailyHeartRate(
+            startTime.toISOString(),
+            endTime.toISOString()
+          );
+          resolve(heartRate);
+        } catch (error) {
+          console.error('Failed to get heart rate from Health Connect:', error);
+          resolve(0);
+        }
+      });
+    });
   }
 
   async getDailyCalories(date: Date = new Date()): Promise<number> {
-    // Placeholder implementation - Health Connect calories to be implemented
-    return 0;
+    return new Promise((resolve) => {
+      InteractionManager.runAfterInteractions(() => {
+        // Placeholder implementation - Health Connect calories to be implemented
+        resolve(0);
+      });
+    });
   }
 
   async getWeeklySteps(startDate: Date): Promise<number[]> {

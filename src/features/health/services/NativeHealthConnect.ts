@@ -13,6 +13,7 @@ interface NativeHealthConnectInterface {
   requestPermissions(permissions: string[]): Promise<boolean>;
   getDailySteps(startTime: string, endTime: string): Promise<number>;
   getDailyDistance(startTime: string, endTime: string): Promise<number>;
+  getDailyHeartRate(startTime: string, endTime: string): Promise<number>;
   hasPermissions(permissions: string[]): Promise<boolean>;
 }
 
@@ -21,6 +22,7 @@ const NativeHealthConnect: NativeHealthConnectInterface = {
   requestPermissions: HealthConnectModule.requestPermissions,
   getDailySteps: HealthConnectModule.getDailySteps,
   getDailyDistance: HealthConnectModule.getDailyDistance,
+  getDailyHeartRate: HealthConnectModule.getDailyHeartRate,
   hasPermissions: HealthConnectModule.hasPermissions,
 };
 
