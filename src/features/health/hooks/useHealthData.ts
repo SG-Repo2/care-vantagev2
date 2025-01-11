@@ -16,6 +16,12 @@ const useHealthData = (userId: string) => {
     const initializeHealthService = async () => {
       try {
         const service = await HealthServiceFactory.getService();
+        if (!mounted) return;
+
+        if (!service) {
+          throw new Error('Failed to create health service');
+        }
+
         const initialized = await service.initialize({
           permissions: {
             read: [
@@ -31,15 +37,40 @@ const useHealthData = (userId: string) => {
         if (!mounted) return;
 
         if (!initialized) {
-          throw new Error('Failed to initialize health service');
+          console.warn('Health service initialization failed');
+          setError('Health service not available');
+          setLoading(false);
+          return;
         }
+
+        // Verify the service has the required methods
+        const requiredMethods = ['getDailySteps', 'getDailyDistance', 'getDailyHeartRate', 'getDailyCalories'] as const;
+        const missingMethods = requiredMethods.filter(
+          method => typeof (service as any)[method] !== 'function'
+        );
+        
+        if (missingMethods.length > 0) {
+          console.error('Health service missing required methods:', missingMethods);
+          throw new Error(`Health service missing required methods: ${missingMethods.join(', ')}`);
+        }
+
         const hasPermissions = await service.hasPermissions();
         if (!hasPermissions) {
-          const granted = await service.requestPermissions();
-          if (!granted) {
-            throw new Error('Health data permissions not granted');
+          try {
+            const granted = await service.requestPermissions();
+            if (!granted) {
+              setError('Health data permissions not granted');
+              setLoading(false);
+              return;
+            }
+          } catch (err) {
+            console.error('Error requesting permissions:', err);
+            setError('Failed to request health permissions');
+            setLoading(false);
+            return;
           }
         }
+
         if (mounted) {
           setHealthService(service);
         }
@@ -87,7 +118,10 @@ const useHealthData = (userId: string) => {
         const [steps, distance, heartRate, calories] = await Promise.all([
           healthService.getDailySteps(),
           healthService.getDailyDistance(),
-          healthService.getDailyHeartRate(),
+          healthService.getDailyHeartRate().catch((err: Error) => {
+            console.warn('Error fetching heart rate:', err);
+            return 0;
+          }),
           healthService.getDailyCalories(),
         ]);
 
@@ -111,7 +145,10 @@ const useHealthData = (userId: string) => {
             const [daySteps, dayDistance, dayHeartRate, dayCalories] = await Promise.all([
               healthService.getDailySteps(date),
               healthService.getDailyDistance(date),
-              healthService.getDailyHeartRate(date),
+              healthService.getDailyHeartRate(date).catch((err: Error) => {
+                console.warn(`Error fetching heart rate for ${date.toISOString()}:`, err);
+                return 0;
+              }),
               healthService.getDailyCalories(date),
             ]);
 
@@ -137,7 +174,7 @@ const useHealthData = (userId: string) => {
         const combinedMetrics: HealthMetrics & WeeklyMetrics = {
           steps,
           distance,
-          heartRate,
+          heartRate: heartRate || 0, // Ensure we always have a number
           calories,
           weeklySteps,
           weeklyDistance,

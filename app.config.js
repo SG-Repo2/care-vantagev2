@@ -49,7 +49,13 @@ module.exports = {
       },
       package: 'com.groebe1kenobi.carevantage',
       scheme: 'com.groebe1kenobi.carevantage',
-      googleServicesFile: './google-services.json'
+      googleServicesFile: './google-services.json',
+      permissions: [
+        'android.permission.health.READ_STEPS',
+        'android.permission.health.READ_DISTANCE',
+        'android.permission.health.READ_HEART_RATE',
+        'android.permission.health.READ_ACTIVE_CALORIES_BURNED'
+      ]
     },
     web: {
       favicon: './assets/favicon.png'
