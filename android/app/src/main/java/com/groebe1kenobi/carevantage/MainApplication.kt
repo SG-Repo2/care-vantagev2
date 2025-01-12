@@ -1,5 +1,6 @@
 package com.groebe1kenobi.carevantage
 
+import android.os.Bundle
 import android.app.Application
 import android.content.res.Configuration
 
@@ -15,7 +16,7 @@ import com.facebook.soloader.SoLoader
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
-import com.groebe1kenobi.carevantage.health.HealthConnectPackage
+import dev.matinzd.healthconnect.permissions.HealthConnectPermissionDelegate
 
 class MainApplication : Application(), ReactApplication {
 
@@ -37,6 +38,12 @@ class MainApplication : Application(), ReactApplication {
           override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED
       }
   )
+  + override fun onCreate(savedInstanceState: Bundle?) {
++   super.onCreate(savedInstanceState)
++   // In order to handle permission contract results, we need to set the permission delegate.
++   HealthConnectPermissionDelegate.setPermissionDelegate(this)
++ }
+
 
   override val reactHost: ReactHost
     get() = ReactNativeHostWrapper.createReactHost(applicationContext, reactNativeHost)

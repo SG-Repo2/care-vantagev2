@@ -1,0 +1,41 @@
+{
+  "project_info": {
+    "project_number": "1071113185455",
+    "project_id": "cv-mvp-a4a75",
+    "storage_bucket": "cv-mvp-a4a75.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1071113185455:android:6b1e433b71d4f929bbcc5a",
+        "android_client_info": {
+          "package_name": "com.groebe1kenobi.carevantage"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0l44SAEWsGik2RGdxuG1J6y1n8Ke2-Jk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1071113185455-30lqklmad1chc9rh4gv1ice0vikjuer8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1071113185455-tdjomtfodfd573dhnjafu7c4mbj88qlm.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.groebe1kenobi.carevantage"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

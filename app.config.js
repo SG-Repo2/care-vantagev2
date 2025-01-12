@@ -69,8 +69,14 @@ module.exports = {
             useFrameworks: 'static',
             newArchEnabled: false,
             fabricEnabled: false
+          },
+          android: {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 26
           }
-        }
+        }, 
+
       ],
       [
         'react-native-health',
