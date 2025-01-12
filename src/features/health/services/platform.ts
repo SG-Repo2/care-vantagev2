@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { DataSource } from '../../../core/types/base';
+import NativeHealthConnect from '../services/NativeHealthConnect';
 
 export interface HealthPlatform {
   id: string;
@@ -29,10 +30,6 @@ const manualPlatform: HealthPlatform = {
   type: 'manual'
 };
 
-declare const HealthConnectClient: {
-  isAvailable(): Promise<boolean>;
-};
-
 export const getCurrentPlatform = async (): Promise<HealthPlatform> => {
   if (Platform.OS === 'ios') {
     return appleHealthPlatform;
@@ -40,7 +37,7 @@ export const getCurrentPlatform = async (): Promise<HealthPlatform> => {
   
   if (Platform.OS === 'android') {
     try {
-      const isHealthConnectAvailable = await HealthConnectClient.isAvailable();
+      const isHealthConnectAvailable = await NativeHealthConnect.isAvailable();
       if (isHealthConnectAvailable) {
         return healthConnectPlatform;
       }

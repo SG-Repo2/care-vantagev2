@@ -23,10 +23,17 @@ class HealthConnectModule(reactContext: ReactApplicationContext) : ReactContextB
     override fun getName() = "HealthConnectModule"
 
     private fun getClient(context: Context): HealthConnectClient? {
-        if (healthConnectClient == null && HealthConnectClient.isAvailable(context)) {
-            healthConnectClient = HealthConnectClient.getOrCreate(context)
+        try {
+            if (healthConnectClient == null) {
+                if (!HealthConnectClient.isAvailable(context)) {
+                    throw Exception("Health Connect is not available on this device")
+                }
+                healthConnectClient = HealthConnectClient.getOrCreate(context)
+            }
+            return healthConnectClient
+        } catch (e: Exception) {
+            throw Exception("Failed to get Health Connect client: ${e.message}")
         }
-        return healthConnectClient
     }
 
     @ReactMethod
@@ -97,28 +104,33 @@ class HealthConnectModule(reactContext: ReactApplicationContext) : ReactContextB
                     }
                 }
 
+                // Check if permissions are already granted
                 val granted = withContext(Dispatchers.Main) {
                     client.permissionController.getGrantedPermissions().containsAll(healthPermissions)
                 }
 
                 if (granted) {
                     promise.resolve(true)
-                } else {
-                    // Request permissions if not granted
-                    val requestPermissionActivityContract = client.permissionController
-                        .createRequestPermissionActivityContract()
+                    return@launch
+                }
 
-                    val currentActivity = currentActivity
-                    if (currentActivity == null) {
-                        promise.reject("ERROR", "Activity is null")
-                        return@launch
-                    }
+                // Request permissions if not granted
+                val currentActivity = currentActivity
+                if (currentActivity == null) {
+                    promise.reject("ERROR", "Activity is null")
+                    return@launch
+                }
 
-                    // Launch permission request activity
+                try {
                     withContext(Dispatchers.Main) {
-                        requestPermissionActivityContract.launch(healthPermissions)
+                        val contract = client.permissionController.createRequestPermissionActivityContract()
+                        contract.launch(healthPermissions)
                     }
+                    // Note: The actual grant status should be checked after the permission dialog is closed
+                    // For now, we resolve with true to indicate the request was shown
                     promise.resolve(true)
+                } catch (e: Exception) {
+                    promise.reject("ERROR", "Failed to request permissions: ${e.message}")
                 }
             } catch (e: Exception) {
                 promise.reject("ERROR", e.message)
