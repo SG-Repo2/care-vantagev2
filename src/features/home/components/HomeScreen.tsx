@@ -11,12 +11,12 @@ import Animated, {
   SlideInDown 
 } from 'react-native-reanimated';
 
-import useHealthData from '../../health/hooks/useHealthData';
+import { useHealthData } from '../../../core/contexts/health/hooks/useHealthData';
 import { formatDistance, formatScore } from '../../../core/utils/formatting';
 import { MetricCard } from './MetricCard';
 import { MetricModal } from './MetricModal';
 import { Dimensions } from 'react-native';
-import { HealthMetrics, WeeklyMetrics } from '../../health/types/health';
+import { HealthMetrics, WeeklyMetrics } from '../../../core/contexts/health/types';
 import { TabParamList } from '../../../navigation/types';
 import { MeasurementSystem } from '../../../core/types/base';
 import GoalCelebration from './GoalCelebration';
@@ -24,6 +24,13 @@ import { useStyles } from '../styles/HomeScreen.styles';
 import { useAuth } from '../../../context/AuthContext';
 import { METRICS } from '../../../core/constants/metrics';
 import { MetricType } from '../../health/types/health';
+
+const getCurrentWeekStart = () => {
+  const date = new Date();
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(date.setDate(diff));
+};
 
 const DEFAULT_MEASUREMENT_SYSTEM: MeasurementSystem = 'imperial';
 const GOALS = {
@@ -57,7 +64,14 @@ export const HomeScreen: React.FC = () => {
   const styles = useStyles();
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
-  const { metrics, loading, error, refresh } = useHealthData(user?.id || '');
+  const {
+    metrics,
+    weeklyData,
+    isLoading: loading,
+    error,
+    refreshMetrics: refresh,
+    fetchWeeklyData
+  } = useHealthData();
   const [refreshing, setRefreshing] = React.useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<ModalData | null>(null);
@@ -90,7 +104,39 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleMetricPress = (type: MetricType, metrics: HealthMetrics & WeeklyMetrics) => {
+  const handleMetricPress = async (type: MetricType) => {
+    if (!metrics) return;
+
+    const startDate = getCurrentWeekStart().toISOString();
+    const endDate = new Date().toISOString();
+    
+    // Fetch weekly data if not already available
+    if (!weeklyData) {
+      await fetchWeeklyData(startDate, endDate);
+    }
+
+    const getWeeklyValues = () => {
+      if (!weeklyData) return Array(7).fill(0);
+      switch (type) {
+        case 'steps':
+          return weeklyData.weeklySteps;
+        case 'distance':
+          return weeklyData.weeklyDistance;
+        default:
+          return Array(7).fill(0);
+      }
+    };
+
+    const calculateStats = (values: number[]) => {
+      const total = values.reduce((a, b) => a + b, 0);
+      const avg = Math.round(total / 7);
+      const best = Math.max(...values);
+      return { total, avg, best };
+    };
+
+    const weeklyValues = getWeeklyValues();
+    const stats = calculateStats(weeklyValues);
+
     let modalData: ModalData = {
       type,
       title: type.charAt(0).toUpperCase() + type.slice(1),
@@ -99,46 +145,33 @@ export const HomeScreen: React.FC = () => {
         : metrics[type].toString(),
       data: {
         labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        values: (() => {
-          switch (type) {
-            case 'steps':
-              return metrics.weeklySteps;
-            case 'calories':
-              return metrics.weeklyCalories;
-            case 'distance':
-              return metrics.weeklyDistance;
-            case 'heartRate':
-              return metrics.weeklyHeartRate;
-            default:
-              return [0, 0, 0, 0, 0, 0, metrics[type]];
-          }
-        })(),
-        startDate: metrics.weekStartDate
+        values: weeklyValues,
+        startDate: weeklyData?.startDate ? new Date(weeklyData.startDate) : new Date()
       },
       additionalInfo: (() => {
         switch (type) {
           case 'steps':
             return [
-              { label: 'Daily Average', value: Math.round(metrics.weeklySteps.reduce((a, b) => a + b, 0) / 7).toLocaleString() },
-              { label: 'Best Day', value: Math.max(...metrics.weeklySteps).toLocaleString() },
+              { label: 'Daily Average', value: stats.avg.toLocaleString() },
+              { label: 'Best Day', value: stats.best.toLocaleString() },
             ];
           case 'calories':
             return [
-              { label: 'Daily Average', value: `${Math.round(metrics.weeklyCalories.reduce((a, b) => a + b, 0) / 7)} cal` },
-              { label: 'Best Day', value: `${Math.max(...metrics.weeklyCalories)} cal` },
-              { label: 'Weekly Total', value: `${metrics.weeklyCalories.reduce((a, b) => a + b, 0)} cal` },
+              { label: 'Daily Average', value: `${stats.avg} cal` },
+              { label: 'Best Day', value: `${stats.best} cal` },
+              { label: 'Weekly Total', value: `${stats.total} cal` },
             ];
           case 'distance':
             return [
-              { label: 'Daily Average', value: formatDistance(metrics.weeklyDistance.reduce((a, b) => a + b, 0) / 7, DEFAULT_MEASUREMENT_SYSTEM) },
-              { label: 'Best Day', value: formatDistance(Math.max(...metrics.weeklyDistance), DEFAULT_MEASUREMENT_SYSTEM) },
-              { label: 'Weekly Total', value: formatDistance(metrics.weeklyDistance.reduce((a, b) => a + b, 0), DEFAULT_MEASUREMENT_SYSTEM) },
+              { label: 'Daily Average', value: formatDistance(stats.avg, DEFAULT_MEASUREMENT_SYSTEM) },
+              { label: 'Best Day', value: formatDistance(stats.best, DEFAULT_MEASUREMENT_SYSTEM) },
+              { label: 'Weekly Total', value: formatDistance(stats.total, DEFAULT_MEASUREMENT_SYSTEM) },
             ];
           case 'heartRate':
             return [
-              { label: 'Average HR', value: `${Math.round(metrics.weeklyHeartRate.reduce((a, b) => a + b, 0) / 7)} bpm` },
-              { label: 'Peak HR', value: `${Math.max(...metrics.weeklyHeartRate)} bpm` },
-              { label: 'Resting HR', value: `${Math.min(...metrics.weeklyHeartRate)} bpm` },
+              { label: 'Current', value: `${metrics.heartRate} bpm` },
+              { label: 'Average', value: `${stats.avg} bpm` },
+              { label: 'Peak', value: `${stats.best} bpm` },
             ];
           default:
             return undefined;
@@ -265,7 +298,7 @@ export const HomeScreen: React.FC = () => {
             value={(metrics?.steps || 0).toLocaleString()}
             icon="walk"
             metricType="steps"
-            onPress={() => metrics && handleMetricPress('steps', metrics)}
+            onPress={() => metrics && handleMetricPress('steps')}
             loading={loading}
             error={error}
             goal={GOALS.steps}
@@ -275,7 +308,7 @@ export const HomeScreen: React.FC = () => {
             value={(metrics?.calories || 0).toLocaleString()}
             icon="fire"
             metricType="calories"
-            onPress={() => metrics && handleMetricPress('calories', metrics)}
+            onPress={() => metrics && handleMetricPress('calories')}
             loading={loading}
             error={error}
             goal={GOALS.calories}
@@ -285,7 +318,7 @@ export const HomeScreen: React.FC = () => {
             value={formatDistance(metrics?.distance || 0, DEFAULT_MEASUREMENT_SYSTEM)}
             icon="map-marker-distance"
             metricType="distance"
-            onPress={() => metrics && handleMetricPress('distance', metrics)}
+            onPress={() => metrics && handleMetricPress('distance')}
             loading={loading}
             error={error}
             goal={GOALS.distance}
@@ -295,7 +328,7 @@ export const HomeScreen: React.FC = () => {
             value={`${metrics?.heartRate || 0} bpm`}
             icon="heart-pulse"
             metricType="heartRate"
-            onPress={() => metrics && handleMetricPress('heartRate', metrics)}
+            onPress={() => metrics && handleMetricPress('heartRate')}
             loading={loading}
             error={error}
             goal={GOALS.heartRate}
