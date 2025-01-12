@@ -86,6 +86,18 @@ module.exports = {
           healthUpdatePermission: 'CareVantage requires permission to write health data to help you track and manage your fitness goals.',
           healthClinicalDescription: 'Allow CareVantage to check health clinical info'
         }
+      ],
+      [
+        "react-native-health-connect",
+        {
+          "package": "com.groebe1kenobi.carevantage",
+          "permissions": [
+            "android.permission.health.READ_STEPS",
+            "android.permission.health.READ_DISTANCE",
+            "android.permission.health.READ_HEART_RATE",
+            "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
+          ]
+        }
       ]
     ],
     extra: {
