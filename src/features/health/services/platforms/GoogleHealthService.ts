@@ -1,199 +1,130 @@
-import { Platform, NativeModules, InteractionManager } from 'react-native';
+import { Platform } from 'react-native';
 import { HealthServiceConfig } from '../types';
 import { BaseHealthService } from '../base';
-import NativeHealthConnectModule from '../NativeHealthConnect';
+import NativeHealthConnect from '../NativeHealthConnect';
 
 export class GoogleHealthService extends BaseHealthService {
   protected source = 'health_connect' as const;
   protected config: HealthServiceConfig | null = null;
 
   protected async doInitialize(config: HealthServiceConfig): Promise<boolean> {
-    if (Platform.OS !== 'android') {
-      return false;
-    }
-
+    if (Platform.OS !== 'android') return false;
     try {
       this.config = config;
-      const isAvailable = await NativeHealthConnectModule.isAvailable();
-      if (!isAvailable) {
-        console.warn('Health Connect is not available on this device');
+      if (!(await NativeHealthConnect.isAvailable())) {
+        console.warn('Health Connect not available');
         return false;
       }
-
-      // Request permissions during initialization
-      const hasPermissions = await this.doRequestPermissions();
-      if (!hasPermissions) {
-        console.warn('Health Connect permissions not granted');
-        return false;
-      }
-
-      return true;
+      return (await this.doRequestPermissions()) || false;
     } catch (error) {
-      console.error('Failed to initialize Health Connect:', error);
+      console.error('Initialize failed:', error);
       return false;
     }
   }
 
   protected async doRequestPermissions(): Promise<boolean> {
-    if (Platform.OS !== 'android' || !this.config) {
-      return false;
-    }
-
+    if (Platform.OS !== 'android' || !this.config) return false;
     try {
-      const permissions = [
-        'android.permission.health.READ_STEPS',
-        'android.permission.health.READ_DISTANCE',
-        'android.permission.health.READ_HEART_RATE',
-        'android.permission.health.READ_ACTIVE_CALORIES_BURNED'
-      ];
-
-      // First check if we already have permissions
-      const hasPermissions = await NativeHealthConnectModule.hasPermissions(permissions);
-      if (hasPermissions) {
-        return true;
-      }
-
-      // If not, request them
-      const result = await NativeHealthConnectModule.requestPermissions(permissions);
-      if (!result) {
-        console.warn('Failed to get Health Connect permissions');
-        return false;
-      }
-
-      // Verify permissions were granted
-      return await NativeHealthConnectModule.hasPermissions(permissions);
+      return await NativeHealthConnect.requestPermissions();
     } catch (error) {
-      console.error('Failed to request Health Connect permissions:', error);
+      console.error('Request permissions failed:', error);
       return false;
     }
   }
 
   protected async doHasPermissions(): Promise<boolean> {
-    if (Platform.OS !== 'android' || !this.config) {
-      return false;
-    }
-
+    if (Platform.OS !== 'android' || !this.config) return false;
     try {
-      const permissions = [
-        'android.permission.health.READ_STEPS',
-        'android.permission.health.READ_DISTANCE',
-        'android.permission.health.READ_HEART_RATE',
-        'android.permission.health.READ_ACTIVE_CALORIES_BURNED'
-      ];
-      return await NativeHealthConnectModule.hasPermissions(permissions);
+      return await NativeHealthConnect.hasPermissions();
     } catch (error) {
-      console.error('Failed to check Health Connect permissions:', error);
+      console.error('Check permissions failed:', error);
       return false;
     }
   }
 
   async getDailySteps(date: Date = new Date()): Promise<number> {
-    if (Platform.OS !== 'android' || !this.initialized) {
-      return 0;
-    }
-
+    if (Platform.OS !== 'android' || !this.initialized) return 0;
     try {
-      // Verify permissions before reading data
-      const hasPermissions = await this.hasPermissions();
-      if (!hasPermissions) {
-        console.warn('Missing required permissions for reading steps');
-        return 0;
-      }
-
       const startTime = new Date(date);
       startTime.setHours(0, 0, 0, 0);
       const endTime = new Date(date);
       endTime.setHours(23, 59, 59, 999);
-
-      const steps = await NativeHealthConnectModule.getDailySteps(
-        startTime.toISOString(),
-        endTime.toISOString()
-      );
-      return steps;
+      const metrics = await NativeHealthConnect.getDailyMetrics({
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      });
+      return metrics.steps;
     } catch (error) {
-      console.error('Failed to get steps from Health Connect:', error);
+      console.error('Get steps failed:', error);
       return 0;
     }
   }
 
   async getDailyDistance(date: Date = new Date()): Promise<number> {
-    if (Platform.OS !== 'android' || !this.initialized) {
-      return 0;
-    }
-
+    if (Platform.OS !== 'android' || !this.initialized) return 0;
     try {
-      // Verify permissions before reading data
-      const hasPermissions = await this.hasPermissions();
-      if (!hasPermissions) {
-        console.warn('Missing required permissions for reading distance');
-        return 0;
-      }
-
       const startTime = new Date(date);
       startTime.setHours(0, 0, 0, 0);
       const endTime = new Date(date);
       endTime.setHours(23, 59, 59, 999);
-
-      const distance = await NativeHealthConnectModule.getDailyDistance(
-        startTime.toISOString(),
-        endTime.toISOString()
-      );
-      return distance / 1000; // Convert meters to kilometers
+      const metrics = await NativeHealthConnect.getDailyMetrics({
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      });
+      return metrics.distance / 1000; // Convert meters to kilometers
     } catch (error) {
-      console.error('Failed to get distance from Health Connect:', error);
+      console.error('Get distance failed:', error);
       return 0;
     }
   }
 
   async getDailyHeartRate(date: Date = new Date()): Promise<number> {
-    if (Platform.OS !== 'android' || !this.initialized) {
-      return 0;
-    }
-
+    if (Platform.OS !== 'android' || !this.initialized) return 0;
     try {
-      // Verify permissions before reading data
-      const hasPermissions = await this.hasPermissions();
-      if (!hasPermissions) {
-        console.warn('Missing required permissions for reading heart rate');
-        return 0;
-      }
-
       const startTime = new Date(date);
       startTime.setHours(0, 0, 0, 0);
       const endTime = new Date(date);
       endTime.setHours(23, 59, 59, 999);
-
-      const heartRate = await NativeHealthConnectModule.getDailyHeartRate(
-        startTime.toISOString(),
-        endTime.toISOString()
-      );
-      return heartRate;
+      const metrics = await NativeHealthConnect.getDailyMetrics({
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      });
+      return metrics.heartRate;
     } catch (error) {
-      console.error('Failed to get heart rate from Health Connect:', error);
+      console.error('Get heart rate failed:', error);
       return 0;
     }
   }
 
   async getDailyCalories(date: Date = new Date()): Promise<number> {
-    // Placeholder implementation - Health Connect calories to be implemented
-    return 0;
+    if (Platform.OS !== 'android' || !this.initialized) return 0;
+    try {
+      const startTime = new Date(date);
+      startTime.setHours(0, 0, 0, 0);
+      const endTime = new Date(date);
+      endTime.setHours(23, 59, 59, 999);
+      const metrics = await NativeHealthConnect.getDailyMetrics({
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      });
+      return metrics.calories;
+    } catch (error) {
+      console.error('Get calories failed:', error);
+      return 0;
+    }
   }
 
   async getWeeklySteps(startDate: Date): Promise<number[]> {
-    const weeklySteps: number[] = [];
-    const currentDate = new Date(startDate);
-
+    const results: number[] = [];
+    const current = new Date(startDate);
     for (let i = 0; i < 7; i++) {
       try {
-        const steps = await this.getDailySteps(currentDate);
-        weeklySteps.push(steps);
-      } catch (error) {
-        console.error(`Error reading steps for ${currentDate.toISOString()}:`, error);
-        weeklySteps.push(0);
+        results.push(await this.getDailySteps(current));
+      } catch {
+        results.push(0);
       }
-      currentDate.setDate(currentDate.getDate() + 1);
+      current.setDate(current.getDate() + 1);
     }
-
-    return weeklySteps;
+    return results;
   }
 }

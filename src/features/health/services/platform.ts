@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { DataSource } from '../../../core/types/base';
-import NativeHealthConnect from '../services/NativeHealthConnect';
+import NativeHealthConnect from './NativeHealthConnect';
 
 export interface HealthPlatform {
   id: string;
@@ -31,21 +31,27 @@ const manualPlatform: HealthPlatform = {
 };
 
 export const getCurrentPlatform = async (): Promise<HealthPlatform> => {
-  if (Platform.OS === 'ios') {
-    return appleHealthPlatform;
-  }
-  
-  if (Platform.OS === 'android') {
-    try {
-      const isHealthConnectAvailable = await NativeHealthConnect.isAvailable();
-      if (isHealthConnectAvailable) {
-        return healthConnectPlatform;
-      }
-    } catch (error) {
-      console.warn('Error checking Health Connect availability:', error);
+  try {
+    if (Platform.OS === 'ios') {
+      return appleHealthPlatform;
     }
-    return manualPlatform;
+    
+    if (Platform.OS === 'android') {
+      try {
+        const isHealthConnectAvailable = await NativeHealthConnect.isAvailable();
+        if (isHealthConnectAvailable) {
+          return healthConnectPlatform;
+        }
+      } catch (error) {
+        console.warn('Error checking Health Connect availability:', error);
+        // Log more details about the error
+        console.error('Health Connect error details:', error);
+      }
+    }
+  } catch (error) {
+    console.error('Error in getCurrentPlatform:', error);
   }
   
+  // Default to manual platform if anything fails
   return manualPlatform;
 };

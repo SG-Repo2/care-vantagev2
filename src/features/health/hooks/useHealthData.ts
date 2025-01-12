@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import { HealthMetrics, WeeklyMetrics } from '../types/health';
 import { HealthServiceFactory } from '../services/factory';
+import { HealthService } from '../services/types';
 import { HEALTH_METRICS } from '../../../core/constants/metrics';
 import { profileService } from '../../../features/profile/services/profileService';
 
@@ -8,7 +10,7 @@ const useHealthData = (userId: string) => {
   const [metrics, setMetrics] = useState<HealthMetrics & WeeklyMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [healthService, setHealthService] = useState<any>(null);
+  const [healthService, setHealthService] = useState<HealthService | null>(null);
 
   // Initialize health service
   useEffect(() => {
@@ -24,12 +26,22 @@ const useHealthData = (userId: string) => {
 
         const initialized = await service.initialize({
           permissions: {
-            read: [
-              'Steps',
-              'DistanceWalkingRunning',
-              'HeartRate',
-              'ActiveEnergyBurned',
-            ],
+            read: Platform.select({
+              ios: [
+                'Steps',
+                'DistanceWalkingRunning',
+                'HeartRate',
+                'ActiveEnergyBurned',
+              ],
+              android: [
+                'Steps',
+                'Distance',
+                'HeartRate',
+                'ActiveCaloriesBurned',
+                'TotalCaloriesBurned'
+              ],
+              default: ['Steps', 'Distance', 'HeartRate']
+            }),
             write: [],
           }
         });
@@ -41,17 +53,6 @@ const useHealthData = (userId: string) => {
           setError('Health service not available');
           setLoading(false);
           return;
-        }
-
-        // Verify the service has the required methods
-        const requiredMethods = ['getDailySteps', 'getDailyDistance', 'getDailyHeartRate', 'getDailyCalories'] as const;
-        const missingMethods = requiredMethods.filter(
-          method => typeof (service as any)[method] !== 'function'
-        );
-        
-        if (missingMethods.length > 0) {
-          console.error('Health service missing required methods:', missingMethods);
-          throw new Error(`Health service missing required methods: ${missingMethods.join(', ')}`);
         }
 
         const hasPermissions = await service.hasPermissions();
@@ -87,10 +88,12 @@ const useHealthData = (userId: string) => {
     
     return () => {
       mounted = false;
-      if (healthService) {
-        healthService.cleanup?.();
-      }
-      // Sync health data to database when component unmounts
+    };
+  }, [userId]);
+
+  // Sync metrics to database when component unmounts or metrics/userId change
+  useEffect(() => {
+    return () => {
       if (metrics && userId) {
         const today = new Date().toISOString().split('T')[0];
         profileService.updateHealthMetrics(userId, today, {
@@ -103,7 +106,7 @@ const useHealthData = (userId: string) => {
         });
       }
     };
-  }, []);
+  }, [metrics, userId]);
 
   // Load health data
   useEffect(() => {
@@ -115,15 +118,8 @@ const useHealthData = (userId: string) => {
         setError(null);
 
         // Get current day metrics
-        const [steps, distance, heartRate, calories] = await Promise.all([
-          healthService.getDailySteps(),
-          healthService.getDailyDistance(),
-          healthService.getDailyHeartRate().catch((err: Error) => {
-            console.warn('Error fetching heart rate:', err);
-            return 0;
-          }),
-          healthService.getDailyCalories(),
-        ]);
+        const currentMetrics = await healthService.getMetrics();
+        const { steps, distance, heartRate, calories } = currentMetrics;
 
         // Get weekly data
         const weekStartDate = new Date();
@@ -142,20 +138,11 @@ const useHealthData = (userId: string) => {
           date.setDate(date.getDate() + i);
           
           try {
-            const [daySteps, dayDistance, dayHeartRate, dayCalories] = await Promise.all([
-              healthService.getDailySteps(date),
-              healthService.getDailyDistance(date),
-              healthService.getDailyHeartRate(date).catch((err: Error) => {
-                console.warn(`Error fetching heart rate for ${date.toISOString()}:`, err);
-                return 0;
-              }),
-              healthService.getDailyCalories(date),
-            ]);
-
-            weeklySteps.push(daySteps);
-            weeklyDistance.push(dayDistance);
-            weeklyHeartRate.push(dayHeartRate);
-            weeklyCalories.push(dayCalories);
+            const dayMetrics = await healthService.getMetrics(date);
+            weeklySteps.push(dayMetrics.steps);
+            weeklyDistance.push(dayMetrics.distance);
+            weeklyHeartRate.push(dayMetrics.heartRate);
+            weeklyCalories.push(dayMetrics.calories);
           } catch (err) {
             console.error(`Error getting data for ${date.toISOString()}:`, err);
             // Use 0 as fallback for failed days
@@ -194,7 +181,7 @@ const useHealthData = (userId: string) => {
     };
 
     loadHealthData();
-  }, [healthService]);
+  }, [healthService, userId]);
 
   const refresh = async () => {
     if (!healthService) {
@@ -205,12 +192,8 @@ const useHealthData = (userId: string) => {
     try {
       setLoading(true);
       // Re-fetch current day data
-      const [steps, distance, heartRate, calories] = await Promise.all([
-        healthService.getDailySteps(),
-        healthService.getDailyDistance(),
-        healthService.getDailyHeartRate(),
-        healthService.getDailyCalories(),
-      ]);
+      const currentMetrics = await healthService.getMetrics();
+      const { steps, distance, heartRate, calories } = currentMetrics;
 
       if (metrics) {
         setMetrics({
