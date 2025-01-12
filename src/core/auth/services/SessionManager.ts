@@ -1,7 +1,7 @@
-import { Logger } from '../../utils/error/Logger';
-import { SessionExpiredError, TokenRefreshError } from './AuthErrors';
+import { Logger } from '@utils/error/Logger';
+import { SessionExpiredError, TokenRefreshError } from '@core/auth/errors/AuthErrors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../../utils/supabase';
+import { supabase } from '@utils/supabase';
 
 interface Session {
   accessToken: string;
@@ -9,6 +9,8 @@ interface Session {
   expiresAt: number; // Unix timestamp in milliseconds
   userId: string;
   deviceId: string;
+  lastValidated: number; // Timestamp of last backend validation
+  validationInterval: number; // Interval for backend validation checks
 }
 
 interface SessionMetadata {
@@ -21,10 +23,13 @@ interface SessionMetadata {
   };
 }
 
+type SessionEvent = 'session-renewed' | 'session-expired' | 'session-invalid';
+
 export class SessionManager {
   private static instance: SessionManager;
   private currentSession: Session | null = null;
   private readonly sessionTimeoutMs = 30 * 60 * 1000; // 30 minutes
+  private eventListeners: Map<SessionEvent, Set<Function>> = new Map();
   private readonly storageKeys = {
     session: '@auth_session',
     metadata: '@session_metadata',
@@ -72,16 +77,77 @@ export class SessionManager {
   private async verifyAndRefreshSession(session: Session): Promise<void> {
     const now = Date.now();
     
+    // Check if session needs backend validation
+    if (now - session.lastValidated >= session.validationInterval) {
+      try {
+        await this.validateSessionWithBackend(session);
+        session.lastValidated = now;
+      } catch (error) {
+        Logger.warn('Session validation failed', { error });
+        // Continue with refresh if validation fails
+      }
+    }
+
     // Check if session is expired
     if (now >= session.expiresAt) {
-      // Attempt to refresh the session
-      await this.refreshSession(session);
+      // Attempt to refresh the session with retry
+      await this.refreshSessionWithRetry(session);
     } else {
       // Session is still valid, schedule refresh
       this.scheduleTokenRefresh(session);
       this.currentSession = session;
       await this.updateSessionMetadata();
     }
+  }
+
+  private async validateSessionWithBackend(session: Session): Promise<void> {
+    try {
+      const { error } = await supabase.auth.getUser(session.accessToken);
+      if (error) {
+        throw new SessionExpiredError({ originalError: error });
+      }
+    } catch (error) {
+      Logger.error('Session validation failed', { error });
+      throw error;
+    }
+  }
+
+  private async refreshSessionWithRetry(
+    session: Session,
+    attempt = 1
+  ): Promise<void> {
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+
+    try {
+      await this.refreshSession(session);
+    } catch (error) {
+      if (attempt <= maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff
+        Logger.warn(`Refresh attempt ${attempt} failed, retrying in ${delay}ms`, {
+          error
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.refreshSessionWithRetry(session, attempt + 1);
+      }
+      throw error;
+    }
+  }
+
+  // Session health monitoring
+  private startHealthMonitoring(): void {
+    setInterval(async () => {
+      if (this.currentSession) {
+        try {
+          await this.validateSessionWithBackend(this.currentSession);
+          Logger.debug('Session health check passed');
+        } catch (error) {
+          Logger.warn('Session health check failed', { error });
+          await this.clearSession();
+        }
+      }
+    }, 5 * 60 * 1000); // Check every 5 minutes
   }
 
   private async refreshSession(session: Session): Promise<void> {
@@ -99,6 +165,8 @@ export class SessionManager {
           expiresAt: Date.now() + (data.session.expires_in * 1000),
           userId: data.session.user.id,
           deviceId: session.deviceId, // Maintain device ID
+          lastValidated: Date.now(),
+          validationInterval: 5 * 60 * 1000, // Validate every 5 minutes
         };
 
         await this.setSession(newSession);
