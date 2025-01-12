@@ -5,6 +5,8 @@ import android.app.Application
 import android.content.res.Configuration
 
 import com.facebook.react.PackageList
+import dev.matinzd.healthconnect.HealthConnectPackage
+import dev.matinzd.healthconnect.permissions.HealthConnectPermissionDelegate
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactPackage
@@ -16,7 +18,6 @@ import com.facebook.soloader.SoLoader
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
-import dev.matinzd.healthconnect.permissions.HealthConnectPermissionDelegate
 
 class MainApplication : Application(), ReactApplication {
 
@@ -38,18 +39,13 @@ class MainApplication : Application(), ReactApplication {
           override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED
       }
   )
-  + override fun onCreate(savedInstanceState: Bundle?) {
-+   super.onCreate(savedInstanceState)
-+   // In order to handle permission contract results, we need to set the permission delegate.
-+   HealthConnectPermissionDelegate.setPermissionDelegate(this)
-+ }
-
-
   override val reactHost: ReactHost
     get() = ReactNativeHostWrapper.createReactHost(applicationContext, reactNativeHost)
 
   override fun onCreate() {
     super.onCreate()
+    // Set up Health Connect permission delegate
+    HealthConnectPermissionDelegate.setPermissionDelegate(this)
     SoLoader.init(this, OpenSourceMergedSoMapping)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.
