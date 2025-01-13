@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import { TextInput, Text, useTheme } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { FontAwesome } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { AuthStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../core/auth/contexts/AuthContext';
 import { Button } from '../../../components/common/atoms/Button';
@@ -38,22 +41,43 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
+  const googleAuth = Constants.expoConfig?.extra?.googleAuth;
+  
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: Platform.select({
+      ios: googleAuth?.iosClientId,
+      android: googleAuth?.androidClientId,
+      default: googleAuth?.webClientId,
+    }),
+    iosClientId: googleAuth?.iosClientId,
+    androidClientId: googleAuth?.androidClientId,
+    webClientId: googleAuth?.webClientId,
+    scopes: [
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'openid'
+    ]
+  });
+
   const handleGoogleSignIn = async () => {
     setLocalError(null);
     try {
-      // Get Google OAuth token - this would typically come from Google Sign-In SDK
-      const idToken = await getGoogleIdToken();
-      await signInWithGoogle(idToken);
+      await promptAsync();
     } catch (err) {
       console.error('Google sign-in error:', err);
       setLocalError('Failed to sign in with Google. Please try again.');
     }
   };
 
-  const getGoogleIdToken = async (): Promise<string> => {
-    // TODO: Implement Google Sign-In SDK integration
-    throw new Error('Google Sign-In not implemented');
-  };
+  React.useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      signInWithGoogle(id_token).catch(err => {
+        console.error('Google sign-in error:', err);
+        setLocalError('Failed to sign in with Google. Please try again.');
+      });
+    }
+  }, [response]);
 
   const error = localError || authError;
   const styles = createStyles(theme);
@@ -124,12 +148,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           size="large"
           onPress={handleGoogleSignIn}
           loading={isLoading}
-          disabled={true}
+          disabled={!request || isLoading}
           icon={GoogleIcon}
           fullWidth
           style={[styles.button, styles.googleButton]}
         >
-          Sign in with Google (Coming Soon)
+          Sign in with Google
         </Button>
 
         <Button
