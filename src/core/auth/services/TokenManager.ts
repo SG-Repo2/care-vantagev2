@@ -3,6 +3,7 @@ import { TokenRefreshError } from '../errors/AuthErrors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../../utils/supabase';
 import * as jose from 'jose';
+import * as Crypto from 'expo-crypto';
 
 interface TokenMetadata {
   issuedAt: number;
@@ -116,7 +117,8 @@ export class TokenManager {
       if (!blacklistJson) return false;
 
       const blacklist: Record<string, number> = JSON.parse(blacklistJson);
-      return !!blacklist[this.hashToken(token)];
+      const hashedToken = await this.hashToken(token);
+      return !!blacklist[hashedToken];
     } catch (error) {
       Logger.error('Failed to check token blacklist', { error });
       return false;
@@ -139,7 +141,8 @@ export class TokenManager {
         : {};
 
       // Store expiration time with hashed token
-      blacklist[this.hashToken(token)] = metadata.expiresAt;
+      const hashedToken = await this.hashToken(token);
+      blacklist[hashedToken] = metadata.expiresAt;
 
       // Clean up expired entries
       const now = Date.now();
@@ -160,19 +163,15 @@ export class TokenManager {
   }
 
   /**
-   * Creates a hash of the token for storage
-   * Note: In a production environment, use a proper cryptographic hash function
+   * Creates a cryptographic hash of the token for storage
    */
-  private hashToken(token: string): string {
-    // Simple hash function for demo purposes
-    // In production, use crypto.subtle.digest or a proper hashing library
-    let hash = 0;
-    for (let i = 0; i < token.length; i++) {
-      const char = token.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return hash.toString(36);
+  private async hashToken(token: string): Promise<string> {
+    const data = new TextEncoder().encode(token);
+    const hash = await Crypto.digest(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      data
+    );
+    return Buffer.from(hash).toString('base64');
   }
 
   /**
