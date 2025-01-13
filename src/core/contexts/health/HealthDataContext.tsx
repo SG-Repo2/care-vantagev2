@@ -6,7 +6,7 @@ import type {
   HealthDataProviderProps,
   HealthError
 } from './types';
-import { HealthProviderFactory } from './services/providers/HealthProviderFactory';
+import { HealthProviderFactory } from './providers/HealthProviderFactory';
 import { DEFAULT_HEALTH_CONFIG } from './types';
 import { useAuth } from '../../auth/contexts/AuthContext';
 
