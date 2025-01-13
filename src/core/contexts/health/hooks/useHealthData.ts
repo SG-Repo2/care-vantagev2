@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useHealthData as useHealthDataContext } from '../HealthDataContext';
-import type { 
-  HealthMetrics, 
-  WeeklyMetrics, 
-  HealthError,
-  MetricsHistory 
+import type {
+  HealthMetrics,
+  WeeklyMetrics,
+  HealthError
 } from '../types';
 
 interface UseHealthDataReturn {
@@ -30,7 +29,7 @@ export function useHealthData(): UseHealthDataReturn {
   const getWeeklyHistory = useCallback(async (startDate: string, endDate: string): Promise<WeeklyMetrics> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      
+
       // TODO: Implement actual weekly history fetching logic
       const weeklyData: WeeklyMetrics = {
         weeklySteps: 0,
@@ -81,8 +80,8 @@ export function useHealthData(): UseHealthDataReturn {
     metrics: state.metrics,
     loading: state.loading,
     error: state.error,
-    weeklyData: state.weeklyData || null,
-    lastSync: state.lastSync || null,
+    weeklyData: state.weeklyData,
+    lastSync: state.lastSync,
     refresh,
     getWeeklyHistory,
     clearError,
