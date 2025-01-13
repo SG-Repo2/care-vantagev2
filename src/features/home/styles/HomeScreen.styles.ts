@@ -176,6 +176,17 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 16,
     backgroundColor: theme.colors.errorContainer,
+    width: '90%',
+  },
+  errorActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  closeButton: {
+    backgroundColor: theme.colors.surfaceVariant,
   },
 });
 

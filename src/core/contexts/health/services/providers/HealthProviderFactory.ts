@@ -1,65 +1,62 @@
 import { Platform } from 'react-native';
-import { HealthProvider, HealthServiceConfig } from '../../types';
+import type { HealthProvider } from '../../types';
 import { AppleHealthProvider } from './AppleHealthProvider';
 import { GoogleHealthProvider } from './GoogleHealthProvider';
-import { HealthService } from '../healthService';
 
-export class HealthProviderFactory {
-  private static instance: HealthProviderFactory;
-  private healthService: HealthService | null = null;
-
-  private constructor() {}
-
-  static getInstance(): HealthProviderFactory {
-    if (!HealthProviderFactory.instance) {
-      HealthProviderFactory.instance = new HealthProviderFactory();
-    }
-    return HealthProviderFactory.instance;
-  }
-
-  async createHealthService(config?: HealthServiceConfig): Promise<HealthService> {
-    // Return existing instance if already created
-    if (this.healthService) {
-      return this.healthService;
-    }
-
-    const provider = await this.createProvider();
-    this.healthService = new HealthService(provider, config);
-    
-    // Initialize the service
-    await this.healthService.initialize();
-    
-    return this.healthService;
-  }
-
-  private async createProvider(): Promise<HealthProvider> {
-    switch (Platform.OS) {
-      case 'ios':
-        const appleProvider = new AppleHealthProvider();
-        await appleProvider.initialize();
-        return appleProvider;
-      
-      case 'android':
-        const googleProvider = new GoogleHealthProvider();
-        await googleProvider.initialize();
-        return googleProvider;
-      
-      default:
-        throw new Error(`Unsupported platform: ${Platform.OS}`);
-    }
-  }
-
-  // Cleanup method for testing or reset purposes
-  destroy(): void {
-    if (this.healthService) {
-      this.healthService.destroy();
-      this.healthService = null;
-    }
+class MockHealthProvider implements HealthProvider {
+  async initialize(): Promise<void> {}
+  async requestPermissions(): Promise<void> {}
+  async getMetrics() {
+    const currentDate = new Date().toISOString();
+    return {
+      steps: 0,
+      distance: 0,
+      calories: 0,
+      heartRate: 0,
+      lastUpdated: currentDate,
+      weeklySteps: 0,
+      weeklyDistance: 0,
+      weeklyCalories: 0,
+      weeklyHeartRate: 0,
+      score: 0
+    };
   }
 }
 
-// Convenience function to get health service instance
-export async function getHealthService(config?: HealthServiceConfig): Promise<HealthService> {
-  const factory = HealthProviderFactory.getInstance();
-  return factory.createHealthService(config);
+export class HealthProviderFactory {
+  private static instance: HealthProvider | null = null;
+
+  static async createProvider(): Promise<HealthProvider> {
+    if (this.instance) {
+      return this.instance;
+    }
+
+    let provider: HealthProvider;
+
+    try {
+      if (Platform.OS === 'ios') {
+        provider = new AppleHealthProvider();
+      } else if (Platform.OS === 'android') {
+        provider = new GoogleHealthProvider();
+      } else {
+        console.warn('Platform not supported, using mock provider');
+        provider = new MockHealthProvider();
+      }
+
+      await provider.initialize();
+      this.instance = provider;
+      return provider;
+    } catch (error) {
+      console.error('Failed to create health provider:', error);
+      // Fallback to mock provider if real provider initialization fails
+      provider = new MockHealthProvider();
+      await provider.initialize();
+      this.instance = provider;
+      return provider;
+    }
+  }
+
+  static resetProvider(): void {
+    this.instance = null;
+  }
 }

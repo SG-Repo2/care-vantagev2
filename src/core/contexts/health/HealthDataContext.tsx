@@ -1,17 +1,19 @@
-import React, { createContext, useReducer, useEffect, useCallback } from 'react';
-import { HealthDataContextType, HealthDataState, HealthDataAction, HealthDataProviderProps } from './types';
-import { HealthDataValidator } from './validators/healthDataValidator';
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
+import type { 
+  HealthDataState, 
+  HealthDataAction, 
+  HealthDataContextType,
+  HealthDataProviderProps,
+  HealthError
+} from './types';
+import { HealthProviderFactory } from './services/providers/HealthProviderFactory';
+import { DEFAULT_HEALTH_CONFIG } from './types';
 
 const initialState: HealthDataState = {
-  metrics: {
-    steps: 0,
-    distance: 0,
-    heartRate: 0,
-    calories: 0
-  },
-  weeklyData: null,
-  isLoading: false,
+  metrics: null,
+  loading: true,
   error: null,
+  weeklyData: null,
   lastSync: null
 };
 
@@ -23,21 +25,26 @@ function healthDataReducer(state: HealthDataState, action: HealthDataAction): He
         metrics: action.payload,
         error: null
       };
-    case 'SET_WEEKLY_DATA':
-      return {
-        ...state,
-        weeklyData: action.payload,
-        error: null
-      };
     case 'SET_LOADING':
       return {
         ...state,
-        isLoading: action.payload
+        loading: action.payload
       };
     case 'SET_ERROR':
       return {
         ...state,
-        error: action.payload
+        error: action.payload,
+        loading: false
+      };
+    case 'CLEAR_ERROR':
+      return {
+        ...state,
+        error: null
+      };
+    case 'SET_WEEKLY_DATA':
+      return {
+        ...state,
+        weeklyData: action.payload
       };
     case 'SET_LAST_SYNC':
       return {
@@ -51,47 +58,52 @@ function healthDataReducer(state: HealthDataState, action: HealthDataAction): He
   }
 }
 
-export const HealthDataContext = createContext<HealthDataContextType | undefined>(undefined);
+const HealthDataContext = createContext<HealthDataContextType | undefined>(undefined);
 
-export const HealthDataProvider: React.FC<HealthDataProviderProps> = ({
-  children,
-  validateOnChange = true
-}) => {
+export function HealthDataProvider({ 
+  children, 
+  config = DEFAULT_HEALTH_CONFIG,
+  validateOnChange = true 
+}: HealthDataProviderProps) {
   const [state, dispatch] = useReducer(healthDataReducer, initialState);
 
-  const validateData = useCallback(() => {
-    if (!validateOnChange) return;
-
-    // Validate current metrics
-    const metricsValidation = HealthDataValidator.validateMetrics(state.metrics);
-    if (!metricsValidation.isValid) {
-      dispatch({
-        type: 'SET_ERROR',
-        payload: `Invalid metrics data: ${metricsValidation.errors.join(', ')}`
-      });
-      return;
-    }
-
-    // Validate weekly data if present
-    if (state.weeklyData) {
-      const weeklyValidation = HealthDataValidator.validateWeeklyData(state.weeklyData);
-      if (!weeklyValidation.isValid) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: `Invalid weekly data: ${weeklyValidation.errors.join(', ')}`
-        });
-        return;
+  const refresh = useCallback(async () => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const provider = await HealthProviderFactory.createProvider();
+      const metrics = await provider.getMetrics();
+      
+      if (validateOnChange) {
+        // TODO: Add validation logic here
       }
+
+      dispatch({ type: 'SET_METRICS', payload: metrics });
+      dispatch({ type: 'SET_LAST_SYNC', payload: new Date().toISOString() });
+    } catch (error) {
+      const healthError: HealthError = {
+        type: 'data',
+        message: error instanceof Error ? error.message : 'Failed to fetch health data',
+        details: error
+      };
+      dispatch({ type: 'SET_ERROR', payload: healthError });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [state.metrics, state.weeklyData, validateOnChange]);
+  }, [validateOnChange]);
 
   useEffect(() => {
-    validateData();
-  }, [state.metrics, state.weeklyData, validateData]);
+    refresh();
+
+    if (config.enableBackgroundSync) {
+      const syncInterval = setInterval(refresh, config.syncInterval || 300000);
+      return () => clearInterval(syncInterval);
+    }
+  }, [refresh, config.enableBackgroundSync, config.syncInterval]);
 
   const contextValue: HealthDataContextType = {
     state,
-    dispatch
+    dispatch,
+    refresh
   };
 
   return (
@@ -99,12 +111,12 @@ export const HealthDataProvider: React.FC<HealthDataProviderProps> = ({
       {children}
     </HealthDataContext.Provider>
   );
-};
+}
 
-export const useHealthData = (): HealthDataContextType => {
-  const context = React.useContext(HealthDataContext);
+export function useHealthData(): HealthDataContextType {
+  const context = useContext(HealthDataContext);
   if (context === undefined) {
     throw new Error('useHealthData must be used within a HealthDataProvider');
   }
   return context;
-};
+}

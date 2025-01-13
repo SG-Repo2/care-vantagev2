@@ -5,6 +5,13 @@ import { ExtendedTheme } from '../theme';
 import { HomeScreen } from '../features/home/components/HomeScreen';
 import { LeaderboardScreen } from '../features/leaderboard/components/LeaderboardScreen';
 import { ProfileScreen } from '../features/profile/components/ProfileScreen';
+import { HealthDataProvider } from '../core/contexts/health/HealthDataContext';
+
+const HomeScreenWithProvider = () => (
+  <HealthDataProvider>
+    <HomeScreen />
+  </HealthDataProvider>
+);
 
 const Tab = createBottomTabNavigator();
 

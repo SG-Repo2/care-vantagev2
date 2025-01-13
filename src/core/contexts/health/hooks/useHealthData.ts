@@ -1,136 +1,91 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useHealthData as useHealthContext } from '../HealthDataContext';
-import { getHealthService } from '../services/providers/HealthProviderFactory';
-import { HealthMetrics, WeeklyMetrics } from '../types';
+import { useHealthData as useHealthDataContext } from '../HealthDataContext';
+import type { 
+  HealthMetrics, 
+  WeeklyMetrics, 
+  HealthError,
+  MetricsHistory 
+} from '../types';
 
-export function useHealthData() {
-  const { state, dispatch } = useHealthContext();
+interface UseHealthDataReturn {
+  metrics: (HealthMetrics & WeeklyMetrics) | null;
+  loading: boolean;
+  error: HealthError | null;
+  weeklyData: WeeklyMetrics | null;
+  lastSync: string | null;
+  refresh: () => Promise<void>;
+  getWeeklyHistory: (startDate: string, endDate: string) => Promise<WeeklyMetrics>;
+  clearError: () => void;
+  isInitialized: boolean;
+}
+
+export function useHealthData(): UseHealthDataReturn {
+  const { state, dispatch, refresh } = useHealthDataContext();
   const [isInitialized, setIsInitialized] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-
-    const initialize = async () => {
-      try {
-        dispatch({ type: 'SET_LOADING', payload: true });
-        
-        const healthService = await getHealthService({
-          enableBackgroundSync: true,
-          syncInterval: 300000 // 5 minutes
-        });
-
-        const hasPermissions = await healthService.hasPermissions();
-        if (!hasPermissions) {
-          const granted = await healthService.requestPermissions();
-          if (!granted) {
-            throw new Error('Health data permissions not granted');
-          }
-        }
-
-        if (mounted) {
-          setIsInitialized(true);
-          dispatch({ type: 'SET_LOADING', payload: false });
-        }
-      } catch (error) {
-        if (mounted) {
-          console.error('Failed to initialize health data:', error);
-          dispatch({ 
-            type: 'SET_ERROR', 
-            payload: error instanceof Error ? error.message : 'Failed to initialize health data'
-          });
-          dispatch({ type: 'SET_LOADING', payload: false });
-        }
-      }
-    };
-
-    initialize();
-
-    return () => {
-      mounted = false;
-    };
+  const clearError = useCallback(() => {
+    dispatch({ type: 'CLEAR_ERROR' });
   }, [dispatch]);
 
-  const refreshMetrics = useCallback(async () => {
-    if (!isInitialized) return;
-
+  const getWeeklyHistory = useCallback(async (startDate: string, endDate: string): Promise<WeeklyMetrics> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       
-      const healthService = await getHealthService();
-      const metrics = await healthService.getMetrics();
-      
-      if (metrics) {
-        dispatch({ type: 'SET_METRICS', payload: metrics });
-        dispatch({ 
-          type: 'SET_LAST_SYNC', 
-          payload: new Date().toISOString() 
-        });
+      // TODO: Implement actual weekly history fetching logic
+      const weeklyData: WeeklyMetrics = {
+        weeklySteps: 0,
+        weeklyDistance: 0,
+        weeklyCalories: 0,
+        weeklyHeartRate: 0,
+        startDate,
+        endDate,
+        score: 0
+      };
+
+      dispatch({ type: 'SET_WEEKLY_DATA', payload: weeklyData });
+      return weeklyData;
+    } catch (error) {
+      const healthError: HealthError = {
+        type: 'data',
+        message: error instanceof Error ? error.message : 'Failed to fetch weekly history',
+        details: error
+      };
+      dispatch({ type: 'SET_ERROR', payload: healthError });
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    const initializeHealthData = async () => {
+      try {
+        await refresh();
+        setIsInitialized(true);
+      } catch (error) {
+        const healthError: HealthError = {
+          type: 'initialization',
+          message: error instanceof Error ? error.message : 'Failed to initialize health data',
+          details: error
+        };
+        dispatch({ type: 'SET_ERROR', payload: healthError });
       }
-    } catch (error) {
-      console.error('Failed to refresh metrics:', error);
-      dispatch({ 
-        type: 'SET_ERROR', 
-        payload: error instanceof Error ? error.message : 'Failed to refresh metrics'
-      });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
+    };
+
+    if (!isInitialized) {
+      initializeHealthData();
     }
-  }, [isInitialized, dispatch]);
-
-  const fetchWeeklyData = useCallback(async (startDate: string, endDate: string) => {
-    if (!isInitialized) return;
-
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      
-      const healthService = await getHealthService();
-      const weeklyData = await healthService.getWeeklyData(startDate, endDate);
-      
-      if (weeklyData) {
-        dispatch({ type: 'SET_WEEKLY_DATA', payload: weeklyData });
-      }
-    } catch (error) {
-      console.error('Failed to fetch weekly data:', error);
-      dispatch({ 
-        type: 'SET_ERROR', 
-        payload: error instanceof Error ? error.message : 'Failed to fetch weekly data'
-      });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  }, [isInitialized, dispatch]);
-
-  const syncData = useCallback(async () => {
-    if (!isInitialized) return;
-
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      
-      const healthService = await getHealthService();
-      await healthService.sync();
-      
-      // Refresh metrics after sync
-      await refreshMetrics();
-    } catch (error) {
-      console.error('Failed to sync health data:', error);
-      dispatch({ 
-        type: 'SET_ERROR', 
-        payload: error instanceof Error ? error.message : 'Failed to sync health data'
-      });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  }, [isInitialized, dispatch, refreshMetrics]);
+  }, [isInitialized, refresh, dispatch]);
 
   return {
     metrics: state.metrics,
-    weeklyData: state.weeklyData,
-    isLoading: state.isLoading,
+    loading: state.loading,
     error: state.error,
-    lastSync: state.lastSync,
-    isInitialized,
-    refreshMetrics,
-    fetchWeeklyData,
-    syncData
+    weeklyData: state.weeklyData || null,
+    lastSync: state.lastSync || null,
+    refresh,
+    getWeeklyHistory,
+    clearError,
+    isInitialized
   };
 }

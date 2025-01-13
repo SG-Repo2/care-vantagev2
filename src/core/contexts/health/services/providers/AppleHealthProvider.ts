@@ -1,136 +1,127 @@
-import { NativeModules, Platform } from 'react-native';
-import { HealthMetrics, WeeklyMetrics, HealthProvider } from '../../types';
-
-const { HealthKit } = NativeModules;
+import { Platform } from 'react-native';
+import type { 
+  HealthMetrics, 
+  HealthProvider, 
+  WeeklyMetrics,
+  HealthError,
+  HealthMetricsResponse 
+} from '../../types';
 
 export class AppleHealthProvider implements HealthProvider {
-  private initialized: boolean = false;
-  private readonly healthMetrics = [
-    'Steps',
-    'DistanceWalkingRunning',
-    'HeartRate',
-    'ActiveEnergyBurned'
-  ];
+  private authorized = false;
 
-  async initialize(): Promise<boolean> {
+  async initialize(): Promise<void> {
     if (Platform.OS !== 'ios') {
-      console.warn('AppleHealthProvider is only available on iOS');
-      return false;
+      throw new Error('AppleHealthProvider can only be used on iOS');
     }
-
-    if (this.initialized) {
-      return true;
-    }
-
-    try {
-      const available = await HealthKit.isHealthDataAvailable();
-      if (!available) {
-        console.error('HealthKit is not available on this device');
-        return false;
-      }
-
-      this.initialized = true;
-      return true;
-    } catch (error) {
-      console.error('Failed to initialize HealthKit:', error);
-      return false;
-    }
+    await this.requestPermissions();
   }
 
-  async requestPermissions(): Promise<boolean> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
+  async requestPermissions(): Promise<void> {
     try {
-      const granted = await HealthKit.requestAuthorization(this.healthMetrics);
-      return granted === true;
+      // TODO: Implement actual Apple HealthKit permissions request
+      this.authorized = true;
     } catch (error) {
-      console.error('Failed to request HealthKit permissions:', error);
-      return false;
+      this.authorized = false;
+      const healthError: HealthError = {
+        type: 'permissions',
+        message: 'Failed to get HealthKit permissions',
+        details: error
+      };
+      throw healthError;
     }
   }
 
   async hasPermissions(): Promise<boolean> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
-    try {
-      const permissions = await HealthKit.checkAuthorization(this.healthMetrics);
-      return permissions === true;
-    } catch (error) {
-      console.error('Failed to check HealthKit permissions:', error);
-      return false;
-    }
+    return this.authorized;
   }
 
-  async getMetrics(): Promise<HealthMetrics> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
-    const now = new Date();
-    const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-
+  async getMetrics(): Promise<HealthMetrics & WeeklyMetrics> {
     try {
-      const [steps, distance, heartRate, calories] = await Promise.all([
-        HealthKit.getSteps(startOfDay, now),
-        HealthKit.getDistance(startOfDay, now),
-        HealthKit.getHeartRate(startOfDay, now),
-        HealthKit.getActiveEnergy(startOfDay, now)
-      ]);
+      if (!this.authorized) {
+        throw {
+          type: 'permissions' as const,
+          message: 'Not authorized to access HealthKit data'
+        };
+      }
 
-      return {
-        steps: steps || 0,
-        distance: distance || 0,
-        heartRate: heartRate || 0,
-        calories: calories || 0,
-        timestamp: now.toISOString()
+      // TODO: Implement actual HealthKit data fetching
+      const currentDate = new Date().toISOString();
+      const metrics: HealthMetrics & WeeklyMetrics = {
+        // Current metrics
+        steps: 0,
+        distance: 0,
+        calories: 0,
+        heartRate: 0,
+        lastUpdated: currentDate,
+        score: 0,
+        
+        // Weekly metrics
+        weeklySteps: 0,
+        weeklyDistance: 0,
+        weeklyCalories: 0,
+        weeklyHeartRate: 0,
+        startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        endDate: currentDate
       };
+
+      return metrics;
     } catch (error) {
-      console.error('Failed to get HealthKit metrics:', error);
-      throw error;
+      const healthError: HealthError = {
+        type: 'data',
+        message: 'Failed to fetch health metrics',
+        details: error
+      };
+      throw healthError;
     }
   }
 
   async getWeeklyData(startDate: string, endDate: string): Promise<WeeklyMetrics> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
     try {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      if (!this.authorized) {
+        throw {
+          type: 'permissions' as const,
+          message: 'Not authorized to access HealthKit data'
+        };
+      }
 
-      const [weeklySteps, weeklyDistance] = await Promise.all([
-        HealthKit.getDailySteps(start, end),
-        HealthKit.getDailyDistance(start, end)
-      ]);
-
+      // TODO: Implement actual HealthKit weekly data fetching
       return {
-        weeklySteps: weeklySteps || Array(7).fill(0),
-        weeklyDistance: weeklyDistance || Array(7).fill(0),
+        weeklySteps: 0,
+        weeklyDistance: 0,
+        weeklyCalories: 0,
+        weeklyHeartRate: 0,
         startDate,
-        endDate
+        endDate,
+        score: 0
       };
     } catch (error) {
-      console.error('Failed to get HealthKit weekly data:', error);
-      throw error;
+      const healthError: HealthError = {
+        type: 'data',
+        message: 'Failed to fetch weekly health data',
+        details: error
+      };
+      throw healthError;
     }
   }
 
   async sync(): Promise<void> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
     try {
-      // Force a refresh of the HealthKit data
-      await HealthKit.syncData();
+      if (!this.authorized) {
+        throw {
+          type: 'permissions' as const,
+          message: 'Not authorized to access HealthKit data'
+        };
+      }
+
+      // TODO: Implement background sync logic
     } catch (error) {
-      console.error('Failed to sync HealthKit data:', error);
-      throw error;
+      const healthError: HealthError = {
+        type: 'data',
+        message: 'Failed to sync health data',
+        details: error
+      };
+      throw healthError;
     }
   }
 }

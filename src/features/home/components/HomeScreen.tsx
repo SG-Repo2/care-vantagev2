@@ -66,11 +66,11 @@ export const HomeScreen: React.FC = () => {
   const { user } = useAuth();
   const {
     metrics,
-    weeklyData,
-    isLoading: loading,
+    loading,
     error,
-    refreshMetrics: refresh,
-    fetchWeeklyData
+    weeklyData,
+    refresh,
+    clearError
   } = useHealthData();
   const [refreshing, setRefreshing] = React.useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -104,24 +104,19 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleMetricPress = async (type: MetricType) => {
-    if (!metrics) return;
+  const handleMetricPress = (type: MetricType) => {
+    if (!metrics || !weeklyData) return;
 
-    const startDate = getCurrentWeekStart().toISOString();
-    const endDate = new Date().toISOString();
-    
-    // Fetch weekly data if not already available
-    if (!weeklyData) {
-      await fetchWeeklyData(startDate, endDate);
-    }
-
-    const getWeeklyValues = () => {
-      if (!weeklyData) return Array(7).fill(0);
+    const getWeeklyValues = (): number[] => {
       switch (type) {
         case 'steps':
-          return weeklyData.weeklySteps;
+          return Array.isArray(weeklyData.weeklySteps) ? weeklyData.weeklySteps : Array(7).fill(0);
         case 'distance':
-          return weeklyData.weeklyDistance;
+          return Array.isArray(weeklyData.weeklyDistance) ? weeklyData.weeklyDistance : Array(7).fill(0);
+        case 'heartRate':
+          return Array.isArray(weeklyData.weeklyHeartRate) ? weeklyData.weeklyHeartRate : Array(7).fill(0);
+        case 'calories':
+          return Array.isArray(weeklyData.weeklyCalories) ? weeklyData.weeklyCalories : Array(7).fill(0);
         default:
           return Array(7).fill(0);
       }
@@ -202,7 +197,7 @@ export const HomeScreen: React.FC = () => {
 
   if (error) {
     return (
-      <AnimatedSurface 
+      <AnimatedSurface
         style={[styles.container, styles.centered]}
         entering={SlideInDown}
       >
@@ -210,13 +205,23 @@ export const HomeScreen: React.FC = () => {
           colors={[theme.colors.errorContainer, theme.colors.surface]}
           style={[styles.errorGradient, { backgroundColor: theme.colors.surface }]}
         >
-          <Text variant="titleMedium" style={styles.errorText}>{error}</Text>
-          <IconButton 
-            icon="refresh" 
-            mode="contained"
-            onPress={refresh}
-            style={styles.retryButton}
-          />
+          <Text variant="titleMedium" style={styles.errorText}>
+            {error.message || 'An error occurred while loading health data'}
+          </Text>
+          <View style={styles.errorActions}>
+            <IconButton
+              icon="refresh"
+              mode="contained"
+              onPress={refresh}
+              style={styles.retryButton}
+            />
+            <IconButton
+              icon="close"
+              mode="contained"
+              onPress={clearError}
+              style={styles.closeButton}
+            />
+          </View>
         </LinearGradient>
       </AnimatedSurface>
     );
