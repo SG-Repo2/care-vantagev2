@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { AuthService } from '../services/AuthService';
+import { authService } from '../services/AuthService';
 import { User, AuthState } from '../types/auth.types';
-import { supabase } from '@utils/supabase';
+import { supabase } from '../../../utils/supabase';
 import { mapSupabaseUser } from '../types/auth.types';
-import { Logger } from '@utils/error/Logger';
+import { Logger } from '../../../utils/error/Logger';
 import { SessionExpiredError, TokenRefreshError } from '../errors/AuthErrors';
 
 interface AuthContextType extends AuthState {
@@ -27,7 +27,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     error: null
   });
 
-  const authService = AuthService.getInstance();
 
   const handleAuthError = useCallback((error: any, context: string) => {
     const errorMessage = error instanceof Error ? error.message : 'Authentication error';

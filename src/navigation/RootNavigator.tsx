@@ -31,7 +31,13 @@ export const RootNavigator = () => {
   }
 
   if (error) {
-    console.error('Auth error:', error);
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+        <Text style={[styles.loadingText, { color: theme.colors.error }]}>
+          Error: {error}
+        </Text>
+      </View>
+    );
   }
 
   return (

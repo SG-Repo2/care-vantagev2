@@ -8,6 +8,7 @@ import type {
 } from './types';
 import { HealthProviderFactory } from './services/providers/HealthProviderFactory';
 import { DEFAULT_HEALTH_CONFIG } from './types';
+import { useAuth } from '../../auth/contexts/AuthContext';
 
 const initialState: HealthDataState = {
   metrics: null,
@@ -67,14 +68,53 @@ export function HealthDataProvider({
 }: HealthDataProviderProps) {
   const [state, dispatch] = useReducer(healthDataReducer, initialState);
 
-  const refresh = useCallback(async () => {
-    dispatch({ type: 'SET_LOADING', payload: true });
+  const { user, getAccessToken } = useAuth();
+
+  const requestHealthPermissions = useCallback(async () => {
     try {
       const provider = await HealthProviderFactory.createProvider();
+      await provider.requestPermissions();
+      return true;
+    } catch (error) {
+      const healthError: HealthError = {
+        type: 'permissions',
+        message: error instanceof Error ? error.message : 'Failed to request health permissions',
+        details: error
+      };
+      dispatch({ type: 'SET_ERROR', payload: healthError });
+      return false;
+    }
+  }, []);
+
+  const refresh = useCallback(async () => {
+    if (!user) {
+      dispatch({ type: 'RESET_STATE' });
+      return;
+    }
+
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const token = await getAccessToken();
+      const provider = await HealthProviderFactory.createProvider();
+      
+      // Request permissions if needed
+      const permissionsGranted = await requestHealthPermissions();
+      if (!permissionsGranted) {
+        throw new Error('Health permissions not granted');
+      }
+
       const metrics = await provider.getMetrics();
       
       if (validateOnChange) {
-        // TODO: Add validation logic here
+        // Validate metrics are within reasonable ranges
+        const isValid = metrics.steps >= 0 && 
+                       metrics.distance >= 0 && 
+                       metrics.calories >= 0 && 
+                       metrics.heartRate >= 0;
+        
+        if (!isValid) {
+          throw new Error('Invalid health metrics received');
+        }
       }
 
       dispatch({ type: 'SET_METRICS', payload: metrics });
@@ -89,16 +129,21 @@ export function HealthDataProvider({
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [validateOnChange]);
+  }, [user, getAccessToken, validateOnChange, requestHealthPermissions]);
 
   useEffect(() => {
-    refresh();
+    // Reset provider when auth state changes
+    HealthProviderFactory.resetProvider();
+    
+    if (user) {
+      refresh();
 
-    if (config.enableBackgroundSync) {
-      const syncInterval = setInterval(refresh, config.syncInterval || 300000);
-      return () => clearInterval(syncInterval);
+      if (config.enableBackgroundSync) {
+        const syncInterval = setInterval(refresh, config.syncInterval || 300000);
+        return () => clearInterval(syncInterval);
+      }
     }
-  }, [refresh, config.enableBackgroundSync, config.syncInterval]);
+  }, [user, refresh, config.enableBackgroundSync, config.syncInterval]);
 
   const clearError = useCallback(() => {
     dispatch({ type: 'CLEAR_ERROR' });

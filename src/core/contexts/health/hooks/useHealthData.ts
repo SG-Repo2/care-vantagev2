@@ -3,8 +3,10 @@ import { useHealthData as useHealthDataContext } from '../HealthDataContext';
 import type {
   HealthMetrics,
   WeeklyMetrics,
-  HealthError
+  HealthError,
+  HealthProvider
 } from '../types';
+import { HealthProviderFactory } from '../services/providers/HealthProviderFactory';
 
 interface UseHealthDataReturn {
   metrics: (HealthMetrics & WeeklyMetrics) | null;
@@ -19,18 +21,30 @@ interface UseHealthDataReturn {
 }
 
 export function useHealthData(): UseHealthDataReturn {
-  const { state, dispatch, refresh } = useHealthDataContext();
+  const context = useHealthDataContext();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [provider, setProvider] = useState<HealthProvider | null>(null);
 
   const clearError = useCallback(() => {
-    dispatch({ type: 'CLEAR_ERROR' });
-  }, [dispatch]);
+    context.dispatch({ type: 'CLEAR_ERROR' });
+  }, [context]);
 
   const getWeeklyHistory = useCallback(async (startDate: string, endDate: string): Promise<WeeklyMetrics> => {
     try {
-      dispatch({ type: 'SET_LOADING', payload: true });
+      context.dispatch({ type: 'SET_LOADING', payload: true });
 
-      // TODO: Implement actual weekly history fetching logic
+      if (!provider) {
+        const newProvider = await HealthProviderFactory.createProvider();
+        setProvider(newProvider);
+      }
+
+      if (provider?.getWeeklyData) {
+        const weeklyData = await provider.getWeeklyData(startDate, endDate);
+        context.dispatch({ type: 'SET_WEEKLY_DATA', payload: weeklyData });
+        return weeklyData;
+      }
+
+      // Fallback if provider doesn't support weekly data
       const weeklyData: WeeklyMetrics = {
         weeklySteps: 0,
         weeklyDistance: 0,
@@ -41,7 +55,7 @@ export function useHealthData(): UseHealthDataReturn {
         score: 0
       };
 
-      dispatch({ type: 'SET_WEEKLY_DATA', payload: weeklyData });
+      context.dispatch({ type: 'SET_WEEKLY_DATA', payload: weeklyData });
       return weeklyData;
     } catch (error) {
       const healthError: HealthError = {
@@ -49,17 +63,19 @@ export function useHealthData(): UseHealthDataReturn {
         message: error instanceof Error ? error.message : 'Failed to fetch weekly history',
         details: error
       };
-      dispatch({ type: 'SET_ERROR', payload: healthError });
+      context.dispatch({ type: 'SET_ERROR', payload: healthError });
       throw error;
     } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
+      context.dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [dispatch]);
+  }, [context, provider]);
 
   useEffect(() => {
     const initializeHealthData = async () => {
       try {
-        await refresh();
+        const newProvider = await HealthProviderFactory.createProvider();
+        setProvider(newProvider);
+        await context.refresh();
         setIsInitialized(true);
       } catch (error) {
         const healthError: HealthError = {
@@ -67,22 +83,22 @@ export function useHealthData(): UseHealthDataReturn {
           message: error instanceof Error ? error.message : 'Failed to initialize health data',
           details: error
         };
-        dispatch({ type: 'SET_ERROR', payload: healthError });
+        context.dispatch({ type: 'SET_ERROR', payload: healthError });
       }
     };
 
     if (!isInitialized) {
       initializeHealthData();
     }
-  }, [isInitialized, refresh, dispatch]);
+  }, [isInitialized, context]);
 
   return {
-    metrics: state.metrics,
-    loading: state.loading,
-    error: state.error,
-    weeklyData: state.weeklyData,
-    lastSync: state.lastSync,
-    refresh,
+    metrics: context.metrics,
+    loading: context.loading,
+    error: context.error,
+    weeklyData: context.weeklyData,
+    lastSync: context.lastSync,
+    refresh: context.refresh,
     getWeeklyHistory,
     clearError,
     isInitialized

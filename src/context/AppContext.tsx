@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'react-native';
 import { customLightTheme, customDarkTheme, AppTheme } from '../theme';
-
+import { Logger } from '../utils/error/Logger';
 interface AppContextType {
   theme: AppTheme;
   isDarkMode: boolean;
@@ -31,7 +31,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             });
           }
         } catch (error) {
-          console.error('Error loading theme:', error);
+          Logger.error('Failed to initialize app theme:', { error });
+          // Still set theme to system default if loading fails
+          setTheme(colorScheme === 'dark' ? customDarkTheme : customLightTheme);
         } finally {
           setIsLoading(false);
         }
@@ -55,7 +57,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       try {
         await AsyncStorage.setItem('theme', newIsDarkMode ? 'dark' : 'light');
       } catch (error) {
-        console.error('Error saving theme:', error);
+        Logger.error('Failed to save theme preference:', { error });
       }
     });
   };

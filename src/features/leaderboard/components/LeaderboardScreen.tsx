@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, memo } from 'react';
 import { View, Text, RefreshControl, Image, VirtualizedList, Animated } from 'react-native';
 import { useTheme, ActivityIndicator, SegmentedButtons, Card } from 'react-native-paper';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../core/auth/contexts/AuthContext';
 import leaderboardService from '../services/leaderboardService';
 import { LeaderboardEntry } from '../types/leaderboard';
 import { createStyles } from '../styles/LeaderboardScreen.styles';

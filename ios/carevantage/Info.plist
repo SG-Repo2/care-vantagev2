@@ -27,9 +27,15 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>carevantage</string>
-          <string>carevantage</string>
           <string>com.groebe1kenobi.carevantage</string>
+          <string>com.groebe1kenobi.carevantage</string>
+          <string>com.groebe1kenobi.carevantage</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.1071113185455-tdjomtfodfd573dhnjafu7c4mbj88qlm</string>
         </array>
       </dict>
       <dict>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../core/auth/contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
 import { AvatarSection } from './AvatarSection';
 import { PrivacySettings } from './PrivacySettings';

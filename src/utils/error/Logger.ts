@@ -131,13 +131,16 @@ export class Logger {
     // 2. Store logs in local storage
     // 3. Write to a file in Node.js environment
     
-    // For now, we'll just console.log in development
-    if (__DEV__) {
-      this.logBuffer.forEach(entry => {
-        const { level, message, context } = entry;
+    // Always log errors, regardless of environment
+    this.logBuffer.forEach(entry => {
+      const { level, message, context } = entry;
+      if (level === 'error') {
+        console.error(message, context);
+      } else if (__DEV__) {
+        // Only log non-errors in development
         console[level](message, context);
-      });
-    }
+      }
+    });
 
     this.logBuffer = [];
   }

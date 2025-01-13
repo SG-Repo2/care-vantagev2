@@ -1,13 +1,21 @@
 import React from 'react';
 import { TouchableOpacity, Text, View } from 'react-native';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../core/auth/contexts/AuthContext';
 
 export function SignInButton() {
   const { signInWithGoogle, isLoading } = useAuth();
 
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle('');
+    } catch (error) {
+      console.error('Google sign in failed:', error);
+    }
+  };
+
   return (
     <TouchableOpacity 
-      onPress={signInWithGoogle}
+      onPress={handleSignIn}
       disabled={isLoading}
       style={{
         backgroundColor: '#4285F4',

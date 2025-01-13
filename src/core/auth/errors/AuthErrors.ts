@@ -1,4 +1,4 @@
-import { Logger } from '../../utils/error/Logger';
+import { Logger } from '../../../utils/error/Logger';
 
 export class AuthError extends Error {
   constructor(

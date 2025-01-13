@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { profileService } from '../services/profileService';
 import type { UserProfile } from '../services/profileService';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../core/auth/contexts/AuthContext';
 
 export const useProfile = () => {
   const { user, updateUser: setUser } = useAuth();

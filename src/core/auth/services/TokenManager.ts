@@ -1,7 +1,7 @@
-import { Logger } from '../../utils/error/Logger';
-import { TokenRefreshError } from './AuthErrors';
+import { Logger } from '../../../utils/error/Logger';
+import { TokenRefreshError } from '../errors/AuthErrors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../../utils/supabase';
+import { supabase } from '../../../utils/supabase';
 import * as jose from 'jose';
 
 interface TokenMetadata {
