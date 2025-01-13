@@ -11,7 +11,7 @@ import Animated, {
   SlideInDown 
 } from 'react-native-reanimated';
 
-import { useHealthData } from '../../../core/contexts/health/hooks/useHealthData';
+import { useHealthData } from '../../../core/contexts/health/HealthDataContext';
 import { formatDistance, formatScore } from '../../../core/utils/formatting';
 import { MetricCard } from './MetricCard';
 import { MetricModal } from './MetricModal';
@@ -21,7 +21,7 @@ import { TabParamList } from '../../../navigation/types';
 import { MeasurementSystem } from '../../../core/types/base';
 import GoalCelebration from './GoalCelebration';
 import { useStyles } from '../styles/HomeScreen.styles';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../core/auth/contexts/AuthContext';
 import { METRICS } from '../../../core/constants/metrics';
 import { MetricType } from '../../health/types/health';
 

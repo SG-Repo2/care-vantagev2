@@ -100,10 +100,19 @@ export function HealthDataProvider({
     }
   }, [refresh, config.enableBackgroundSync, config.syncInterval]);
 
+  const clearError = useCallback(() => {
+    dispatch({ type: 'CLEAR_ERROR' });
+  }, []);
+
   const contextValue: HealthDataContextType = {
-    state,
+    metrics: state.metrics,
+    loading: state.loading,
+    error: state.error,
+    weeklyData: state.weeklyData || null,
+    lastSync: state.lastSync || null,
     dispatch,
-    refresh
+    refresh,
+    clearError
   };
 
   return (

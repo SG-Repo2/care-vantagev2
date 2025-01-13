@@ -59,9 +59,14 @@ export type HealthDataAction =
   | { type: 'RESET_STATE' };
 
 export interface HealthDataContextType {
-  state: HealthDataState;
+  metrics: (HealthMetrics & WeeklyMetrics) | null;
+  loading: boolean;
+  error: HealthError | null;
+  weeklyData: WeeklyMetrics | null;
+  lastSync: string | null;
   dispatch: Dispatch<HealthDataAction>;
   refresh: () => Promise<void>;
+  clearError: () => void;
 }
 
 export interface HealthDataProviderProps {
