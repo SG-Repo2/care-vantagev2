@@ -58,8 +58,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: googleAuth?.androidClientId,
     iosClientId: googleAuth?.iosClientId,
-    webClientId: googleAuth?.webClientId,
-    responseType: "token",
+    clientId: googleAuth?.webClientId,
+    responseType: "id_token",
     scopes: ['profile', 'email']
   });
 

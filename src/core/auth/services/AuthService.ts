@@ -51,12 +51,12 @@ export class AuthService {
   /**
    * Sign in with Google OAuth token
    */
-  public async signInWithGoogle(accessToken: string): Promise<User> {
+  public async signInWithGoogle(idToken: string): Promise<User> {
     try {
-      // Exchange the Google access token for Supabase session
+      // Exchange the Google ID token for Supabase session
       const { data: { user, session }, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
-        token: accessToken,
+        token: idToken,
         nonce: undefined // Supabase will generate a nonce automatically
       });
 
