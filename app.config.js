@@ -1,6 +1,6 @@
 module.exports = {
   expo: {
-    owner: "groebe1kenobi", // Add space after colon
+    owner:"groebe1kenobi",
     name: 'care-vantage',
     slug: 'care-vantage',
     version: '1.0.0',
@@ -17,7 +17,7 @@ module.exports = {
     bundleIdentifier: 'com.groebe1kenobi.carevantage',
     ios: {
       supportsTablet: true,
-      // Remove extra blank line
+      
       infoPlist: {
         NSHealthShareUsageDescription: 'CareVantage needs access to read your health data to track your fitness and wellness metrics.',
         NSHealthUpdateUsageDescription: 'CareVantage requires permission to write health data to help you track and manage your fitness goals.',
@@ -62,6 +62,12 @@ module.exports = {
     },
     plugins: [
       [
+        'expo-auth-session',
+        {
+          scheme: 'com.groebe1kenobi.carevantage'
+        }
+      ],
+      [
         'expo-build-properties',
         {
           ios: {
@@ -71,12 +77,13 @@ module.exports = {
             fabricEnabled: false
           },
           android: {
-            compileSdkVersion: 34, // Remove quotes
-            targetSdkVersion: 34, // Remove quotes
-            minSdkVersion: 26 // Remove quotes
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 26
           }
-        }
-      ], // Remove extra whitespace
+        }, 
+
+      ],
       [
         'react-native-health',
         {

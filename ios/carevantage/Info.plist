@@ -28,8 +28,6 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>com.groebe1kenobi.carevantage</string>
-          <string>com.groebe1kenobi.carevantage</string>
-          <string>com.groebe1kenobi.carevantage</string>
         </array>
       </dict>
       <dict>

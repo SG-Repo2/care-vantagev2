@@ -59,8 +59,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     androidClientId: googleAuth?.androidClientId,
     iosClientId: googleAuth?.iosClientId,
     clientId: googleAuth?.webClientId,
-    responseType: "id_token",
-    scopes: ['profile', 'email']
+    responseType: "token",
+    scopes: ['openid', 'profile', 'email']
   });
 
   const handleGoogleSignIn = async () => {

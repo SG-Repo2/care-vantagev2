@@ -7,6 +7,10 @@
 	<key>com.apple.developer.healthkit.access</key>
 	<array>
 		<string>health-records</string>
+	  <string>HKQuantityTypeIdentifierStepCount</string>
+      <string>HKQuantityTypeIdentifierHeartRate</string>
+      <string>HKQuantityTypeIdentifierActiveEnergyBurned</string>
+      <string>HKQuantityTypeIdentifierDistanceWalkingRunning</string>
 	</array>
 	<key>com.apple.developer.healthkit.background-delivery</key>
 	<true/>
