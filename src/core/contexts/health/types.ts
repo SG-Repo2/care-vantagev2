@@ -29,7 +29,7 @@ export interface HealthProvider {
 }
 
 export interface HealthError {
-  type: 'initialization' | 'permissions' | 'data';
+  type: 'initialization' | 'permissions' | 'data' | 'validation';
   message: string;
   details?: unknown;
 }
