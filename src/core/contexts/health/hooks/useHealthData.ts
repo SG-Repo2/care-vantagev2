@@ -71,13 +71,23 @@ export function useHealthData(): UseHealthDataReturn {
   }, [context, provider]);
 
   useEffect(() => {
+    let mounted = true;
+
     const initializeHealthData = async () => {
       try {
+        if (!mounted) return;
+
         const newProvider = await HealthProviderFactory.createProvider();
+        if (!mounted) return;
+
         setProvider(newProvider);
         await context.refresh();
+        if (!mounted) return;
+
         setIsInitialized(true);
       } catch (error) {
+        if (!mounted) return;
+
         const healthError: HealthError = {
           type: 'initialization',
           message: error instanceof Error ? error.message : 'Failed to initialize health data',
@@ -88,8 +98,22 @@ export function useHealthData(): UseHealthDataReturn {
     };
 
     if (!isInitialized) {
-      initializeHealthData();
+      // Delay initialization slightly to ensure proper component mounting
+      const timer = setTimeout(() => {
+        if (mounted) {
+          initializeHealthData();
+        }
+      }, 100);
+
+      return () => {
+        mounted = false;
+        clearTimeout(timer);
+      };
     }
+
+    return () => {
+      mounted = false;
+    };
   }, [isInitialized, context]);
 
   return {

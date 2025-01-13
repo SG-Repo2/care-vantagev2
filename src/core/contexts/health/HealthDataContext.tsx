@@ -132,17 +132,41 @@ export function HealthDataProvider({
   }, [user, getAccessToken, validateOnChange, requestHealthPermissions]);
 
   useEffect(() => {
-    // Reset provider when auth state changes
-    HealthProviderFactory.resetProvider();
-    
-    if (user) {
-      refresh();
+    let mounted = true;
+    let syncInterval: NodeJS.Timeout | null = null;
 
-      if (config.enableBackgroundSync) {
-        const syncInterval = setInterval(refresh, config.syncInterval || 300000);
-        return () => clearInterval(syncInterval);
+    const initialize = async () => {
+      if (!mounted) return;
+
+      // Reset and cleanup provider when auth state changes
+      await HealthProviderFactory.cleanup();
+      
+      if (user) {
+        try {
+          await refresh();
+          
+          if (config.enableBackgroundSync && mounted) {
+            syncInterval = setInterval(refresh, config.syncInterval || 300000);
+          }
+        } catch (error) {
+          console.error('Health data initialization error:', error);
+        }
+      } else {
+        // Reset state when user is null
+        dispatch({ type: 'RESET_STATE' });
       }
-    }
+    };
+
+    initialize();
+
+    return () => {
+      mounted = false;
+      if (syncInterval) {
+        clearInterval(syncInterval);
+      }
+      // Cleanup provider on unmount
+      HealthProviderFactory.cleanup();
+    };
   }, [user, refresh, config.enableBackgroundSync, config.syncInterval]);
 
   const clearError = useCallback(() => {

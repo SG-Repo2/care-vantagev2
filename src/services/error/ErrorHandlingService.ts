@@ -1,5 +1,17 @@
+import { Platform } from 'react-native';
 import { Logger } from '../../utils/error/Logger';
 import { monitor } from '../../utils/error/Monitor';
+
+type ErrorHandlerType = (error: Error, isFatal?: boolean) => void;
+
+interface ReactNativeGlobal extends Global {
+  ErrorUtils: {
+    setGlobalHandler: (callback: ErrorHandlerType) => void;
+    getGlobalHandler: () => ErrorHandlerType;
+  };
+}
+
+declare const global: ReactNativeGlobal;
 
 export class ErrorHandlingService {
   static handle(error: unknown, context: string): void {
@@ -50,25 +62,23 @@ export class ErrorHandlingService {
   }
 
   static setupGlobalErrorHandlers(): void {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('error', (event) => {
+    if (Platform.OS === 'web') {
+      // Web-specific error handling
+      window.addEventListener('error', (event: ErrorEvent) => {
         this.handle(event.error, 'window_error');
       });
 
-      window.addEventListener('unhandledrejection', (event) => {
+      window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
         this.handle(event.reason, 'unhandled_rejection');
       });
     } else {
-      process.on('uncaughtException', (error) => {
-        this.handle(error, 'uncaught_exception');
-      });
-
-      process.on('unhandledRejection', (reason) => {
-        this.handle(reason, 'unhandled_rejection');
+      // React Native error handling
+      const defaultHandler = global.ErrorUtils.getGlobalHandler();
+      
+      global.ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
+        this.handle(error, isFatal ? 'fatal_error' : 'react_native_error');
+        defaultHandler(error, isFatal);
       });
     }
   }
 }
-
-// Initialize global error handlers
-ErrorHandlingService.setupGlobalErrorHandlers();

@@ -43,7 +43,7 @@ class MockHealthProvider implements HealthProvider {
       lastUpdated: currentDate,
       score: 0,
       
-      // Weekly aggregates (single numbers representing weekly totals)
+      // Weekly aggregates
       weeklySteps: 0,
       weeklyDistance: 0,
       weeklyCalories: 0,
@@ -80,51 +80,124 @@ class MockHealthProvider implements HealthProvider {
 export class HealthProviderFactory {
   private static instance: HealthProvider | null = null;
   private static lastInitializedPlatform: string | null = null;
+  private static initializationPromise: Promise<HealthProvider> | null = null;
 
   static async createProvider(): Promise<HealthProvider> {
+    // If we're already initializing, return the existing promise
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
     const currentPlatform = Platform.OS;
 
-    // Reset instance if platform changed or no instance exists
-    if (this.lastInitializedPlatform !== currentPlatform || !this.instance) {
-      this.instance = null;
-      this.lastInitializedPlatform = currentPlatform;
+    // If we have a valid instance for the current platform, return it
+    if (this.instance && this.lastInitializedPlatform === currentPlatform) {
+      return this.instance;
+    }
 
-      let provider: HealthProvider;
-
+    // Create a new initialization promise
+    this.initializationPromise = (async () => {
       try {
-        if (currentPlatform === 'ios') {
-          provider = new AppleHealthProvider();
-        } else if (currentPlatform === 'android') {
-          provider = new GoogleHealthProvider();
-        } else {
-          console.warn('Platform not supported, using mock provider');
+        // Reset the instance
+        this.instance = null;
+        this.lastInitializedPlatform = currentPlatform;
+
+        let provider: HealthProvider;
+
+        // Wrap provider creation in a timeout to prevent blocking
+        const createProviderWithTimeout = async (): Promise<HealthProvider> => {
+          return new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+              reject(new InitializationError('Provider initialization timed out'));
+            }, 5000); // 5 second timeout
+
+            const initProvider = async () => {
+              try {
+                if (currentPlatform === 'ios') {
+                  provider = new AppleHealthProvider();
+                } else if (currentPlatform === 'android') {
+                  provider = new GoogleHealthProvider();
+                } else {
+                  provider = new MockHealthProvider();
+                }
+
+                await provider.initialize();
+                clearTimeout(timeoutId);
+                resolve(provider);
+              } catch (error) {
+                clearTimeout(timeoutId);
+                reject(error);
+              }
+            };
+
+            initProvider();
+          });
+        };
+
+        try {
+          provider = await createProviderWithTimeout();
+        } catch (error) {
+          // If real provider fails, fallback to mock
+          console.warn('Health provider initialization failed, using mock provider:', error);
           provider = new MockHealthProvider();
+          await provider.initialize();
         }
 
-        await provider.initialize();
         this.instance = provider;
+        return provider;
       } catch (error) {
         const initError = new InitializationError(
           `Failed to initialize health provider for platform ${currentPlatform}`,
           { cause: error }
         );
-
-        // Only fallback to mock if real provider fails
-        if (currentPlatform === 'ios' || currentPlatform === 'android') {
-          console.error('Falling back to mock provider:', initError);
-          provider = new MockHealthProvider();
-          await provider.initialize();
-          this.instance = provider;
-        } else {
-          throw initError;
-        }
+        throw initError;
+      } finally {
+        // Clear the initialization promise
+        this.initializationPromise = null;
       }
-    }
+    })();
 
-    return this.instance;
+    return this.initializationPromise;
   }
 
   static resetProvider(): void {
     this.instance = null;
+    this.lastInitializedPlatform = null;
+    this.initializationPromise = null;
+  }
+
+  static async cleanup(): Promise<void> {
+    try {
+      // Wait for any pending initialization to complete
+      if (this.initializationPromise) {
+        try {
+          await this.initializationPromise;
+        } catch (error) {
+          // Ignore initialization errors during cleanup
+          console.warn('Ignored pending initialization during cleanup:', error);
+        }
+      }
+
+      if (this.instance) {
+        // Ensure sync operations are stopped
+        const provider = this.instance as HealthProvider & { sync?: () => Promise<void> };
+        if (provider.sync) {
+          try {
+            await provider.sync();
+          } catch (error) {
+            console.warn('Final sync during cleanup failed:', error);
+          }
+        }
+        
+        this.resetProvider();
+      }
+    } catch (error) {
+      console.error('Error during health provider cleanup:', error);
+    } finally {
+      // Ensure everything is reset even if cleanup fails
+      this.instance = null;
+      this.lastInitializedPlatform = null;
+      this.initializationPromise = null;
+    }
   }
 }

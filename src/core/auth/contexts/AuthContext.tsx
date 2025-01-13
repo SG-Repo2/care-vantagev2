@@ -171,10 +171,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     signOut: async () => {
       try {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
-        await authService.signOut();
+        
+        // First set user to null to trigger cleanup in dependent contexts
         setState(prev => ({ ...prev, user: null }));
+        
+        // Then perform actual signout
+        await authService.signOut();
       } catch (error) {
         handleAuthError(error, 'signOut');
+        // Revert user state if signout fails
+        setState(prev => ({ 
+          ...prev, 
+          user: prev.user,
+          error: error instanceof Error ? error.message : 'Sign out failed' 
+        }));
       } finally {
         setState(prev => ({ ...prev, isLoading: false }));
       }
