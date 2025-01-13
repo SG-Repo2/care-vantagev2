@@ -12,6 +12,26 @@ import type {
   HealthError
 } from '../../types';
 
+// Health Connect API types
+interface HeartRateSample {
+  beatsPerMinute: number;
+  time: string;
+}
+
+interface HeartRateRecord {
+  samples: HeartRateSample[];
+  startTime: string;
+  endTime: string;
+}
+
+interface HealthConnectRecord<T> {
+  records: T[];
+}
+
+type ReadRecordsResult<T extends string> = {
+  records: Array<any>;
+};
+
 export class GoogleHealthProvider implements HealthProvider {
   private authorized = false;
 
@@ -83,15 +103,17 @@ export class GoogleHealthProvider implements HealthProvider {
     }
   }
 
-  async getMetrics(): Promise<HealthMetrics & WeeklyMetrics> {
-    try {
-      if (!this.authorized) {
-        throw {
-          type: 'permissions' as const,
-          message: 'Not authorized to access Health Connect data'
-        };
-      }
 
+  async getMetrics(): Promise<HealthMetrics & WeeklyMetrics> {
+    if (!this.authorized) {
+      const error: HealthError = {
+        type: 'permissions',
+        message: 'Not authorized to access Health Connect data'
+      };
+      throw error;
+    }
+
+    try {
       const currentDate = new Date();
       const startOfDay = new Date(currentDate);
       startOfDay.setHours(0, 0, 0, 0);
@@ -104,39 +126,66 @@ export class GoogleHealthProvider implements HealthProvider {
         }
       };
 
-      const [steps, distance, calories, heartRate] = await Promise.all([
+      const [stepsData, distanceData, caloriesData, heartRateData] = await Promise.all([
         readRecords('Steps', options),
         readRecords('Distance', options),
         readRecords('ActiveCaloriesBurned', options),
         readRecords('HeartRate', options)
-      ]);
+      ]) as [
+        ReadRecordsResult<'Steps'>,
+        ReadRecordsResult<'Distance'>,
+        ReadRecordsResult<'ActiveCaloriesBurned'>,
+        ReadRecordsResult<'HeartRate'>
+      ];
 
-      const weeklyData = await this.getWeeklyData(
-        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        currentDate.toISOString()
-      );
+      // Validate records exist for each metric
+      if (!stepsData?.records || !distanceData?.records || !caloriesData?.records) {
+        const error: HealthError = {
+          type: 'data',
+          message: 'Invalid or missing health records',
+          details: 'One or more required metrics returned invalid data'
+        };
+        throw error;
+      }
 
-      const stepsTotal = steps.records.reduce((sum: number, record: any) => 
-        sum + (record as any).count, 0);
-      const distanceTotal = distance.records.reduce((sum: number, record: any) => 
-        sum + (record as any).distance.inMeters, 0);
-      const caloriesTotal = calories.records.reduce((sum: number, record: any) => 
-        sum + (record as any).energy.inKilocalories, 0);
-      // Get latest valid heart rate
+      const stepsTotal = stepsData.records.reduce((sum: number, record: any) => 
+        sum + (record?.count || 0), 0);
+      const distanceTotal = distanceData.records.reduce((sum: number, record: any) => 
+        sum + (record?.distance?.inMeters || 0), 0);
+      const caloriesTotal = caloriesData.records.reduce((sum: number, record: any) => 
+        sum + (record?.energy?.inKilocalories || 0), 0);
+
+      // Get latest valid heart rate with proper error handling
       const latestHeartRate = (() => {
-        if (!heartRate.records || !heartRate.records.length) return 0;
-        
-        for (let i = heartRate.records.length - 1; i >= 0; i--) {
-          const record = heartRate.records[i] as any;
-          if (!record?.samples?.length) continue;
-          
-          const bpm = record.samples[0].beatsPerMinute;
-          if (typeof bpm === 'number' && !isNaN(bpm) && bpm > 0 && bpm < 300) {
-            return bpm;
+        if (!heartRateData?.records || !Array.isArray(heartRateData.records)) {
+          return 0;
+        }
+      
+        for (let i = heartRateData.records.length - 1; i >= 0; i--) {
+          const record = heartRateData.records[i] as any;
+          if (!record) continue;
+      
+          // Try to get BPM from samples array
+          if (Array.isArray(record.samples) && record.samples.length > 0) {
+            const sample = record.samples[0];
+            const bpm = sample?.beatsPerMinute;
+            if (typeof bpm === 'number' && !isNaN(bpm) && bpm > 0 && bpm < 300) {
+              return Math.round(bpm);
+            }
           }
+      
+          // No need for fallback as the value array is the only way to access heart rate data
         }
         return 0;
       })();
+
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(currentDate.getDate() - 7);
+
+      const weeklyData = await this.getWeeklyData(
+        weekStart.toISOString(),
+        currentDate.toISOString()
+      );
 
       return {
         steps: stepsTotal,
@@ -184,34 +233,54 @@ export class GoogleHealthProvider implements HealthProvider {
         readRecords('Distance', options),
         readRecords('ActiveCaloriesBurned', options),
         readRecords('HeartRate', options)
-      ]);
+      ]) as [
+        ReadRecordsResult<'Steps'>,
+        ReadRecordsResult<'Distance'>,
+        ReadRecordsResult<'ActiveCaloriesBurned'>,
+        ReadRecordsResult<'HeartRate'>
+      ];
+
+      // Validate weekly records exist
+      if (!weeklySteps?.records || !weeklyDistance?.records || !weeklyCalories?.records) {
+        const error: HealthError = {
+          type: 'data',
+          message: 'Invalid or missing weekly health records',
+          details: 'One or more required weekly metrics returned invalid data'
+        };
+        throw error;
+      }
 
       const weeklyStepsTotal = weeklySteps.records.reduce((sum: number, record: any) => 
-        sum + (record as any).count, 0);
+        sum + (record?.count || 0), 0);
       const weeklyDistanceTotal = weeklyDistance.records.reduce((sum: number, record: any) => 
-        sum + (record as any).distance.inMeters, 0);
+        sum + (record?.distance?.inMeters || 0), 0);
       const weeklyCaloriesTotal = weeklyCalories.records.reduce((sum: number, record: any) => 
-        sum + (record as any).energy.inKilocalories, 0);
-      // Calculate weekly heart rate average from valid readings
+        sum + (record?.energy?.inKilocalories || 0), 0);
+      // Calculate weekly heart rate average with proper error handling
       const weeklyHeartRateAvg = (() => {
-        if (!weeklyHeartRate.records || !weeklyHeartRate.records.length) return 0;
-        
+        if (!weeklyHeartRate?.records || !Array.isArray(weeklyHeartRate.records)) {
+          return 0;
+        }
+
         let validReadings = 0;
-        const sum = weeklyHeartRate.records.reduce((total: number, record: any) => {
-          if (!record?.samples?.length) return total;
-          
-          const validSamples = record.samples.filter((sample: any) => {
-            const bpm = sample.beatsPerMinute;
-            return typeof bpm === 'number' && !isNaN(bpm) && bpm > 0 && bpm < 300;
-          });
-          
-          if (!validSamples.length) return total;
-          
-          validReadings += validSamples.length;
-          return total + validSamples.reduce((s: number, sample: any) => s + sample.beatsPerMinute, 0);
-        }, 0);
-        
-        return validReadings > 0 ? Math.round(sum / validReadings) : 0;
+        let totalBpm = 0;
+
+        for (const record of weeklyHeartRate.records) {
+          if (!record) continue;
+
+          // Get BPM from samples array
+          if (Array.isArray(record.samples) && record.samples.length > 0) {
+            for (const sample of record.samples) {
+              const bpm = sample?.beatsPerMinute;
+              if (typeof bpm === 'number' && !isNaN(bpm) && bpm > 0 && bpm < 300) {
+                totalBpm += bpm;
+                validReadings++;
+              }
+            }
+          }
+        }
+
+        return validReadings > 0 ? Math.round(totalBpm / validReadings) : 0;
       })();
 
       const metrics = {
