@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Platform } from 'react-native';
 import { TextInput, Text, useTheme } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -6,6 +6,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import { AuthStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../core/auth/contexts/AuthContext';
 import { Button } from '../../../components/common/atoms/Button';
@@ -43,46 +44,46 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const googleAuth = Constants.expoConfig?.extra?.googleAuth;
   
-  // Initialize WebBrowser for OAuth redirect handling
-  React.useEffect(() => {
+  // Initialize AuthSession and WebBrowser for OAuth
+  AuthSession.useAutoDiscovery('https://accounts.google.com');
+
+  useEffect(() => {
     WebBrowser.maybeCompleteAuthSession();
+    WebBrowser.warmUpAsync();
+    return () => {
+      WebBrowser.coolDownAsync();
+    };
   }, []);
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: Platform.select({
-      ios: googleAuth?.iosClientId,
-      android: googleAuth?.androidClientId,
-      default: googleAuth?.webClientId,
-    }),
-    iosClientId: googleAuth?.iosClientId,
+  const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: googleAuth?.androidClientId,
+    iosClientId: googleAuth?.iosClientId,
     webClientId: googleAuth?.webClientId,
-    scopes: [
-      'https://www.googleapis.com/auth/userinfo.email',
-      'https://www.googleapis.com/auth/userinfo.profile',
-      'openid'
-    ]
+    responseType: "token",
+    scopes: ['profile', 'email']
   });
 
   const handleGoogleSignIn = async () => {
-    setLocalError(null);
     try {
-      await promptAsync();
+      setLocalError(null);
+      const result = await promptAsync();
+      
+      if (result?.type === 'success') {
+        if (!result.authentication?.accessToken) {
+          throw new Error('No access token present in response');
+        }
+        await signInWithGoogle(result.authentication.accessToken);
+      } else if (result?.type === 'error') {
+        throw new Error(result.error?.message || 'Google sign-in failed');
+      } else if (result?.type === 'cancel') {
+        // User cancelled the login flow
+        return;
+      }
     } catch (err) {
       console.error('Google sign-in error:', err);
-      setLocalError('Failed to sign in with Google. Please try again.');
+      setLocalError(err instanceof Error ? err.message : 'Failed to sign in with Google. Please try again.');
     }
   };
-
-  React.useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      signInWithGoogle(id_token).catch(err => {
-        console.error('Google sign-in error:', err);
-        setLocalError('Failed to sign in with Google. Please try again.');
-      });
-    }
-  }, [response]);
 
   const error = localError || authError;
   const styles = createStyles(theme);

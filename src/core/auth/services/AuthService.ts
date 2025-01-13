@@ -51,21 +51,23 @@ export class AuthService {
   /**
    * Sign in with Google OAuth token
    */
-  public async signInWithGoogle(idToken: string): Promise<User> {
+  public async signInWithGoogle(accessToken: string): Promise<User> {
     try {
-      const { data, error } = await supabase.auth.signInWithIdToken({
+      // Exchange the Google access token for Supabase session
+      const { data: { user, session }, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
-        token: idToken,
+        token: accessToken,
+        nonce: undefined // Supabase will generate a nonce automatically
       });
 
       if (error) throw error;
-      if (!data.user || !data.session) {
+      if (!user || !session) {
         throw new Error('No user data or session returned');
       }
 
-      const user = mapSupabaseUser(data.user);
-      await this.handleSuccessfulAuth(data.session, user);
-      return user;
+      const mappedUser = mapSupabaseUser(user);
+      await this.handleSuccessfulAuth(session, mappedUser);
+      return mappedUser;
     } catch (error) {
       Logger.error('Google sign-in failed', { error });
       throw this.handleError(error, 'signInWithGoogle');

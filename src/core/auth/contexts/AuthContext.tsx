@@ -6,12 +6,13 @@ import { supabase } from '../../../utils/supabase';
 import { mapSupabaseUser } from '../types/auth.types';
 import { Logger } from '../../../utils/error/Logger';
 import { SessionExpiredError, TokenRefreshError } from '../errors/AuthErrors';
+import { StorageService } from '../../../core/storage/StorageService';
 
 interface AuthContextType extends AuthState {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signInWithGoogle: (idToken: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  signOut: (error?: Error) => Promise<void>;
   updateUser: (user: User) => void;
   refreshSession: () => Promise<void>;
   getAccessToken: () => Promise<string>;
@@ -56,14 +57,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [handleAuthError]);
 
+  const clearAuthData = async () => {
+    try {
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Clear stored tokens and user data
+      await StorageService.clearAll();
+      
+      // Clear any other auth-related storage
+      await AsyncStorage.multiRemove([
+        '@health_permissions_granted',
+        // Add any other auth-related keys that need to be cleared
+      ]);
+    } catch (clearError) {
+      console.error('Error clearing auth data:', clearError);
+    }
+  };
+
   useEffect(() => {
+    const handleSessionError = async (error: any) => {
+      console.error('Session error:', error);
+      
+      // Clear stored auth data
+      await clearAuthData();
+      
+      setState(prev => ({
+        ...prev,
+        user: null,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Session error'
+      }));
+    };
+  
+    const handleAuthError = async (error: any) => {
+      console.error('Auth error:', error);
+      
+      // Check for specific JWT sub claim error
+      if (error?.message?.includes('User from sub claim in JWT does not exist')) {
+        await clearAuthData();
+      }
+      
+      setState(prev => ({
+        ...prev,
+        user: null,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Authentication error'
+      }));
+    };
+  
     const initAuth = async () => {
       try {
         console.log('Starting auth initialization...');
         
         // First check if we have an existing session
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
+        if (sessionError) {
+          // Handle session error specifically
+          await handleSessionError(sessionError);
+          return;
+        }
+  
         if (!session) {
           console.log('No existing auth session found');
           setState(prev => ({
@@ -73,12 +128,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           }));
           return;
         }
-
+  
         // If we have a session, get the user
         const { data: { user }, error } = await supabase.auth.getUser();
         console.log('Auth response:', { user, error });
         
-        if (error) throw error;
+        if (error) {
+          // Handle user fetch error
+          await handleAuthError(error);
+          return;
+        }
         
         setState(prev => ({
           ...prev,
@@ -87,11 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }));
       } catch (error) {
         console.error('Auth initialization error:', error);
-        setState(prev => ({
-          ...prev,
-          isLoading: false,
-          error: error instanceof Error ? error.message : 'Authentication error'
-        }));
+        await handleAuthError(error);
       }
     };
 
@@ -107,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             error: null
           }));
         } catch (error) {
-          handleAuthError(error, 'authStateChange');
+          await handleAuthError(error);
         }
       } else {
         setState(prev => ({
@@ -169,35 +224,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setState(prev => ({ ...prev, isLoading: false }));
       }
     },
-    signOut: async () => {
+    signOut: async (error?: Error) => {
       try {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
         
         // First set user to null to trigger cleanup in dependent contexts
         setState(prev => ({ ...prev, user: null }));
         
-        try {
-          // Clear stored health permissions
-          await AsyncStorage.removeItem('@health_permissions_granted');
-        } catch (error) {
-          console.warn('Failed to clear health permissions:', error);
-        }
+        // Clear all auth-related data using the clearAuthData function
+        await clearAuthData();
         
-        // Then perform actual signout
-        await authService.signOut();
-      } catch (error) {
-        // Only revert user state for auth errors, not cleanup errors
-        if (error instanceof Error && !error.message.includes('Health permissions')) {
-          handleAuthError(error, 'signOut');
-          setState(prev => ({ 
-            ...prev, 
-            user: prev.user,
-            error: error instanceof Error ? error.message : 'Sign out failed' 
+        // If there was an error that triggered the signout, set it in state
+        if (error) {
+          setState(prev => ({
+            ...prev,
+            error: error.message
           }));
-        } else {
-          // Log but continue with signout for health permission errors
-          console.warn('Non-critical error during signout:', error);
         }
+      } catch (signOutError) {
+        console.error('Error during sign out:', signOutError);
+        setState(prev => ({
+          ...prev,
+          error: signOutError instanceof Error ? signOutError.message : 'Sign out failed'
+        }));
       } finally {
         setState(prev => ({ ...prev, isLoading: false }));
       }

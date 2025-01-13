@@ -32,9 +32,23 @@ export class StorageService {
   }
 
   static async clearAll(): Promise<void> {
-    await AsyncStorage.multiRemove([
+    const keysToRemove = [
       STORAGE_KEYS.AUTH_TOKEN,
       STORAGE_KEYS.USER_DATA,
-    ]);
+      '@health_permissions_granted',
+      '@token_blacklist'
+    ];
+    
+    try {
+      await AsyncStorage.multiRemove(keysToRemove);
+      console.log('Successfully cleared all storage data');
+    } catch (error) {
+      console.error('Error clearing storage:', error);
+      throw error;
+    }
+  }
+
+  static async clearAuthData(): Promise<void> {
+    await this.clearAll(); // Reuse clearAll since we want to clear everything auth-related
   }
 }

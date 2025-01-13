@@ -35,7 +35,7 @@ export class TokenManager {
       // Decode the token without verifying to check structure
       const decoded = jose.decodeJwt(token);
       
-      if (!decoded || !decoded.exp || !decoded.iat) {
+      if (!decoded || !decoded.exp || !decoded.iat || !decoded.sub) {
         Logger.warn('Invalid token structure', { decoded });
         return false;
       }
@@ -43,8 +43,8 @@ export class TokenManager {
       // Check if token is expired
       const now = Math.floor(Date.now() / 1000);
       if (decoded.exp < now) {
-        Logger.warn('Token is expired', { 
-          expiry: new Date(decoded.exp * 1000).toISOString() 
+        Logger.warn('Token is expired', {
+          expiry: new Date(decoded.exp * 1000).toISOString()
         });
         return false;
       }
@@ -56,9 +56,28 @@ export class TokenManager {
         return false;
       }
 
-      // In a production environment, you would also verify the token's signature
-      // using your JWT_SECRET or public key
-      
+      // Verify the user exists in the database
+      try {
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', decoded.sub)
+          .single();
+
+        if (error || !user) {
+          Logger.warn('User from token does not exist in database', {
+            userId: decoded.sub,
+            error
+          });
+          // Add token to blacklist since it references a non-existent user
+          await this.addToBlacklist(token);
+          return false;
+        }
+      } catch (error) {
+        Logger.error('Error verifying user existence', { error });
+        return false;
+      }
+
       return true;
     } catch (error) {
       Logger.error('Token validation failed', { error });
