@@ -38,11 +38,23 @@ export class HealthDataValidator {
         }
       }
 
-      // Validate numeric fields are non-negative
+      // Validate numeric fields
       for (const field of NUMERIC_METRIC_FIELDS) {
         const value = metrics[field];
-        if (typeof value === 'number' && value < 0) {
+        if (typeof value !== 'number') {
+          throw new Error(`${field} must be a number`);
+        }
+        
+        // Basic range validation
+        if (value < 0) {
           throw new Error(`${field} cannot be negative`);
+        }
+        
+        // Heart rate specific validation
+        if (field === 'heartRate' || field === 'weeklyHeartRate') {
+          if (value > 300) { // Maximum reasonable heart rate
+            throw new Error(`${field} cannot exceed 300 bpm`);
+          }
         }
       }
 
@@ -108,11 +120,23 @@ export class HealthDataValidator {
         }
       }
 
-      // Validate numeric fields are non-negative
+      // Validate numeric fields
       for (const field of WEEKLY_FIELDS) {
         const value = weeklyData[field];
-        if (typeof value === 'number' && value < 0) {
+        if (typeof value !== 'number') {
+          throw new Error(`${field} must be a number`);
+        }
+        
+        // Basic range validation
+        if (value < 0) {
           throw new Error(`${field} cannot be negative`);
+        }
+        
+        // Heart rate specific validation
+        if (field === 'weeklyHeartRate') {
+          if (value > 300) { // Maximum reasonable heart rate
+            throw new Error(`${field} cannot exceed 300 bpm`);
+          }
         }
       }
 

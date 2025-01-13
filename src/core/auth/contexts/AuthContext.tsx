@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services/AuthService';
 import { User, AuthState } from '../types/auth.types';
 import { supabase } from '../../../utils/supabase';
@@ -175,16 +176,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // First set user to null to trigger cleanup in dependent contexts
         setState(prev => ({ ...prev, user: null }));
         
+        try {
+          // Clear stored health permissions
+          await AsyncStorage.removeItem('@health_permissions_granted');
+        } catch (error) {
+          console.warn('Failed to clear health permissions:', error);
+        }
+        
         // Then perform actual signout
         await authService.signOut();
       } catch (error) {
-        handleAuthError(error, 'signOut');
-        // Revert user state if signout fails
-        setState(prev => ({ 
-          ...prev, 
-          user: prev.user,
-          error: error instanceof Error ? error.message : 'Sign out failed' 
-        }));
+        // Only revert user state for auth errors, not cleanup errors
+        if (error instanceof Error && !error.message.includes('Health permissions')) {
+          handleAuthError(error, 'signOut');
+          setState(prev => ({ 
+            ...prev, 
+            user: prev.user,
+            error: error instanceof Error ? error.message : 'Sign out failed' 
+          }));
+        } else {
+          // Log but continue with signout for health permission errors
+          console.warn('Non-critical error during signout:', error);
+        }
       } finally {
         setState(prev => ({ ...prev, isLoading: false }));
       }

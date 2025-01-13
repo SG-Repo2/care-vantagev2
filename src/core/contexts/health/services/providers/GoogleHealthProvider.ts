@@ -122,8 +122,21 @@ export class GoogleHealthProvider implements HealthProvider {
         sum + (record as any).distance.inMeters, 0);
       const caloriesTotal = calories.records.reduce((sum: number, record: any) => 
         sum + (record as any).energy.inKilocalories, 0);
-      const latestHeartRate = heartRate.records.length > 0 ? 
-        (heartRate.records[heartRate.records.length - 1] as any).samples[0].beatsPerMinute : 0;
+      // Get latest valid heart rate
+      const latestHeartRate = (() => {
+        if (!heartRate.records || !heartRate.records.length) return 0;
+        
+        for (let i = heartRate.records.length - 1; i >= 0; i--) {
+          const record = heartRate.records[i] as any;
+          if (!record?.samples?.length) continue;
+          
+          const bpm = record.samples[0].beatsPerMinute;
+          if (typeof bpm === 'number' && !isNaN(bpm) && bpm > 0 && bpm < 300) {
+            return bpm;
+          }
+        }
+        return 0;
+      })();
 
       return {
         steps: stepsTotal,
@@ -179,13 +192,27 @@ export class GoogleHealthProvider implements HealthProvider {
         sum + (record as any).distance.inMeters, 0);
       const weeklyCaloriesTotal = weeklyCalories.records.reduce((sum: number, record: any) => 
         sum + (record as any).energy.inKilocalories, 0);
-      const weeklyHeartRateAvg = weeklyHeartRate.records.length > 0 ? 
-        weeklyHeartRate.records.reduce((sum: number, record: any) => {
-          const samples = (record as any).samples;
-          const recordAvg = samples.reduce((s: number, sample: any) => 
-            s + sample.beatsPerMinute, 0) / samples.length;
-          return sum + recordAvg;
-        }, 0) / weeklyHeartRate.records.length : 0;
+      // Calculate weekly heart rate average from valid readings
+      const weeklyHeartRateAvg = (() => {
+        if (!weeklyHeartRate.records || !weeklyHeartRate.records.length) return 0;
+        
+        let validReadings = 0;
+        const sum = weeklyHeartRate.records.reduce((total: number, record: any) => {
+          if (!record?.samples?.length) return total;
+          
+          const validSamples = record.samples.filter((sample: any) => {
+            const bpm = sample.beatsPerMinute;
+            return typeof bpm === 'number' && !isNaN(bpm) && bpm > 0 && bpm < 300;
+          });
+          
+          if (!validSamples.length) return total;
+          
+          validReadings += validSamples.length;
+          return total + validSamples.reduce((s: number, sample: any) => s + sample.beatsPerMinute, 0);
+        }, 0);
+        
+        return validReadings > 0 ? Math.round(sum / validReadings) : 0;
+      })();
 
       const metrics = {
         weeklySteps: weeklyStepsTotal,
