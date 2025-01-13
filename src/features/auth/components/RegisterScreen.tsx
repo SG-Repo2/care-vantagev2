@@ -48,6 +48,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
   };
 
   const googleAuth = Constants.expoConfig?.extra?.googleAuth;
+  // Redirect
+  React.useEffect(() => {
+      WebBrowser.maybeCompleteAuthSession();
+    }, []);
   
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: Platform.select({

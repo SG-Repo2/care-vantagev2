@@ -43,6 +43,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const googleAuth = Constants.expoConfig?.extra?.googleAuth;
   
+  // Initialize WebBrowser for OAuth redirect handling
+  React.useEffect(() => {
+    WebBrowser.maybeCompleteAuthSession();
+  }, []);
+
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: Platform.select({
       ios: googleAuth?.iosClientId,

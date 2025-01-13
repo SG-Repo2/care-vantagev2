@@ -6,7 +6,7 @@ import type {
   HealthError,
   HealthProvider
 } from '../types';
-import { HealthProviderFactory } from '../services/providers/HealthProviderFactory';
+import { HealthProviderFactory } from '../providers/HealthProviderFactory';
 
 interface UseHealthDataReturn {
   metrics: (HealthMetrics & WeeklyMetrics) | null;

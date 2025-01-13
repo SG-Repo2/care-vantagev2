@@ -107,7 +107,7 @@ export class AppleHealthProvider extends BaseHealthProvider {
       calories,
       heartRate,
       lastUpdated: currentDate.toISOString(),
-      score: this.calculateHealthScore(steps, distance, calories, heartRate),
+      score: 0, // Will be calculated in BaseHealthProvider
       ...weeklyData
     };
   }
@@ -140,7 +140,7 @@ export class AppleHealthProvider extends BaseHealthProvider {
       weeklyHeartRate: heartRate,
       startDate,
       endDate,
-      score: this.calculateHealthScore(steps/7, distance/7, calories/7, heartRate)
+      score: 0 // Will be calculated in BaseHealthProvider
     };
   }
 
@@ -237,13 +237,4 @@ export class AppleHealthProvider extends BaseHealthProvider {
     });
   }
 
-  private calculateHealthScore(steps: number, distance: number, calories: number, heartRate: number): number {
-    // Simple scoring algorithm - can be made more sophisticated
-    const stepScore = Math.min(steps / 10000, 1) * 25;
-    const distanceScore = Math.min(distance / 5, 1) * 25;
-    const calorieScore = Math.min(calories / 500, 1) * 25;
-    const heartScore = heartRate > 0 ? 25 : 0;
-    
-    return Math.round(stepScore + distanceScore + calorieScore + heartScore);
-  }
 }

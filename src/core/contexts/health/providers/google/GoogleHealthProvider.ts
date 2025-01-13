@@ -69,12 +69,7 @@ export class GoogleHealthProvider extends BaseHealthProvider {
       calories: caloriesTotal,
       heartRate: latestHeartRate,
       lastUpdated: currentDate.toISOString(),
-      score: this.calculateHealthScore({
-        steps: stepsTotal,
-        distance: distanceTotal,
-        calories: caloriesTotal,
-        heartRate: latestHeartRate
-      }),
+      score: 0, // Will be calculated in BaseHealthProvider
       ...weeklyData
     };
   }
@@ -107,12 +102,7 @@ export class GoogleHealthProvider extends BaseHealthProvider {
       weeklyHeartRate: weeklyHeartRateAvg,
       startDate,
       endDate,
-      score: this.calculateHealthScore({
-        steps: weeklyStepsTotal,
-        distance: weeklyDistanceTotal,
-        calories: weeklyCaloriesTotal,
-        heartRate: weeklyHeartRateAvg
-      })
+      score: 0 // Will be calculated in BaseHealthProvider
     };
   }
 
@@ -168,18 +158,4 @@ export class GoogleHealthProvider extends BaseHealthProvider {
     return validReadings > 0 ? Math.round(sum / validReadings) : 0;
   }
 
-  private calculateHealthScore(metrics: {
-    steps: number;
-    distance: number;
-    calories: number;
-    heartRate: number;
-  }): number {
-    const stepsScore = Math.min(metrics.steps / 10000, 1) * 25;
-    const distanceScore = Math.min(metrics.distance / 8000, 1) * 25;
-    const caloriesScore = Math.min(metrics.calories / 500, 1) * 25;
-    const heartRateScore = metrics.heartRate > 60 && metrics.heartRate < 100 ? 25 : 
-      metrics.heartRate > 40 && metrics.heartRate < 120 ? 15 : 0;
-
-    return Math.round(stepsScore + distanceScore + caloriesScore + heartRateScore);
-  }
 }

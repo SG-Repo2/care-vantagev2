@@ -9,7 +9,7 @@ import { AppProvider } from './src/context/AppContext';
 import { AuthProvider } from './src/core/auth/contexts/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { ErrorHandlingService } from './src/services/error/ErrorHandlingService';
-import { HealthProviderFactory } from './src/core/contexts/health/services/providers/HealthProviderFactory';
+import { HealthProviderFactory } from './src/core/contexts/health/providers/HealthProviderFactory';
 import { lightTheme } from './src/theme';
 
 // Ignore specific warnings

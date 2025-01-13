@@ -1,10 +1,17 @@
-import type { 
-  HealthMetrics, 
-  HealthProvider, 
+import type {
+  HealthMetrics,
+  HealthProvider,
   WeeklyMetrics,
-  HealthError 
+  HealthError
 } from '../types';
 import { HealthDataValidator } from '../validators/healthDataValidator';
+import {
+  normalizeSteps,
+  normalizeDistance,
+  normalizeCalories,
+  averageHeartRate
+} from '../core/transforms/metricTransforms';
+import { calculateHealthScore } from '../core/transforms/scoreCalculator';
 
 export abstract class BaseHealthProvider implements HealthProvider {
   protected authorized = false;
@@ -69,14 +76,38 @@ export abstract class BaseHealthProvider implements HealthProvider {
         throw new Error('Not authorized to access health data');
       }
 
-      const metrics = await this.fetchNativeMetrics();
-      const validation = HealthDataValidator.validateMetrics(metrics);
+      // Fetch raw metrics from platform-specific implementation
+      const rawMetrics = await this.fetchNativeMetrics();
+      
+      // Apply transformations
+      const transformedMetrics: HealthMetrics & WeeklyMetrics = {
+        steps: normalizeSteps(rawMetrics.steps),
+        distance: normalizeDistance(rawMetrics.distance),
+        calories: normalizeCalories(rawMetrics.calories),
+        heartRate: averageHeartRate([rawMetrics.heartRate]), // Convert to array
+        lastUpdated: rawMetrics.lastUpdated,
+        score: calculateHealthScore({
+          steps: rawMetrics.steps,
+          distance: rawMetrics.distance,
+          calories: rawMetrics.calories,
+          heartRate: rawMetrics.heartRate,
+          lastUpdated: rawMetrics.lastUpdated
+        }),
+        weeklySteps: rawMetrics.weeklySteps,
+        weeklyDistance: rawMetrics.weeklyDistance,
+        weeklyCalories: rawMetrics.weeklyCalories,
+        weeklyHeartRate: rawMetrics.weeklyHeartRate,
+        startDate: rawMetrics.startDate,
+        endDate: rawMetrics.endDate
+      };
 
+      // Validate transformed metrics
+      const validation = HealthDataValidator.validateMetrics(transformedMetrics);
       if (!validation.isValid) {
         throw new Error(validation.error?.message || 'Invalid health metrics data');
       }
 
-      return metrics;
+      return transformedMetrics;
     } catch (error) {
       const healthError: HealthError = {
         type: 'data',
