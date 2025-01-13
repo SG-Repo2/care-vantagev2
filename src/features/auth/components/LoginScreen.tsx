@@ -4,7 +4,7 @@ import { TextInput, Text, useTheme } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { FontAwesome } from '@expo/vector-icons';
 import { AuthStackParamList } from '../../../navigation/types';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../core/auth/contexts/AuthContext';
 import { Button } from '../../../components/common/atoms/Button';
 import { spacing } from '../../../components/common/theme/spacing';
 import { createStyles } from '../styles/LoginScreen.styles';
@@ -41,11 +41,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const handleGoogleSignIn = async () => {
     setLocalError(null);
     try {
-      await signInWithGoogle();
+      // Get Google OAuth token - this would typically come from Google Sign-In SDK
+      const idToken = await getGoogleIdToken();
+      await signInWithGoogle(idToken);
     } catch (err) {
       console.error('Google sign-in error:', err);
       setLocalError('Failed to sign in with Google. Please try again.');
     }
+  };
+
+  const getGoogleIdToken = async (): Promise<string> => {
+    // TODO: Implement Google Sign-In SDK integration
+    throw new Error('Google Sign-In not implemented');
   };
 
   const error = localError || authError;
@@ -117,12 +124,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           size="large"
           onPress={handleGoogleSignIn}
           loading={isLoading}
-          disabled={isLoading}
+          disabled={true}
           icon={GoogleIcon}
           fullWidth
           style={[styles.button, styles.googleButton]}
         >
-          Sign in with Google
+          Sign in with Google (Coming Soon)
         </Button>
 
         <Button

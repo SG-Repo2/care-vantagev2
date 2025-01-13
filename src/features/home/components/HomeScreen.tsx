@@ -245,7 +245,7 @@ export const HomeScreen: React.FC = () => {
         <Animated.View style={[styles.header]} entering={SlideInDown}>
           <View style={styles.headerTop}>
             <Text variant="headlineMedium" style={styles.welcomeText}>
-              Welcome back, Sean
+              Welcome back, {user?.displayName || 'User'}
             </Text>
             <IconButton
               icon="trophy"

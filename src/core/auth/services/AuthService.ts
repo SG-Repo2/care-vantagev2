@@ -73,6 +73,30 @@ export class AuthService {
   }
 
   /**
+   * Sign up with email and password
+   */
+  public async signUpWithEmail(email: string, password: string): Promise<User> {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      if (!data.user || !data.session) {
+        throw new Error('No user data or session returned');
+      }
+
+      const user = mapSupabaseUser(data.user);
+      await this.handleSuccessfulAuth(data.session, user);
+      return user;
+    } catch (error) {
+      Logger.error('Email sign-up failed', { error, email });
+      throw this.handleError(error, 'signUpWithEmail');
+    }
+  }
+
+  /**
    * Sign out the current user
    */
   public async signOut(): Promise<void> {
