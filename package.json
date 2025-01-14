@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@babel/preset-env": "^7.1.6",
+    "@expo/config-plugins": "^9.0.14",
     "@expo/vector-icons": "^14.0.4",
     "@react-native-async-storage/async-storage": "^1.21.0",
     "@react-native-community/blur": "^4.4.1",
