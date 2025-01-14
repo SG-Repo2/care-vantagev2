@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import Constants from 'expo-constants';
@@ -40,15 +40,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     ]
   });
 
+  const isRefreshing = useRef(false);
+  
   const refreshSession = useCallback(async (): Promise<void> => {
+    if (isRefreshing.current) {
+      Logger.info('Session refresh already in progress');
+      return;
+    }
+
+    isRefreshing.current = true;
+
     try {
+      Logger.info('Starting session refresh', {
+        userId: state.user?.id,
+        timestamp: new Date().toISOString()
+      });
+
       const user = await authService.refreshSession();
+      
       setState(prev => ({
         ...prev,
         user,
         error: null,
         isAuthenticated: !!user
       }));
+
+      Logger.info('Session refresh successful', {
+        userId: user?.id,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
       Logger.error('Session refresh failed:', {
         error,
@@ -60,6 +80,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         error: error instanceof Error ? error.message : 'Failed to refresh session',
         isLoading: false
       }));
+    } finally {
+      isRefreshing.current = false;
     }
   }, [state.user?.id]);
 
@@ -96,7 +118,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [refreshSession, state.user?.id]);
 
   useEffect(() => {
+    let isSubscribed = true;
+    let unsubscribe: (() => void) | undefined;
+
     const initAuth = async () => {
+      if (!isSubscribed) return;
+
       try {
         Logger.info('Starting auth initialization...', {
           timestamp: new Date().toISOString(),
@@ -104,6 +131,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
         
         const user = await authService.initializeAuth();
+        
+        if (!isSubscribed) return;
+
         Logger.info('Auth initialization successful', {
           userId: user?.id,
           timestamp: new Date().toISOString(),
@@ -116,7 +146,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           isLoading: false,
           isAuthenticated: !!user
         }));
+
+        // Only subscribe to auth changes after successful initialization
+        if (isSubscribed) {
+          unsubscribe = authService.subscribeToAuthChanges((updatedUser) => {
+            if (!isSubscribed) return;
+            
+            Logger.info('Auth state changed', {
+              userId: updatedUser?.id,
+              isAuthenticated: !!updatedUser,
+              timestamp: new Date().toISOString(),
+              context: 'authStateChange'
+            });
+            
+            setState(prev => ({
+              ...prev,
+              user: updatedUser,
+              isAuthenticated: !!updatedUser,
+              error: null
+            }));
+          });
+        }
       } catch (error) {
+        if (!isSubscribed) return;
+
         Logger.error('Auth initialization error:', {
           error,
           timestamp: new Date().toISOString(),
@@ -133,41 +186,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     initAuth();
 
-    // Subscribe to auth state changes
-    const unsubscribe = authService.subscribeToAuthChanges((user) => {
-      Logger.info('Auth state changed', {
-        userId: user?.id,
-        isAuthenticated: !!user,
-        timestamp: new Date().toISOString(),
-        context: 'authStateChange'
-      });
-      
-      setState(prev => ({
-        ...prev,
-        user,
-        isAuthenticated: !!user,
-        error: null
-      }));
-    });
-
     return () => {
-      Logger.info('Cleaning up auth subscriptions', {
-        timestamp: new Date().toISOString(),
-        context: 'cleanup'
-      });
-      unsubscribe();
+      isSubscribed = false;
+      if (unsubscribe) {
+        Logger.info('Cleaning up auth subscriptions', {
+          timestamp: new Date().toISOString(),
+          context: 'cleanup'
+        });
+        unsubscribe();
+      }
     };
   }, []);
-
-  // Handle Google Auth Response
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      handleGoogleSignIn(id_token);
-    } else if (response?.type === 'error') {
-      handleAuthError(new Error(response.error?.message || 'Failed to authenticate with Google'), 'googleAuth');
-    }
-  }, [response]);
 
   const handleGoogleSignIn = async (idToken: string) => {
     if (!idToken) {
@@ -216,7 +245,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // Handle Google Auth Response
+  useEffect(() => {
+    let isHandling = false;
+
+    const handleResponse = async () => {
+      if (isHandling || !response) return;
+      isHandling = true;
+
+      try {
+        if (response.type === 'success') {
+          const { id_token } = response.params;
+          await handleGoogleSignIn(id_token);
+        } else if (response.type === 'error') {
+          handleAuthError(
+            new Error(response.error?.message || 'Failed to authenticate with Google'),
+            'googleAuth'
+          );
+        }
+      } finally {
+        isHandling = false;
+      }
+    };
+
+    handleResponse();
+  }, [response, handleAuthError]);
+
+  const isGettingToken = useRef(false);
+  
   const getAccessToken = useCallback(async () => {
+    if (isGettingToken.current) {
+      Logger.info('Token retrieval already in progress');
+      // Wait for the existing operation to complete
+      while (isGettingToken.current) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return authService.getAccessToken();
+    }
+
+    isGettingToken.current = true;
+
     try {
       Logger.info('Attempting to get access token', {
         userId: state.user?.id,
@@ -267,6 +335,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       throw error;
+    } finally {
+      isGettingToken.current = false;
     }
   }, [refreshSession, state.user?.id]);
 
@@ -279,39 +349,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isAuthenticated: !!user
       }));
     },
-    login: async (email: string, password: string) => {
+    login: useCallback(async (email: string, password: string) => {
+      if (state.isLoading) {
+        Logger.info('Login operation already in progress');
+        return;
+      }
+
       try {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
         const user = await authService.signInWithEmail(email, password);
-        setState(prev => ({ 
-          ...prev, 
-          user, 
+        setState(prev => ({
+          ...prev,
+          user,
           error: null,
-          isAuthenticated: true 
+          isAuthenticated: true
         }));
       } catch (error) {
         handleAuthError(error, 'signInWithEmail');
       } finally {
         setState(prev => ({ ...prev, isLoading: false }));
       }
-    },
-    register: async (email: string, password: string) => {
+    }, [state.isLoading, handleAuthError]),
+
+    register: useCallback(async (email: string, password: string) => {
+      if (state.isLoading) {
+        Logger.info('Registration operation already in progress');
+        return;
+      }
+
       try {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
         const user = await authService.signUpWithEmail(email, password);
-        setState(prev => ({ 
-          ...prev, 
-          user, 
+        setState(prev => ({
+          ...prev,
+          user,
           error: null,
-          isAuthenticated: true 
+          isAuthenticated: true
         }));
       } catch (error) {
         handleAuthError(error, 'signUpWithEmail');
       } finally {
         setState(prev => ({ ...prev, isLoading: false }));
       }
-    },
-    signInWithGoogle: async () => {
+    }, [state.isLoading, handleAuthError]),
+    signInWithGoogle: useCallback(async () => {
+      if (state.isLoading) {
+        Logger.info('Google sign-in operation already in progress');
+        return;
+      }
+
       try {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
         if (!request) {
@@ -322,22 +408,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         handleAuthError(error, 'signInWithGoogle');
         setState(prev => ({ ...prev, isLoading: false }));
       }
-    },
-    logout: async () => {
+    }, [state.isLoading, request, promptAsync, handleAuthError]),
+
+    logout: useCallback(async () => {
+      if (state.isLoading) {
+        Logger.info('Logout operation already in progress');
+        return;
+      }
+
       try {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
         await authService.clearAuthData();
-        setState(prev => ({ 
-          ...prev, 
+        setState(prev => ({
+          ...prev,
           user: null,
-          isAuthenticated: false 
+          isAuthenticated: false
         }));
       } catch (error) {
         handleAuthError(error, 'logout');
       } finally {
         setState(prev => ({ ...prev, isLoading: false }));
       }
-    },
+    }, [state.isLoading, handleAuthError]),
     refreshSession,
     getAccessToken
   };
