@@ -1,4 +1,3 @@
-import { supabase } from '@utils/supabase';
 import { User, AuthCredentials, mapSupabaseUser, GoogleAuthResponse } from '../types/auth.types';
 import { SessionManager } from './SessionManager';
 import { TokenManager } from './TokenManager';
@@ -9,6 +8,7 @@ import DeviceInfo from 'react-native-device-info';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from '@core/storage/StorageService';
+import { supabaseGateway } from '@core/supabase/SupabaseGateway';
 
 export class AuthService {
   private static instance: AuthService;
@@ -32,18 +32,12 @@ export class AuthService {
    */
   public async signInWithEmail(email: string, password: string): Promise<User> {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-      if (!data.user || !data.session) {
+      const response = await supabaseGateway.signInWithEmail(email, password);
+      if (!response.data.user || !response.data.session) {
         throw new Error('No user data or session returned');
       }
 
-      const user = mapSupabaseUser(data.user);
-      await this.handleSuccessfulAuth(data.session, user);
+      const user = mapSupabaseUser(response.data.user);
       return user;
     } catch (error) {
       Logger.error('Email sign-in failed', { error, email });
@@ -58,25 +52,12 @@ export class AuthService {
     try {
       Logger.info('Starting Google sign-in with ID token');
       
-      // Exchange the Google ID token for Supabase session
-      const { data: { user, session }, error } = await supabase.auth.signInWithIdToken({
-        provider: 'google',
-        token: idToken,
-        nonce: undefined // Supabase will generate a nonce automatically
-      });
-
-      if (error) throw error;
-      if (!user || !session) {
+      const response = await supabaseGateway.signInWithGoogle(idToken);
+      if (!response.data.user || !response.data.session) {
         throw new Error('No user data or session returned from Supabase');
       }
 
-      // Store Google auth token securely
-      await this.storeTokenSecurely('google_id_token', idToken);
-      
-      // Map user and handle auth
-      const mappedUser = mapSupabaseUser(user);
-      await this.handleSuccessfulAuth(session, mappedUser);
-
+      const mappedUser = mapSupabaseUser(response.data.user);
       Logger.info('Google sign-in successful', { userId: mappedUser.id });
       return mappedUser;
     } catch (error) {
@@ -90,18 +71,12 @@ export class AuthService {
    */
   public async signUpWithEmail(email: string, password: string): Promise<User> {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-      if (!data.user || !data.session) {
+      const response = await supabaseGateway.signUpWithEmail(email, password);
+      if (!response.data.user || !response.data.session) {
         throw new Error('No user data or session returned');
       }
 
-      const user = mapSupabaseUser(data.user);
-      await this.handleSuccessfulAuth(data.session, user);
+      const user = mapSupabaseUser(response.data.user);
       return user;
     } catch (error) {
       Logger.error('Email sign-up failed', { error, email });
@@ -111,14 +86,7 @@ export class AuthService {
 
   public async clearAuthData(): Promise<void> {
     try {
-      // Sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      // Clear secure storage
-      await SecureStore.deleteItemAsync('access_token');
-      await SecureStore.deleteItemAsync('refresh_token');
-      await SecureStore.deleteItemAsync('google_id_token');
+      await supabaseGateway.signOut();
       
       // Clear stored tokens and user data
       await StorageService.clearAll();
@@ -128,9 +96,6 @@ export class AuthService {
         '@health_permissions_granted',
         // Add any other auth-related keys that need to be cleared
       ]);
-
-      // Clear local session
-      await this.sessionManager.clearSession();
       
       Logger.info('Auth data cleared successfully');
     } catch (error) {
@@ -142,20 +107,13 @@ export class AuthService {
   public async initializeAuth(): Promise<User | null> {
     try {
       Logger.info('Initializing auth...');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) throw sessionError;
-      if (!session) {
+      const user = await supabaseGateway.getCurrentUser();
+      if (!user) {
         Logger.info('No existing auth session found');
         return null;
       }
 
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) throw error;
-      if (!user) return null;
-
       const mappedUser = mapSupabaseUser(user);
-      await this.handleSuccessfulAuth(session, mappedUser);
       return mappedUser;
     } catch (error) {
       Logger.error('Auth initialization failed', { error });
@@ -165,14 +123,12 @@ export class AuthService {
 
   public async refreshSession(): Promise<User> {
     try {
-      const { data: { session }, error } = await supabase.auth.refreshSession();
-      if (error) throw error;
-      if (!session?.user) {
+      const response = await supabaseGateway.refreshSession();
+      if (!response.data.session?.user) {
         throw new Error('No user data or session returned');
       }
 
-      const user = mapSupabaseUser(session.user);
-      await this.handleSuccessfulAuth(session, user);
+      const user = mapSupabaseUser(response.data.session.user);
       return user;
     } catch (error) {
       Logger.error('Session refresh failed', { error });
@@ -207,24 +163,14 @@ export class AuthService {
   }
 
   public subscribeToAuthChanges(callback: (user: User | null) => void): () => void {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
-      try {
-        if (session?.user) {
-          const mappedUser = mapSupabaseUser(session.user);
-          await this.handleSuccessfulAuth(session, mappedUser);
-          callback(mappedUser);
-        } else {
-          callback(null);
-        }
-      } catch (error) {
-        Logger.error('Auth state change handler failed', { error });
+    return supabaseGateway.subscribeToAuthChanges((user) => {
+      if (user) {
+        const mappedUser = mapSupabaseUser(user);
+        callback(mappedUser);
+      } else {
         callback(null);
       }
     });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }
 
   private async storeTokenSecurely(key: string, token: string): Promise<void> {
@@ -242,43 +188,6 @@ export class AuthService {
     } catch (error) {
       Logger.error('Failed to retrieve token', { error });
       return null;
-    }
-  }
-
-  private async handleSuccessfulAuth(
-    session: any,
-    user: User
-  ): Promise<void> {
-    try {
-      // Create new session
-      const deviceId = await DeviceInfo.getUniqueId();
-      const newSession = {
-        accessToken: session.access_token,
-        refreshToken: session.refresh_token,
-        expiresAt: Date.now() + (session.expires_in * 1000),
-        userId: user.id,
-        deviceId,
-        lastValidated: Date.now(),
-        validationInterval: 5 * 60 * 1000, // 5 minutes
-      };
-
-      // Validate token
-      const isValid = await this.tokenManager.validateToken(session.access_token);
-      if (!isValid) {
-        throw new TokenRefreshError({ message: 'Invalid token received' });
-      }
-
-      // Store tokens securely
-      await this.storeTokenSecurely('access_token', session.access_token);
-      await this.storeTokenSecurely('refresh_token', session.refresh_token);
-
-      // Set session
-      await this.sessionManager.setSession(newSession);
-
-      Logger.info('Authentication successful', { userId: user.id });
-    } catch (error) {
-      Logger.error('Failed to handle successful auth', { error });
-      throw error;
     }
   }
 
