@@ -1,22 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { authService } from '../services/AuthService';
-import { User, AuthState } from '../types/auth.types';
+import { User, AuthState, AuthContextType } from '../types/auth.types';
 import { supabase } from '../../../utils/supabase';
 import { mapSupabaseUser } from '../types/auth.types';
 import { Logger } from '../../../utils/error/Logger';
 import { SessionExpiredError, TokenRefreshError } from '../errors/AuthErrors';
 import { StorageService } from '../../../core/storage/StorageService';
-
-interface AuthContextType extends AuthState {
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: (idToken: string) => Promise<void>;
-  signOut: (error?: Error) => Promise<void>;
-  updateUser: (user: User) => void;
-  refreshSession: () => Promise<void>;
-  getAccessToken: () => Promise<string>;
-}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -26,7 +17,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [state, setState] = useState<AuthState>({
     user: null,
     isLoading: true,
-    error: null
+    error: null,
+    isAuthenticated: false
   });
 
 
@@ -191,7 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const value: AuthContextType = {
     ...state,
-    signInWithEmail: async (email: string, password: string) => {
+    login: async (email: string, password: string) => {
       try {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
         const user = await authService.signInWithEmail(email, password);
@@ -202,7 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setState(prev => ({ ...prev, isLoading: false }));
       }
     },
-    signUpWithEmail: async (email: string, password: string) => {
+    register: async (email: string, password: string) => {
       try {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
         const user = await authService.signUpWithEmail(email, password);
@@ -213,10 +205,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setState(prev => ({ ...prev, isLoading: false }));
       }
     },
-    signInWithGoogle: async (idToken: string) => {
+    signInWithGoogle: async () => {
       try {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
-        const user = await authService.signInWithGoogle(idToken);
+        await GoogleSignin.signIn();
+        const googleUser = await GoogleSignin.getCurrentUser();
+        if (!googleUser?.idToken) {
+          throw new Error('Failed to get Google ID token');
+        }
+        const user = await authService.signInWithGoogle(googleUser.idToken);
         setState(prev => ({ ...prev, user, error: null }));
       } catch (error) {
         handleAuthError(error, 'signInWithGoogle');
@@ -224,7 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setState(prev => ({ ...prev, isLoading: false }));
       }
     },
-    signOut: async (error?: Error) => {
+    logout: async () => {
       try {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
         
@@ -233,14 +230,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         
         // Clear all auth-related data using the clearAuthData function
         await clearAuthData();
-        
-        // If there was an error that triggered the signout, set it in state
-        if (error) {
-          setState(prev => ({
-            ...prev,
-            error: error.message
-          }));
-        }
       } catch (signOutError) {
         console.error('Error during sign out:', signOutError);
         setState(prev => ({
@@ -250,9 +239,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } finally {
         setState(prev => ({ ...prev, isLoading: false }));
       }
-    },
-    updateUser: (user: User) => {
-      setState(prev => ({ ...prev, user }));
     },
     refreshSession,
     getAccessToken

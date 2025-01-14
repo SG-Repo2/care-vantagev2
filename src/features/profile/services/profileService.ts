@@ -1,5 +1,5 @@
 import { supabase } from '../../../utils/supabase';
-import { User } from '../../auth/types/auth';
+import { User } from '../../../core/auth/types/auth.types';
 import type { HealthMetrics } from '../../../core/contexts/health/types';
 
 export type MeasurementSystem = 'metric' | 'imperial';

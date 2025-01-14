@@ -1,9 +1,19 @@
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface AuthState {
+  isAuthenticated: boolean;
   user: User | null;
   isLoading: boolean;
   error: string | null;
+}
+
+export interface AuthContextType extends AuthState {
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  logout: () => Promise<void>;
+  refreshSession: () => Promise<void>;
+  getAccessToken: () => Promise<string>;
 }
 
 export interface AuthCredentials {
