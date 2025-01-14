@@ -16,6 +16,17 @@ export interface AuthContextType extends AuthState {
   getAccessToken: () => Promise<string>;
 }
 
+export interface GoogleAuthResponse {
+  idToken: string;
+  accessToken: string;
+  user: {
+    id: string;
+    email: string;
+    displayName?: string;
+    photoURL?: string;
+  };
+}
+
 export interface AuthCredentials {
   email?: string;
   password?: string;

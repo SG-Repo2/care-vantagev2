@@ -1,11 +1,12 @@
 import { supabase } from '@utils/supabase';
-import { User, AuthCredentials, mapSupabaseUser } from '../types/auth.types';
+import { User, AuthCredentials, mapSupabaseUser, GoogleAuthResponse } from '../types/auth.types';
 import { SessionManager } from './SessionManager';
 import { TokenManager } from './TokenManager';
 import { Logger } from '@utils/error/Logger';
 import { SessionExpiredError, TokenRefreshError } from '../errors/AuthErrors';
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
+import * as SecureStore from 'expo-secure-store';
 
 export class AuthService {
   private static instance: AuthService;
@@ -65,8 +66,26 @@ export class AuthService {
         throw new Error('No user data or session returned');
       }
 
+      // Store Google auth tokens securely
+      await this.storeTokenSecurely('google_id_token', idToken);
+      
+      // Create GoogleAuthResponse for type safety
+      const googleAuthResponse: GoogleAuthResponse = {
+        idToken,
+        accessToken: session.access_token,
+        user: {
+          id: user.id,
+          email: user.email || '',
+          displayName: user.user_metadata?.full_name,
+          photoURL: user.user_metadata?.avatar_url
+        }
+      };
+
+      // Map user and handle auth
       const mappedUser = mapSupabaseUser(user);
       await this.handleSuccessfulAuth(session, mappedUser);
+
+      Logger.info('Google sign-in successful', { userId: mappedUser.id });
       return mappedUser;
     } catch (error) {
       Logger.error('Google sign-in failed', { error });
@@ -104,7 +123,7 @@ export class AuthService {
   public async signOut(): Promise<void> {
     try {
       // Get current token before signing out
-      const token = await this.sessionManager.getAccessToken();
+      const token = await this.getAccessToken();
       
       // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
@@ -114,6 +133,10 @@ export class AuthService {
       if (token) {
         await this.tokenManager.revokeToken(token);
       }
+
+      // Clear secure storage
+      await SecureStore.deleteItemAsync('access_token');
+      await SecureStore.deleteItemAsync('refresh_token');
 
       // Clear local session
       await this.sessionManager.clearSession();
@@ -137,7 +160,21 @@ export class AuthService {
    */
   public async getAccessToken(): Promise<string> {
     try {
-      return await this.sessionManager.getAccessToken();
+      // First try to get token from secure storage
+      const secureToken = await this.getTokenSecurely('access_token');
+      if (secureToken) {
+        return secureToken;
+      }
+
+      // Fallback to session manager if not in secure storage
+      const sessionToken = await this.sessionManager.getAccessToken();
+      if (sessionToken) {
+        // Store in secure storage for future use
+        await this.storeTokenSecurely('access_token', sessionToken);
+        return sessionToken;
+      }
+
+      throw new SessionExpiredError({ message: 'No valid access token found' });
     } catch (error) {
       if (error instanceof SessionExpiredError) {
         // Handle session expiry
@@ -150,6 +187,24 @@ export class AuthService {
   /**
    * Handle successful authentication
    */
+  private async storeTokenSecurely(key: string, token: string): Promise<void> {
+    try {
+      await SecureStore.setItemAsync(key, token);
+    } catch (error) {
+      Logger.error('Failed to store token securely', { error });
+      throw error;
+    }
+  }
+
+  private async getTokenSecurely(key: string): Promise<string | null> {
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch (error) {
+      Logger.error('Failed to retrieve token', { error });
+      return null;
+    }
+  }
+
   private async handleSuccessfulAuth(
     session: any,
     user: User
@@ -167,11 +222,15 @@ export class AuthService {
         validationInterval: 5 * 60 * 1000, // 5 minutes
       };
 
-      // Validate and store token
+      // Validate token
       const isValid = await this.tokenManager.validateToken(session.access_token);
       if (!isValid) {
         throw new TokenRefreshError({ message: 'Invalid token received' });
       }
+
+      // Store tokens securely
+      await this.storeTokenSecurely('access_token', session.access_token);
+      await this.storeTokenSecurely('refresh_token', session.refresh_token);
 
       // Set session
       await this.sessionManager.setSession(newSession);
