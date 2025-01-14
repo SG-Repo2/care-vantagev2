@@ -118,8 +118,55 @@ export class TooManyRequestsError extends AuthError {
   }
 }
 
+// New error classes for Expo Auth Session
+export class GoogleAuthError extends AuthError {
+  constructor(context?: Record<string, any>) {
+    super(
+      'Failed to authenticate with Google',
+      'AUTH_GOOGLE_ERROR',
+      context
+    );
+    this.name = 'GoogleAuthError';
+  }
+}
+
+export class AuthSessionError extends AuthError {
+  constructor(context?: Record<string, any>) {
+    super(
+      'Authentication session error occurred',
+      'AUTH_SESSION_ERROR',
+      context
+    );
+    this.name = 'AuthSessionError';
+  }
+}
+
+export class AuthSessionCancelledError extends AuthError {
+  constructor(context?: Record<string, any>) {
+    super(
+      'Authentication was cancelled',
+      'AUTH_SESSION_CANCELLED',
+      context
+    );
+    this.name = 'AuthSessionCancelledError';
+  }
+}
+
 // Helper function to transform raw errors into typed AuthErrors
 export function transformAuthError(error: any): AuthError {
+  // Handle Expo Auth Session specific errors
+  if (error?.type === 'error') {
+    if (error.error?.includes('cancelled')) {
+      return new AuthSessionCancelledError({ originalError: error });
+    }
+    return new AuthSessionError({ originalError: error });
+  }
+
+  // Handle Google Auth specific errors
+  if (error?.message?.includes('Google')) {
+    return new GoogleAuthError({ originalError: error });
+  }
+
   // Handle Supabase specific errors
   if (error?.message?.includes('Invalid login credentials')) {
     return new InvalidCredentialsError({ originalError: error });

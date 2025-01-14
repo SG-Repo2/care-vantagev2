@@ -52,10 +52,12 @@ export class AuthService {
   }
 
   /**
-   * Sign in with Google OAuth token
+   * Sign in with Google OAuth token from Expo Auth Session
    */
   public async signInWithGoogle(idToken: string): Promise<User> {
     try {
+      Logger.info('Starting Google sign-in with ID token');
+      
       // Exchange the Google ID token for Supabase session
       const { data: { user, session }, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
@@ -65,24 +67,12 @@ export class AuthService {
 
       if (error) throw error;
       if (!user || !session) {
-        throw new Error('No user data or session returned');
+        throw new Error('No user data or session returned from Supabase');
       }
 
-      // Store Google auth tokens securely
+      // Store Google auth token securely
       await this.storeTokenSecurely('google_id_token', idToken);
       
-      // Create GoogleAuthResponse for type safety
-      const googleAuthResponse: GoogleAuthResponse = {
-        idToken,
-        accessToken: session.access_token,
-        user: {
-          id: user.id,
-          email: user.email || '',
-          displayName: user.user_metadata?.full_name,
-          photoURL: user.user_metadata?.avatar_url
-        }
-      };
-
       // Map user and handle auth
       const mappedUser = mapSupabaseUser(user);
       await this.handleSuccessfulAuth(session, mappedUser);
@@ -116,90 +106,6 @@ export class AuthService {
     } catch (error) {
       Logger.error('Email sign-up failed', { error, email });
       throw this.handleError(error, 'signUpWithEmail');
-    }
-  }
-
-  /**
-   * Sign out the current user
-   */
-  public async signOut(): Promise<void> {
-    try {
-      // Get current token before signing out
-      const token = await this.getAccessToken();
-      
-      // Sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-
-      // Revoke the token
-      if (token) {
-        await this.tokenManager.revokeToken(token);
-      }
-
-      // Clear secure storage
-      await SecureStore.deleteItemAsync('access_token');
-      await SecureStore.deleteItemAsync('refresh_token');
-
-      // Clear local session
-      await this.sessionManager.clearSession();
-
-      Logger.info('User signed out successfully');
-    } catch (error) {
-      Logger.error('Sign-out failed', { error });
-      throw this.handleError(error, 'signOut');
-    }
-  }
-
-  /**
-   * Check if user is authenticated
-   */
-  public isAuthenticated(): boolean {
-    return this.sessionManager.isAuthenticated();
-  }
-
-  /**
-   * Get current user's access token
-   */
-  public async refreshSession(): Promise<User> {
-    try {
-      const { data: { session }, error } = await supabase.auth.refreshSession();
-      if (error) throw error;
-      if (!session?.user) {
-        throw new Error('No user data or session returned');
-      }
-
-      const user = mapSupabaseUser(session.user);
-      await this.handleSuccessfulAuth(session, user);
-      return user;
-    } catch (error) {
-      Logger.error('Session refresh failed', { error });
-      throw this.handleError(error, 'refreshSession');
-    }
-  }
-
-  public async getAccessToken(): Promise<string> {
-    try {
-      // First try to get token from secure storage
-      const secureToken = await this.getTokenSecurely('access_token');
-      if (secureToken) {
-        return secureToken;
-      }
-
-      // Fallback to session manager if not in secure storage
-      const sessionToken = await this.sessionManager.getAccessToken();
-      if (sessionToken) {
-        // Store in secure storage for future use
-        await this.storeTokenSecurely('access_token', sessionToken);
-        return sessionToken;
-      }
-
-      throw new SessionExpiredError({ message: 'No valid access token found' });
-    } catch (error) {
-      if (error instanceof SessionExpiredError) {
-        // Handle session expiry
-        await this.signOut();
-      }
-      throw error;
     }
   }
 
@@ -257,6 +163,49 @@ export class AuthService {
     }
   }
 
+  public async refreshSession(): Promise<User> {
+    try {
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      if (error) throw error;
+      if (!session?.user) {
+        throw new Error('No user data or session returned');
+      }
+
+      const user = mapSupabaseUser(session.user);
+      await this.handleSuccessfulAuth(session, user);
+      return user;
+    } catch (error) {
+      Logger.error('Session refresh failed', { error });
+      throw this.handleError(error, 'refreshSession');
+    }
+  }
+
+  public async getAccessToken(): Promise<string> {
+    try {
+      // First try to get token from secure storage
+      const secureToken = await this.getTokenSecurely('access_token');
+      if (secureToken) {
+        return secureToken;
+      }
+
+      // Fallback to session manager if not in secure storage
+      const sessionToken = await this.sessionManager.getAccessToken();
+      if (sessionToken) {
+        // Store in secure storage for future use
+        await this.storeTokenSecurely('access_token', sessionToken);
+        return sessionToken;
+      }
+
+      throw new SessionExpiredError({ message: 'No valid access token found' });
+    } catch (error) {
+      if (error instanceof SessionExpiredError) {
+        // Handle session expiry
+        await this.clearAuthData();
+      }
+      throw error;
+    }
+  }
+
   public subscribeToAuthChanges(callback: (user: User | null) => void): () => void {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       try {
@@ -278,9 +227,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Handle successful authentication
-   */
   private async storeTokenSecurely(key: string, token: string): Promise<void> {
     try {
       await SecureStore.setItemAsync(key, token);
@@ -336,9 +282,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Handle authentication errors
-   */
   private handleError(error: any, context: string): Error {
     // Log the error with context
     Logger.error(`Auth error in ${context}:`, { error });
@@ -357,16 +300,10 @@ export class AuthService {
     return error instanceof Error ? error : new Error(error?.message || 'Authentication error');
   }
 
-  /**
-   * Get active sessions for the current user
-   */
   public async getActiveSessions() {
     return this.sessionManager.getActiveSessions();
   }
 
-  /**
-   * Revoke a specific session
-   */
   public async revokeSession(deviceId: string): Promise<void> {
     await this.sessionManager.revokeSession(deviceId);
   }

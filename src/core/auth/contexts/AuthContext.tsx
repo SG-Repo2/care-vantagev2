@@ -1,9 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { authService } from '../services/AuthService';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import Constants from 'expo-constants';
 import { User, AuthState, AuthContextType } from '../types/auth.types';
 import { Logger } from '../../../utils/error/Logger';
 import { SessionExpiredError } from '../errors/AuthErrors';
+import { authService } from '../services/AuthService';
+
+// Initialize WebBrowser for auth session
+WebBrowser.maybeCompleteAuthSession();
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -15,6 +20,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isLoading: true,
     error: null,
     isAuthenticated: false
+  });
+
+  // Initialize Google Auth Request
+  const googleAuth = Constants.expoConfig?.extra?.googleAuth;
+  
+  if (!googleAuth?.webClientId) {
+    throw new Error('Missing Google Auth configuration. Check your app.config.js and .env files.');
+  }
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: googleAuth.webClientId,
+    iosClientId: googleAuth.iosClientId,
+    androidClientId: googleAuth.androidClientId,
+    scopes: [
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'openid'
+    ]
   });
 
   const handleAuthError = useCallback((error: any, context: string) => {
@@ -80,6 +103,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
+  // Handle Google Auth Response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleGoogleSignIn(id_token);
+    } else if (response?.type === 'error') {
+      handleAuthError(new Error(response.error?.message || 'Failed to authenticate with Google'), 'googleAuth');
+    }
+  }, [response]);
+
+  const handleGoogleSignIn = async (idToken: string) => {
+    try {
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
+      const user = await authService.signInWithGoogle(idToken);
+      setState(prev => ({ 
+        ...prev, 
+        user, 
+        error: null,
+        isAuthenticated: true 
+      }));
+    } catch (error) {
+      handleAuthError(error, 'handleGoogleSignIn');
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
   const getAccessToken = useCallback(async () => {
     try {
       return await authService.getAccessToken();
@@ -136,21 +186,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     signInWithGoogle: async () => {
       try {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
-        await GoogleSignin.signIn();
-        const googleUser = await GoogleSignin.getCurrentUser();
-        if (!googleUser?.idToken) {
-          throw new Error('Failed to get Google ID token');
+        if (!request) {
+          throw new Error('Google Auth request was not initialized');
         }
-        const user = await authService.signInWithGoogle(googleUser.idToken);
-        setState(prev => ({ 
-          ...prev, 
-          user, 
-          error: null,
-          isAuthenticated: true 
-        }));
+        await promptAsync();
       } catch (error) {
         handleAuthError(error, 'signInWithGoogle');
-      } finally {
         setState(prev => ({ ...prev, isLoading: false }));
       }
     },
