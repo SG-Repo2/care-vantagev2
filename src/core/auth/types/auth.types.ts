@@ -14,6 +14,7 @@ export interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   getAccessToken: () => Promise<string>;
+  updateUser: (user: User) => void;
 }
 
 export interface GoogleAuthResponse {

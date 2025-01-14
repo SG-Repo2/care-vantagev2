@@ -7,6 +7,8 @@ import { SessionExpiredError, TokenRefreshError } from '../errors/AuthErrors';
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StorageService } from '@core/storage/StorageService';
 
 export class AuthService {
   private static instance: AuthService;
@@ -158,6 +160,23 @@ export class AuthService {
   /**
    * Get current user's access token
    */
+  public async refreshSession(): Promise<User> {
+    try {
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      if (error) throw error;
+      if (!session?.user) {
+        throw new Error('No user data or session returned');
+      }
+
+      const user = mapSupabaseUser(session.user);
+      await this.handleSuccessfulAuth(session, user);
+      return user;
+    } catch (error) {
+      Logger.error('Session refresh failed', { error });
+      throw this.handleError(error, 'refreshSession');
+    }
+  }
+
   public async getAccessToken(): Promise<string> {
     try {
       // First try to get token from secure storage
@@ -182,6 +201,81 @@ export class AuthService {
       }
       throw error;
     }
+  }
+
+  public async clearAuthData(): Promise<void> {
+    try {
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // Clear secure storage
+      await SecureStore.deleteItemAsync('access_token');
+      await SecureStore.deleteItemAsync('refresh_token');
+      await SecureStore.deleteItemAsync('google_id_token');
+      
+      // Clear stored tokens and user data
+      await StorageService.clearAll();
+      
+      // Clear any other auth-related storage
+      await AsyncStorage.multiRemove([
+        '@health_permissions_granted',
+        // Add any other auth-related keys that need to be cleared
+      ]);
+
+      // Clear local session
+      await this.sessionManager.clearSession();
+      
+      Logger.info('Auth data cleared successfully');
+    } catch (error) {
+      Logger.error('Failed to clear auth data', { error });
+      throw this.handleError(error, 'clearAuthData');
+    }
+  }
+
+  public async initializeAuth(): Promise<User | null> {
+    try {
+      Logger.info('Initializing auth...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) throw sessionError;
+      if (!session) {
+        Logger.info('No existing auth session found');
+        return null;
+      }
+
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      if (!user) return null;
+
+      const mappedUser = mapSupabaseUser(user);
+      await this.handleSuccessfulAuth(session, mappedUser);
+      return mappedUser;
+    } catch (error) {
+      Logger.error('Auth initialization failed', { error });
+      throw this.handleError(error, 'initializeAuth');
+    }
+  }
+
+  public subscribeToAuthChanges(callback: (user: User | null) => void): () => void {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+      try {
+        if (session?.user) {
+          const mappedUser = mapSupabaseUser(session.user);
+          await this.handleSuccessfulAuth(session, mappedUser);
+          callback(mappedUser);
+        } else {
+          callback(null);
+        }
+      } catch (error) {
+        Logger.error('Auth state change handler failed', { error });
+        callback(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }
 
   /**

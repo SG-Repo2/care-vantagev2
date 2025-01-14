@@ -1,43 +1,9 @@
 import { useAuth } from '../contexts/AuthContext';
-import { AuthService } from '../services/AuthService';
 import { User } from '../types/auth.types';
 import { Logger } from '@utils/error/Logger';
 
 export const useAuthentication = () => {
   const auth = useAuth();
-  const authService = AuthService.getInstance();
-
-  const isAuthenticated = (): boolean => {
-    return authService.isAuthenticated();
-  };
-
-  const getAccessToken = async (): Promise<string | null> => {
-    try {
-      return await authService.getAccessToken();
-    } catch (error) {
-      Logger.error('Failed to get access token', { error });
-      return null;
-    }
-  };
-
-  const getActiveSessions = async () => {
-    try {
-      return await authService.getActiveSessions();
-    } catch (error) {
-      Logger.error('Failed to get active sessions', { error });
-      return [];
-    }
-  };
-
-  const revokeSession = async (deviceId: string): Promise<boolean> => {
-    try {
-      await authService.revokeSession(deviceId);
-      return true;
-    } catch (error) {
-      Logger.error('Failed to revoke session', { error, deviceId });
-      return false;
-    }
-  };
 
   const updateUserProfile = async (updates: Partial<User>): Promise<void> => {
     if (!auth.user) {
@@ -50,7 +16,9 @@ export const useAuthentication = () => {
       updatedAt: new Date().toISOString()
     };
 
-    auth.updateUser(updatedUser);
+    // TODO: Implement user profile update in AuthService
+    // For now, just update the local state
+    auth.updateUser?.(updatedUser);
   };
 
   return {
@@ -58,17 +26,17 @@ export const useAuthentication = () => {
     user: auth.user,
     isLoading: auth.isLoading,
     error: auth.error,
+    isAuthenticated: auth.isAuthenticated,
     
     // Auth methods
-    signInWithEmail: auth.signInWithEmail,
+    login: auth.login,
+    register: auth.register,
     signInWithGoogle: auth.signInWithGoogle,
-    signOut: auth.signOut,
+    logout: auth.logout,
+    refreshSession: auth.refreshSession,
+    getAccessToken: auth.getAccessToken,
     
-    // Additional utilities
-    isAuthenticated,
-    getAccessToken,
-    getActiveSessions,
-    revokeSession,
+    // Profile management
     updateUserProfile,
   };
 };
