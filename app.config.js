@@ -14,8 +14,8 @@ module.exports = {
     },
     assetBundlePatterns: ['**/*'],
     scheme: 'com.groebe1kenobi.carevantage',
-    bundleIdentifier: 'com.groebe1kenobi.carevantage',
     ios: {
+      bundleIdentifier: 'com.groebe1kenobi.carevantage',
       supportsTablet: true,
       
       infoPlist: {
@@ -61,12 +61,6 @@ module.exports = {
       favicon: './assets/favicon.png'
     },
     plugins: [
-      [
-        'expo-auth-session',
-        {
-          scheme: 'com.groebe1kenobi.carevantage'
-        }
-      ],
       [
         'expo-build-properties',
         {
