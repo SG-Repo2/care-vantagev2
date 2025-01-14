@@ -4,18 +4,15 @@ import { AuthResponse, Provider, User, UserResponse, Session } from '@supabase/s
 import { Logger } from '@utils/error/Logger';
 import * as SecureStore from 'expo-secure-store';
 import { SessionManager } from '../auth/services/SessionManager';
-import { TokenManager } from '../auth/services/TokenManager';
 import DeviceInfo from 'react-native-device-info';
 import { TokenRefreshError } from '../auth/errors/AuthErrors';
 
 export class SupabaseGateway {
   private static _instance: SupabaseGateway;
   private sessionManager: SessionManager;
-  private tokenManager: TokenManager;
 
   private constructor() {
     this.sessionManager = SessionManager.getInstance();
-    this.tokenManager = TokenManager.getInstance();
   }
 
   public static getInstance(): SupabaseGateway {
@@ -39,10 +36,10 @@ export class SupabaseGateway {
         validationInterval: 5 * 60 * 1000, // 5 minutes
       };
 
-      // Validate token
-      const isValid = await this.tokenManager.validateToken(session.access_token);
+      // Validate token structure and check blacklist
+      const isValid = await this.sessionManager['validateTokenStructure'](session.access_token);
       if (!isValid) {
-        throw new TokenRefreshError({ message: 'Invalid token received' });
+        throw new TokenRefreshError({ message: 'Invalid token received or token is blacklisted' });
       }
 
       // Store tokens securely

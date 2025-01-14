@@ -1,6 +1,5 @@
 import { User, AuthCredentials, mapSupabaseUser, GoogleAuthResponse } from '../types/auth.types';
 import { SessionManager } from './SessionManager';
-import { TokenManager } from './TokenManager';
 import { Logger } from '@utils/error/Logger';
 import { SessionExpiredError, TokenRefreshError } from '../errors/AuthErrors';
 import { Platform } from 'react-native';
@@ -13,11 +12,9 @@ import { supabaseGateway } from '@core/supabase/SupabaseGateway';
 export class AuthService {
   private static instance: AuthService;
   private sessionManager: SessionManager;
-  private tokenManager: TokenManager;
 
   private constructor() {
     this.sessionManager = SessionManager.getInstance();
-    this.tokenManager = TokenManager.getInstance();
   }
 
   public static getInstance(): AuthService {
