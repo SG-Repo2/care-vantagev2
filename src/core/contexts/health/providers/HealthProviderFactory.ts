@@ -76,25 +76,39 @@ export class HealthProviderFactory {
 
         // Create appropriate provider based on platform
         if (currentPlatform === 'ios') {
+          console.log('Creating AppleHealthProvider...');
           provider = new AppleHealthProvider();
         } else if (currentPlatform === 'android') {
+          console.log('Creating GoogleHealthProvider...');
           provider = new GoogleHealthProvider();
         } else {
+          console.log('Creating MockHealthProvider for unsupported platform...');
           provider = new MockHealthProvider();
         }
 
         // Initialize the provider
+        console.log('Initializing health provider...');
         await provider.initialize();
         
+        // Only store the instance if initialization succeeds
         this.instance = provider;
+        console.log('Health provider initialized successfully');
         return provider;
       } catch (error) {
-        // If real provider fails, fallback to mock
-        console.warn('Health provider initialization failed, using mock provider:', error);
-        const mockProvider = new MockHealthProvider();
-        await mockProvider.initialize();
-        this.instance = mockProvider;
-        return mockProvider;
+        console.error('Health provider initialization failed:', error);
+        
+        // Only fallback to mock if it's an initialization error
+        if (error instanceof Error &&
+            error.message.includes('initialization')) {
+          console.warn('Falling back to mock provider...');
+          const mockProvider = new MockHealthProvider();
+          await mockProvider.initialize();
+          this.instance = mockProvider;
+          return mockProvider;
+        }
+        
+        // For permission or other errors, throw to let the app handle them
+        throw error;
       } finally {
         // Clear the initialization promise
         this.initializationPromise = null;

@@ -1,7 +1,5 @@
 import { Logger } from '@utils/error/Logger';
 import { supabase } from '@utils/supabase';
-import * as jose from 'jose';
-import * as Crypto from 'expo-crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TokenMetadata, TokenValidationResult, StorageKeys } from './types';
 
@@ -12,16 +10,52 @@ export class TokenValidator {
     this.storageKeys = storageKeys;
   }
 
-  /**
-   * Validates a JWT token's structure, expiration, and blacklist status
-   */
+  private base64Decode(str: string): string {
+    const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    try {
+      return decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+    } catch {
+      return atob(base64);
+    }
+  }
+
+  private decodeJwtHeader(token: string): any {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      return JSON.parse(this.base64Decode(parts[0]));
+    } catch {
+      return null;
+    }
+  }
+
+  private decodeJwtPayload(token: string): any {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Invalid JWT format');
+      }
+      const payload = parts[1];
+      return JSON.parse(this.base64Decode(payload));
+    } catch (error) {
+      Logger.error('Failed to decode JWT payload', { error });
+      return null;
+    }
+  }
+
   public async validateToken(token: string): Promise<TokenValidationResult> {
     try {
       // Decode the token without verifying to check structure
-      const decoded = jose.decodeJwt(token);
+      const header = this.decodeJwtHeader(token);
+      const decoded = this.decodeJwtPayload(token);
       
-      if (!decoded || !decoded.exp || !decoded.iat || !decoded.sub) {
-        Logger.warn('Invalid token structure', { decoded });
+      if (!decoded || !decoded.exp || !decoded.iat || !decoded.sub || !header) {
+        Logger.warn('Invalid token structure', { decoded, header });
         return { isValid: false, error: 'Invalid token structure' };
       }
 
@@ -71,14 +105,12 @@ export class TokenValidator {
     }
   }
 
-  /**
-   * Extracts metadata from a JWT token
-   */
   public async extractTokenMetadata(token: string): Promise<TokenMetadata | undefined> {
     try {
-      const decoded = jose.decodeJwt(token);
+      const header = this.decodeJwtHeader(token);
+      const decoded = this.decodeJwtPayload(token);
       
-      if (!decoded || !decoded.exp || !decoded.iat) {
+      if (!decoded || !decoded.exp || !decoded.iat || !header) {
         return undefined;
       }
 
@@ -97,26 +129,21 @@ export class TokenValidator {
     }
   }
 
-  /**
-   * Checks if a token is blacklisted
-   */
   public async isTokenBlacklisted(token: string): Promise<boolean> {
     try {
       const blacklistJson = await AsyncStorage.getItem(this.storageKeys.tokenBlacklist);
       if (!blacklistJson) return false;
 
       const blacklist: Record<string, number> = JSON.parse(blacklistJson);
-      const hashedToken = await this.hashToken(token);
-      return !!blacklist[hashedToken];
+      // Use last 32 chars of token as key since tokens are already unique
+      const tokenKey = token.slice(-32);
+      return !!blacklist[tokenKey];
     } catch (error) {
       Logger.error('Failed to check token blacklist', { error });
       return false;
     }
   }
 
-  /**
-   * Adds a token to the blacklist
-   */
   public async addToBlacklist(token: string): Promise<void> {
     try {
       const metadata = await this.extractTokenMetadata(token);
@@ -129,9 +156,9 @@ export class TokenValidator {
         ? JSON.parse(blacklistJson)
         : {};
 
-      // Store expiration time with hashed token
-      const hashedToken = await this.hashToken(token);
-      blacklist[hashedToken] = metadata.expiresAt;
+      // Use last 32 chars of token as key since tokens are already unique
+      const tokenKey = token.slice(-32);
+      blacklist[tokenKey] = metadata.expiresAt;
 
       await AsyncStorage.setItem(
         this.storageKeys.tokenBlacklist,
@@ -143,21 +170,6 @@ export class TokenValidator {
     }
   }
 
-  /**
-   * Creates a cryptographic hash of the token for storage
-   */
-  private async hashToken(token: string): Promise<string> {
-    const data = new TextEncoder().encode(token);
-    const hash = await Crypto.digest(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      data
-    );
-    return Buffer.from(hash).toString('base64');
-  }
-
-  /**
-   * Cleans up expired tokens from the blacklist
-   */
   public async cleanupBlacklist(): Promise<void> {
     try {
       const blacklistJson = await AsyncStorage.getItem(this.storageKeys.tokenBlacklist);
@@ -167,9 +179,9 @@ export class TokenValidator {
       const now = Date.now();
       let hasChanges = false;
 
-      for (const [hash, expiry] of Object.entries(blacklist)) {
+      for (const [key, expiry] of Object.entries(blacklist)) {
         if (expiry < now) {
-          delete blacklist[hash];
+          delete blacklist[key];
           hasChanges = true;
         }
       }

@@ -43,33 +43,79 @@ export class AppleHealthProvider extends BaseHealthProvider {
       console.warn('Failed to retrieve stored health permissions:', error);
     }
 
+    // Only initialize HealthKit, don't request permissions yet
     return new Promise((resolve, reject) => {
-      AppleHealthKit.initHealthKit(HEALTHKIT_PERMISSIONS, (error: string) => {
-        if (error) {
-          reject(new Error('Failed to initialize HealthKit'));
-          return;
+      AppleHealthKit.initHealthKit(
+        {
+          permissions: {
+            read: [],  // Empty permissions for initial setup
+            write: []
+          }
+        },
+        (error: string) => {
+          if (error) {
+            console.error('HealthKit initialization error:', error);
+            reject(new Error('Failed to initialize HealthKit'));
+            return;
+          }
+          resolve();
         }
-        resolve();
-      });
+      );
     });
   }
 
   protected async requestNativePermissions(): Promise<void> {
+    if (!this.initialized) {
+      throw new Error('HealthKit must be initialized before requesting permissions');
+    }
+
     return new Promise((resolve, reject) => {
+      console.log('Requesting HealthKit permissions...');
+      
       AppleHealthKit.initHealthKit(HEALTHKIT_PERMISSIONS, async (error: string) => {
         if (error) {
+          console.error('HealthKit permissions error:', error);
           await AsyncStorage.removeItem(this.HEALTH_PERMISSION_KEY);
           reject(new Error('Failed to get HealthKit permissions'));
           return;
         }
-        
+
         try {
+          // Verify permissions were actually granted
+          const permissions = await this.verifyPermissions();
+          if (!permissions) {
+            throw new Error('HealthKit permissions were not granted');
+          }
+
           await AsyncStorage.setItem(this.HEALTH_PERMISSION_KEY, 'granted');
+          this.authorized = true;
+          console.log('HealthKit permissions granted successfully');
           resolve();
         } catch (error) {
-          console.warn('Failed to store health permissions:', error);
-          resolve(); // Continue even if storage fails
+          console.error('HealthKit permissions verification failed:', error);
+          await AsyncStorage.removeItem(this.HEALTH_PERMISSION_KEY);
+          reject(error);
         }
+      });
+    });
+  }
+
+  private async verifyPermissions(): Promise<boolean> {
+    return new Promise((resolve) => {
+      AppleHealthKit.getAuthStatus(HEALTHKIT_PERMISSIONS, (err: string, result: any) => {
+        if (err) {
+          console.error('Failed to get auth status:', err);
+          resolve(false);
+          return;
+        }
+        
+        // Check if all required permissions are granted
+        const requiredPermissions = HEALTHKIT_PERMISSIONS.permissions.read;
+        const allGranted = requiredPermissions.every(permission =>
+          result[permission] === 'authorized'
+        );
+        
+        resolve(allGranted);
       });
     });
   }

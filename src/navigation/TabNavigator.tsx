@@ -8,7 +8,13 @@ import { ProfileScreen } from '../features/profile/components/ProfileScreen';
 import { HealthDataProvider } from '../core/contexts/health/HealthDataContext';
 
 const HomeScreenWithProvider = () => (
-  <HealthDataProvider>
+  <HealthDataProvider
+    config={{
+      enableBackgroundSync: true,
+      syncInterval: 300000, // 5 minutes
+    }}
+    validateOnChange={true}
+  >
     <HomeScreen />
   </HealthDataProvider>
 );

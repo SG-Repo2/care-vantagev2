@@ -24,26 +24,11 @@ export default function App() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-
-        
-        // Initialize other services as needed
-        await HealthProviderFactory.createProvider();
-        
-        setIsInitialized(true);
-      } catch (error) {
-        console.error('App initialization error:', error);
-        // Still mark as initialized to show the app even if some services fail
-        setIsInitialized(true);
-      }
-    };
-
-    initializeApp();
-
-    // Cleanup function
+    // Mark as initialized immediately since we don't need to wait for any initialization
+    setIsInitialized(true);
+    
     return () => {
-      HealthProviderFactory.cleanup().catch(console.error);
+      // No cleanup needed at this level
     };
   }, []);
 
