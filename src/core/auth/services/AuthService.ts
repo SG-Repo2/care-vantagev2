@@ -161,10 +161,16 @@ export class AuthService {
 
   public subscribeToAuthChanges(callback: (user: User | null) => void): () => void {
     return supabaseGateway.subscribeToAuthChanges((user) => {
-      if (user) {
-        const mappedUser = mapSupabaseUser(user);
-        callback(mappedUser);
-      } else {
+      try {
+        if (user) {
+          const mappedUser = mapSupabaseUser(user);
+          callback(mappedUser);
+        } else {
+          callback(null);
+        }
+      } catch (error) {
+        Logger.error('Error in auth subscription callback', { error });
+        // Ensure we still update the auth state even if mapping fails
         callback(null);
       }
     });

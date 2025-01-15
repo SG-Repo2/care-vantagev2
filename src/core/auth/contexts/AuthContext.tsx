@@ -67,12 +67,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [refreshSessionHook, handleAuthError]);
 
-  const isLoading = 
-    authStateLoading || 
-    googleAuthLoading || 
-    emailAuthLoading || 
-    isRefreshing || 
-    isGettingToken;
+  // Prevent loading state from getting stuck by checking auth state first
+  const isLoading = authStateLoading ? true : (
+    googleAuthLoading ||
+    emailAuthLoading ||
+    isRefreshing ||
+    isGettingToken
+  );
 
   const error = 
     authStateError || 

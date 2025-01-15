@@ -87,6 +87,7 @@ export function useAuthState(): UseAuthStateReturn {
               ...prev,
               user: updatedUser,
               isAuthenticated: !!updatedUser,
+              isLoading: false,
               error: null
             }));
           });

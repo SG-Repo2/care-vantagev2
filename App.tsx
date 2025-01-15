@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { LogBox, View } from 'react-native';
+import { LogBox, View, Text } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { PaperProvider, ActivityIndicator } from 'react-native-paper';
+import { PaperProvider, ActivityIndicator, Button } from 'react-native-paper';
 import 'react-native-reanimated';
 import 'react-native-url-polyfill/auto';
 
@@ -13,6 +13,7 @@ import { Logger } from './src/utils/error/Logger';
 
 import { HealthProviderFactory } from './src/core/contexts/health/providers/HealthProviderFactory';
 import { lightTheme } from './src/theme';
+import { authService } from './src/core/auth/services/AuthService';
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -22,13 +23,35 @@ LogBox.ignoreLogs([
 
 export default function App() {
   const [isInitialized, setIsInitialized] = useState(false);
+  const [initError, setInitError] = useState<Error | null>(null);
 
   useEffect(() => {
-    // Mark as initialized immediately since we don't need to wait for any initialization
-    setIsInitialized(true);
+    const initializeApp = async () => {
+      try {
+        Logger.info('Starting app initialization...');
+        
+        // Initialize auth first
+        await authService.initializeAuth();
+        Logger.info('Auth initialized');
+        
+        // Initialize health provider
+        await HealthProviderFactory.createProvider();
+        Logger.info('Health provider initialized');
+        
+        setIsInitialized(true);
+      } catch (error) {
+        Logger.error('App initialization failed:', error);
+        setInitError(error instanceof Error ? error : new Error('Initialization failed'));
+      }
+    };
+
+    initializeApp();
     
     return () => {
-      // No cleanup needed at this level
+      // Cleanup health provider on unmount
+      HealthProviderFactory.cleanup().catch(error => {
+        Logger.error('Health provider cleanup failed:', error);
+      });
     };
   }, []);
 
@@ -36,6 +59,20 @@ export default function App() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={lightTheme.colors.primary} />
+        {initError && (
+          <View style={{ marginTop: 20, padding: 20, alignItems: 'center' }}>
+            <Text style={{ color: 'red', marginBottom: 10, textAlign: 'center' }}>
+              {initError.message}
+            </Text>
+            <Button
+              mode="contained"
+              onPress={() => window.location.reload()}
+              style={{ marginTop: 10 }}
+            >
+              Retry
+            </Button>
+          </View>
+        )}
       </View>
     );
   }
@@ -46,9 +83,15 @@ export default function App() {
       componentStack: errorInfo.componentStack,
       context: 'AppRoot'
     });
+    
+    // Reset initialization state on critical errors
+    if (error.message.includes('initialization') || error.message.includes('auth')) {
+      setIsInitialized(false);
+      setInitError(error);
+    }
   };
 
-  return isInitialized ? (
+  return (
     <ErrorBoundary onError={handleError}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <PaperProvider theme={lightTheme}>
@@ -61,6 +104,12 @@ export default function App() {
                     componentStack: errorInfo.componentStack,
                     context: 'Navigation'
                   });
+                  
+                  // Reset app state for auth-related navigation errors
+                  if (error.message.toLowerCase().includes('auth')) {
+                    setIsInitialized(false);
+                    setInitError(error);
+                  }
                 }}
               >
                 <RootNavigator />
@@ -70,5 +119,5 @@ export default function App() {
         </PaperProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>
-  ) : null;
+  );
 }

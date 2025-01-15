@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Logger } from '../../../utils/error/Logger';
 import { SessionExpiredError } from '../errors/AuthErrors';
 import { authService } from '../services/AuthService';
@@ -15,16 +15,19 @@ export function useSessionManagement(
   userId?: string,
   onSessionRefreshed?: (user: User | null) => void
 ): UseSessionManagementReturn {
-  const isRefreshing = useRef(false);
-  const isGettingToken = useRef(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isGettingToken, setIsGettingToken] = useState(false);
+  const refreshInProgress = useRef(false);
+  const tokenInProgress = useRef(false);
 
   const refreshSession = useCallback(async (): Promise<User | null> => {
-    if (isRefreshing.current) {
+    if (refreshInProgress.current) {
       Logger.info('Session refresh already in progress');
       return null;
     }
 
-    isRefreshing.current = true;
+    refreshInProgress.current = true;
+    setIsRefreshing(true);
 
     try {
       Logger.info('Starting session refresh', {
@@ -52,21 +55,23 @@ export function useSessionManagement(
       });
       throw error;
     } finally {
-      isRefreshing.current = false;
+      refreshInProgress.current = false;
+      setIsRefreshing(false);
     }
   }, [userId, onSessionRefreshed]);
 
   const getAccessToken = useCallback(async (): Promise<string> => {
-    if (isGettingToken.current) {
+    if (tokenInProgress.current) {
       Logger.info('Token retrieval already in progress');
       // Wait for the existing operation to complete
-      while (isGettingToken.current) {
+      while (tokenInProgress.current) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       return authService.getAccessToken();
     }
 
-    isGettingToken.current = true;
+    tokenInProgress.current = true;
+    setIsGettingToken(true);
 
     try {
       Logger.info('Attempting to get access token', {
@@ -119,14 +124,15 @@ export function useSessionManagement(
 
       throw error;
     } finally {
-      isGettingToken.current = false;
+      tokenInProgress.current = false;
+      setIsGettingToken(false);
     }
   }, [userId, refreshSession]);
 
   return {
     refreshSession,
     getAccessToken,
-    isRefreshing: isRefreshing.current,
-    isGettingToken: isGettingToken.current
+    isRefreshing,
+    isGettingToken
   };
 }
