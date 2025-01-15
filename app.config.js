@@ -95,7 +95,9 @@ module.exports = {
             "android.permission.health.READ_DISTANCE",
             "android.permission.health.READ_HEART_RATE",
             "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
-          ]
+          ],
+          "minSdkVersion": 26,
+          "targetSdkVersion": 34
         }
       ]
     ],

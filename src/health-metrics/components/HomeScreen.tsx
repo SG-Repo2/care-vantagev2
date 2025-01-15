@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Text, IconButton } from 'react-native-paper';
-import { useHealthData } from '@core/contexts/health/hooks/useHealthData';
+import { useHealthData } from '../contexts/HealthDataContext';
 import { MetricCard } from './MetricCard';
 import { RingProgress } from './RingProgress';
 
 const STEPS_GOAL = 10000;
 
 export const HomeScreen = () => {
-  const [date] = useState(new Date());
   const { metrics, loading, error, refresh } = useHealthData();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -47,7 +46,7 @@ export const HomeScreen = () => {
       }
     >
       <View style={styles.dateSelector}>
-        <Text style={styles.dateText}>{date.toDateString()}</Text>
+        <Text style={styles.dateText}>{new Date().toDateString()}</Text>
       </View>
 
       <RingProgress
