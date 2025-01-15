@@ -1,6 +1,6 @@
 module.exports = {
   expo: {
-    owner:"groebe1kenobi",
+    owner: "groebe1kenobi",
     name: 'care-vantage',
     slug: 'care-vantage',
     version: '1.0.0',
@@ -13,7 +13,7 @@ module.exports = {
       backgroundColor: '#ffffff'
     },
     assetBundlePatterns: ['**/*'],
-    scheme: 'com.groebe1kenobi.carevantage',
+    scheme: 'carevantage', // Updated to a valid URI scheme
     ios: {
       bundleIdentifier: 'com.groebe1kenobi.carevantage',
       supportsTablet: true,
@@ -37,7 +37,6 @@ module.exports = {
         ],
         'com.apple.developer.healthkit.background-delivery': true
       },
-      googleServicesFile: './GoogleService-Info.plist',
       config: {
         usesNonExemptEncryption: false
       }
@@ -48,8 +47,8 @@ module.exports = {
         backgroundColor: '#ffffff'
       },
       package: 'com.groebe1kenobi.carevantage',
-      scheme: 'com.groebe1kenobi.carevantage',
-      googleServicesFile: './google-services.json',
+      scheme: 'carevantage', // Updated to a valid URI scheme
+
       permissions: [
         'android.permission.health.READ_STEPS',
         'android.permission.health.READ_DISTANCE',
@@ -101,9 +100,6 @@ module.exports = {
       ]
     ],
     extra: {
-      eas: {
-        projectId: "care-vantage-dev"
-      },
       supabase: {
         url: process.env.EXPO_PUBLIC_SUPABASE_URL,
         anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
@@ -113,6 +109,9 @@ module.exports = {
         webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
         androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
         expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID
+      },
+      eas: {
+        projectId: "ed8a0109-5476-4b93-9502-e9f46028b8d1"
       }
     },
     experiments: {

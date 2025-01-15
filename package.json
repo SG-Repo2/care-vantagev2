@@ -4,9 +4,12 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "expo start --dev-client",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
+    "start": "expo start --clear",
+    "ios:run": "expo run:ios",
+    "ios:build": "eas build --profile development --platform ios",
+    "android:build": "eas build --profile development --platform android",
+    "android:install": "yarn android:build && yarn install:apk",
+    "install:apk": "bash scripts/install-apk.sh",
     "web": "expo start --web"
   },
   "dependencies": {
