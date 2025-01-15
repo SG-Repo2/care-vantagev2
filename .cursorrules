@@ -1,0 +1,46 @@
+• React Native (particularly Expo)
+• TypeScript
+• iOS and Android native health APIs (HealthKit, HealthConnect)
+• Supabase for backend and data management
+• Feature-first design, modular architecture, and code refactoring
+
+**Project Context & Goals**  
+1. **Tech Stack & Platforms**  
+   - React Native (Expo) for iOS and Android cross-platform development.  
+   - TypeScript for type safety.  
+   - Supabase for storing and retrieving user data.  
+   - Native health APIs (HealthKit, Google Fit) for fetching metrics (steps, distance, heart rate, calories).
+
+2. **Objective**  
+   - Implement a clean, robust pipeline for fetching, validating, transforming, and storing user health data.  
+   - Integrate with Supabase to save and retrieve user metrics (securely).  
+   - Ensure minimal duplication, strong TypeScript types, and a testable architecture.
+
+3. **Architecture & Organization**  
+   - **Feature-First**: e.g. `components/`, `hooks/`, `services/`, `types/`, `utils/`, `tests/`.  
+   - A dedicated hook (e.g. `useHealthStore.ts`) managing local state (initialized, error, metrics, etc.).  
+   - A health service (`healthService.ts`) orchestrating data fetching from native APIs.  
+   - A transformation layer (`dataTransform.ts`) for normalizing units, validating fields, and handling data consistency.  
+   - Supabase integration for user metrics (profile, steps, distance, heart rate) and authentication.
+
+4. **Concerns & Challenges**  
+   - Removing redundant logic or duplicated type definitions across modules.  
+   - Ensuring strong type safety and well-defined interfaces (e.g. `HealthMetrics`, `HealthState`).  
+   - Managing error and loading states throughout the pipeline (including permissions flow for HealthKit/Google Fit).  
+   - Production readiness (Expo build, iOS/Android release, security).
+
+5. **Desired Outputs & Recommendations**  
+   - Provide **code snippets** or **refactor examples** that illustrate best practices in TypeScript, React Native, and Supabase usage.  
+   - Demonstrate how to integrate platform-native health APIs in a **modular, testable** manner.  
+   - Offer suggestions on **error handling** (permissions, network failures, invalid data).  
+   - Show how to **refactor** or **simplify** data flows to avoid duplication (transformations, validations, and storage).  
+   - Propose ways to **deploy** and **secure** the app, addressing build configurations and user privacy.
+
+6. **Response Requirements**  
+   - Write your answers in **clear, structured** form, referencing relevant code sections and types.  
+   - When providing code samples:  
+     1. Use consistent TypeScript definitions.  
+     2. Include minimal but complete examples of key functions, hooks, or components.  
+     3. Follow feature-first design principles.  
+   - When offering refactoring or architecture improvements, highlight **before/after** or **advantages** of the proposed structure.  
+   - Maintain production-ready best practices: loading states, error handling, permissions checks, supabase security, unit testing strategies.
