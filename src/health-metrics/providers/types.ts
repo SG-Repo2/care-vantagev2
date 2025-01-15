@@ -1,8 +1,8 @@
 export interface HealthMetrics {
   steps: number;
-  flights: number;
-  distance: number;  // in meters
-  heartRate?: number; // beats per minute
+  distance: number;
+  calories: number;
+  heartRate?: number;
 }
 
 export interface HealthProvider {

@@ -7,6 +7,15 @@
 	<key>com.apple.developer.healthkit.access</key>
 	<array>
 		<string>health-records</string>
+		<string>activity</string>
+		<string>fitness</string>
+		<string>heart-rate</string>
+		<string>steps</string>
+		<string>calories</string>
+		<string>distance</string>
+		<string>active-energy</string>
+		<string>basal-energy</string>
+		<string>walking-running-distance</string>
 	</array>
 	<key>com.apple.developer.healthkit.background-delivery</key>
 	<true/>

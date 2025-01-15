@@ -1,6 +1,7 @@
 import AppleHealthKit, {
   HealthInputOptions,
   HealthKitPermissions,
+  HealthValue
 } from 'react-native-health';
 import { Platform } from 'react-native';
 import { HealthMetrics, HealthProvider } from '../types';
@@ -9,7 +10,7 @@ const permissions: HealthKitPermissions = {
   permissions: {
     read: [
       AppleHealthKit.Constants.Permissions.Steps,
-      AppleHealthKit.Constants.Permissions.FlightsClimbed,
+      AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
       AppleHealthKit.Constants.Permissions.DistanceWalkingRunning,
       AppleHealthKit.Constants.Permissions.HeartRate,
     ],
@@ -68,16 +69,16 @@ export class AppleHealthProvider implements HealthProvider {
     };
 
     try {
-      const [steps, flights, distance, heartRate] = await Promise.all([
+      const [steps, calories, distance, heartRate] = await Promise.all([
         this.getSteps(options),
-        this.getFlights(options),
+        this.getCalories(options),
         this.getDistance(options),
         this.getHeartRate(options),
       ]);
 
       const metrics = {
         steps,
-        flights,
+        calories,
         distance,
         heartRate,
       };
@@ -104,16 +105,17 @@ export class AppleHealthProvider implements HealthProvider {
     });
   }
 
-  private getFlights(options: HealthInputOptions): Promise<number> {
+  private getCalories(options: HealthInputOptions): Promise<number> {
     return new Promise((resolve, reject) => {
-      AppleHealthKit.getFlightsClimbed(options, (error, results) => {
+      AppleHealthKit.getActiveEnergyBurned(options, (error, results: HealthValue[]) => {
         if (error) {
-          console.error('Error getting flights:', error);
+          console.error('Error getting calories:', error);
           reject(error);
           return;
         }
-        console.log('Flights data:', results);
-        resolve(results?.value || 0);
+        console.log('Calories data:', results);
+        const totalCalories = results.reduce((sum, result) => sum + (result.value || 0), 0);
+        resolve(totalCalories);
       });
     });
   }

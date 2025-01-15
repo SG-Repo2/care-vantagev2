@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Card, Text, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-type MetricType = 'steps' | 'distance' | 'flights' | 'heartRate';
+type MetricType = 'steps' | 'distance' | 'calories' | 'heartRate';
 
 interface MetricCardProps {
   title: string;
@@ -20,7 +20,7 @@ const getMetricColor = (type: MetricType): string => {
       return '#23C552';
     case 'distance':
       return '#88E0EF';
-    case 'flights':
+    case 'calories':
       return '#EE7752';
     case 'heartRate':
       return '#FF4B4B';
@@ -30,12 +30,13 @@ const getMetricColor = (type: MetricType): string => {
 };
 
 const formatValue = (value: number | undefined, type: MetricType): string => {
-  if (value === undefined) return 'N/A';
+  if (value === undefined || value === 0) return '--';
   
   switch (type) {
     case 'distance':
       return `${(value / 1000).toFixed(2)}`;
     case 'heartRate':
+    case 'calories':
       return `${Math.round(value)}`;
     default:
       return `${value}`;
@@ -48,6 +49,8 @@ const getUnit = (type: MetricType): string => {
       return 'km';
     case 'heartRate':
       return 'bpm';
+    case 'calories':
+      return 'kcal';
     default:
       return '';
   }
@@ -68,7 +71,10 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   if (loading) {
     return (
       <Card style={[styles.card, { borderColor: color }]}>
-        <ActivityIndicator size="large" color={color} />
+        <View style={styles.content}>
+          <ActivityIndicator size="small" color={color} />
+          <Text style={styles.title}>{title}</Text>
+        </View>
       </Card>
     );
   }
@@ -79,7 +85,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         <MaterialCommunityIcons name={icon} size={24} color={color} />
         <View style={styles.valueContainer}>
           <Text style={[styles.value, { color }]}>{formattedValue}</Text>
-          {unit && <Text style={[styles.unit, { color }]}>{unit}</Text>}
+          {unit && formattedValue !== '--' && (
+            <Text style={[styles.unit, { color }]}>{unit}</Text>
+          )}
         </View>
         <Text style={styles.title}>{title}</Text>
       </View>

@@ -12,14 +12,14 @@ import type {
 } from '../../types';
 import { BaseHealthProvider } from '../../base/BaseHealthProvider';
 
+// Match the entitlements from app.config.js
 const HEALTHKIT_PERMISSIONS = {
   permissions: {
     read: [
-      AppleHealthKit.Constants.Permissions.Steps,
-      AppleHealthKit.Constants.Permissions.DistanceWalkingRunning,
-      AppleHealthKit.Constants.Permissions.HeartRate,
-      AppleHealthKit.Constants.Permissions.HeartRateVariability,
-      AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
+      'StepCount',
+      'HeartRate',
+      'ActiveEnergyBurned',
+      'DistanceWalkingRunning'
     ],
     write: [],
   },
@@ -33,63 +33,28 @@ export class AppleHealthProvider extends BaseHealthProvider {
       throw new Error('AppleHealthProvider can only be used on iOS');
     }
 
-    // Check for stored permission state
-    try {
-      const storedPermissions = await AsyncStorage.getItem(this.HEALTH_PERMISSION_KEY);
-      if (storedPermissions === 'granted') {
-        this.authorized = true;
-      }
-    } catch (error) {
-      console.warn('Failed to retrieve stored health permissions:', error);
-    }
-
-    // Only initialize HealthKit, don't request permissions yet
+    // Initialize HealthKit with all required permissions
     return new Promise((resolve, reject) => {
-      AppleHealthKit.initHealthKit(
-        {
-          permissions: {
-            read: [],  // Empty permissions for initial setup
-            write: []
-          }
-        },
-        (error: string) => {
-          if (error) {
-            console.error('HealthKit initialization error:', error);
-            reject(new Error('Failed to initialize HealthKit'));
-            return;
-          }
-          resolve();
-        }
-      );
-    });
-  }
-
-  protected async requestNativePermissions(): Promise<void> {
-    if (!this.initialized) {
-      throw new Error('HealthKit must be initialized before requesting permissions');
-    }
-
-    return new Promise((resolve, reject) => {
-      console.log('Requesting HealthKit permissions...');
+      console.log('Initializing HealthKit with permissions:', JSON.stringify(HEALTHKIT_PERMISSIONS, null, 2));
       
       AppleHealthKit.initHealthKit(HEALTHKIT_PERMISSIONS, async (error: string) => {
         if (error) {
-          console.error('HealthKit permissions error:', error);
-          await AsyncStorage.removeItem(this.HEALTH_PERMISSION_KEY);
-          reject(new Error('Failed to get HealthKit permissions'));
+          console.error('HealthKit initialization error:', error);
+          reject(new Error(`Failed to initialize HealthKit: ${error}`));
           return;
         }
-
+        
         try {
-          // Verify permissions were actually granted
+          // Verify permissions were granted
           const permissions = await this.verifyPermissions();
           if (!permissions) {
-            throw new Error('HealthKit permissions were not granted');
+            reject(new Error('HealthKit permissions were not granted'));
+            return;
           }
 
           await AsyncStorage.setItem(this.HEALTH_PERMISSION_KEY, 'granted');
           this.authorized = true;
-          console.log('HealthKit permissions granted successfully');
+          console.log('HealthKit initialized and permissions granted successfully');
           resolve();
         } catch (error) {
           console.error('HealthKit permissions verification failed:', error);
@@ -98,6 +63,18 @@ export class AppleHealthProvider extends BaseHealthProvider {
         }
       });
     });
+  }
+
+  protected async requestNativePermissions(): Promise<void> {
+    if (!this.initialized) {
+      throw new Error('HealthKit must be initialized before requesting permissions');
+    }
+
+    // Permissions are now requested during initialization
+    const permissions = await this.verifyPermissions();
+    if (!permissions) {
+      throw new Error('HealthKit permissions were not granted');
+    }
   }
 
   private async verifyPermissions(): Promise<boolean> {
@@ -109,11 +86,15 @@ export class AppleHealthProvider extends BaseHealthProvider {
           return;
         }
         
-        // Check if all required permissions are granted
-        const requiredPermissions = HEALTHKIT_PERMISSIONS.permissions.read;
-        const allGranted = requiredPermissions.every(permission =>
-          result[permission] === 'authorized'
-        );
+        // The result.permissions.read array contains 1 for granted and 0 for denied
+        const readPermissions = result.permissions?.read || [];
+        const allGranted = readPermissions.every((status: number) => status === 1);
+        
+        console.log('HealthKit auth status:', JSON.stringify({
+          readPermissions,
+          allGranted,
+          result
+        }, null, 2));
         
         resolve(allGranted);
       });

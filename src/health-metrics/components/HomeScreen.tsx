@@ -1,22 +1,16 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Text, IconButton } from 'react-native-paper';
-import { useHealthData } from '../hooks/useHealthData';
-import { MetricCard } from '../components/MetricCard';
-import { RingProgress } from '../components/RingProgress';
+import { useHealthData } from '@core/contexts/health/hooks/useHealthData';
+import { MetricCard } from './MetricCard';
+import { RingProgress } from './RingProgress';
 
 const STEPS_GOAL = 10000;
 
 export const HomeScreen = () => {
-  const [date, setDate] = useState(new Date());
-  const { metrics, loading, error, refresh } = useHealthData(date);
+  const [date] = useState(new Date());
+  const { metrics, loading, error, refresh } = useHealthData();
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const changeDate = (numDays: number) => {
-    const newDate = new Date(date);
-    newDate.setDate(date.getDate() + numDays);
-    setDate(newDate);
-  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -27,11 +21,17 @@ export const HomeScreen = () => {
   if (error) {
     return (
       <View style={styles.container}>
-        <Text style={styles.error}>Error: {error.message}</Text>
+        <Text style={styles.error}>
+          {error.type === 'permissions' 
+            ? 'Please enable health permissions in your device settings'
+            : `Unable to fetch health data: ${error.message}`}
+        </Text>
         <IconButton icon="refresh" onPress={refresh} />
       </View>
     );
   }
+
+  const stepsProgress = metrics ? (metrics.steps || 0) / STEPS_GOAL : 0;
 
   return (
     <ScrollView
@@ -39,7 +39,7 @@ export const HomeScreen = () => {
       contentContainerStyle={styles.contentContainer}
       refreshControl={
         <RefreshControl
-          refreshing={isRefreshing}
+          refreshing={isRefreshing || loading}
           onRefresh={handleRefresh}
           tintColor="#fff"
           titleColor="#fff"
@@ -47,13 +47,11 @@ export const HomeScreen = () => {
       }
     >
       <View style={styles.dateSelector}>
-        <IconButton icon="chevron-left" onPress={() => changeDate(-1)} />
         <Text style={styles.dateText}>{date.toDateString()}</Text>
-        <IconButton icon="chevron-right" onPress={() => changeDate(1)} />
       </View>
 
       <RingProgress
-        progress={(metrics?.steps || 0) / STEPS_GOAL}
+        progress={Math.min(stepsProgress, 1)}
         radius={120}
         strokeWidth={40}
       />
@@ -74,10 +72,10 @@ export const HomeScreen = () => {
           loading={loading}
         />
         <MetricCard
-          title="Flights"
-          value={metrics?.flights}
-          icon="stairs"
-          metricType="flights"
+          title="Calories"
+          value={metrics?.calories}
+          icon="fire"
+          metricType="calories"
           loading={loading}
         />
         <MetricCard
@@ -124,5 +122,6 @@ const styles = StyleSheet.create({
     color: '#ff6b6b',
     textAlign: 'center',
     marginBottom: 10,
+    padding: 16,
   },
 }); 

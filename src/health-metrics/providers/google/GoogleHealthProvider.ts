@@ -18,8 +18,10 @@ interface DistanceRecord {
   };
 }
 
-interface FloorsRecord {
-  floors: number;
+interface CaloriesRecord {
+  energy: {
+    inKilocalories: number;
+  };
 }
 
 interface RecordsResponse<T> {
@@ -39,7 +41,7 @@ export class GoogleHealthProvider implements HealthProvider {
       await requestPermission([
         { accessType: 'read', recordType: 'Steps' },
         { accessType: 'read', recordType: 'Distance' },
-        { accessType: 'read', recordType: 'FloorsClimbed' },
+        { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
       ]);
       this.initialized = true;
       return true;
@@ -60,16 +62,17 @@ export class GoogleHealthProvider implements HealthProvider {
       endTime: new Date(date.setHours(23, 59, 59, 999)).toISOString(),
     };
 
-    const [steps, distance, flights] = await Promise.all([
+    const [steps, distance, calories] = await Promise.all([
       this.getSteps(timeRangeFilter),
       this.getDistance(timeRangeFilter),
-      this.getFlights(timeRangeFilter),
+      this.getCalories(timeRangeFilter),
     ]);
 
     return {
       steps,
       distance,
-      flights,
+      calories,
+      heartRate: undefined, // Google Health Connect doesn't support real-time heart rate
     };
   }
 
@@ -85,9 +88,10 @@ export class GoogleHealthProvider implements HealthProvider {
     return distanceArray.reduce((sum: number, cur: DistanceRecord) => sum + cur.distance.inMeters, 0);
   }
 
-  private async getFlights(timeRangeFilter: TimeRangeFilter): Promise<number> {
-    const records = await readRecords('FloorsClimbed', { timeRangeFilter });
-    const floorsArray = (records as RecordsResponse<FloorsRecord>).records;
-    return floorsArray.reduce((sum: number, cur: FloorsRecord) => sum + cur.floors, 0);
+  private async getCalories(timeRangeFilter: TimeRangeFilter): Promise<number> {
+    const records = await readRecords('ActiveCaloriesBurned', { timeRangeFilter });
+    const caloriesArray = (records as RecordsResponse<CaloriesRecord>).records;
+    return caloriesArray.reduce((sum: number, cur: CaloriesRecord) => 
+      sum + cur.energy.inKilocalories, 0);
   }
 } 

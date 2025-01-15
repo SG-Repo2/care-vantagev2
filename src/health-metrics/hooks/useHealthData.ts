@@ -26,7 +26,7 @@ export const useHealthData = (date: Date): UseHealthDataResult => {
 
   const initialize = useCallback(async () => {
     try {
-      // Reset provider instance to ensure fresh initialization
+      setLoading(true);
       await HealthProviderFactory.cleanup();
       const newProvider = await HealthProviderFactory.createProvider();
       setProvider(newProvider);
@@ -38,6 +38,8 @@ export const useHealthData = (date: Date): UseHealthDataResult => {
         details: err
       };
       throw healthError;
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -61,16 +63,20 @@ export const useHealthData = (date: Date): UseHealthDataResult => {
 
       console.log('Fetching metrics for date:', date.toISOString());
       const data = await currentProvider.getMetrics(date);
-      console.log('Received metrics:', data);
+      console.log('Received metrics:', JSON.stringify(data, null, 2));
       
-      if (!data) {
-        throw {
-          type: 'data',
-          message: 'No health data available'
-        } as HealthError;
-      }
+      // Initialize metrics with zeros if no data is available
+      const defaultMetrics: HealthMetrics = {
+        steps: 0,
+        distance: 0,
+        calories: 0,
+        heartRate: 0
+      };
 
-      setMetrics(data);
+      setMetrics({
+        ...defaultMetrics,
+        ...data // Override defaults with any actual data
+      });
     } catch (err: unknown) {
       console.error('Health data error:', err);
       const healthError: HealthError = isHealthError(err)
@@ -81,7 +87,7 @@ export const useHealthData = (date: Date): UseHealthDataResult => {
             details: err
           };
       setError(healthError);
-      setMetrics(null);
+      // Don't clear metrics on error, keep showing last known data
     } finally {
       setLoading(false);
     }
