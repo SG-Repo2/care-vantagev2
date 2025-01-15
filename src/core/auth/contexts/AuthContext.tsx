@@ -9,8 +9,8 @@ import { useEmailAuth } from '../hooks/useEmailAuth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
-  children 
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children
 }) => {
   const {
     user,
@@ -18,7 +18,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     error: authStateError,
     isAuthenticated,
     updateUser,
-    handleAuthError
+    handleAuthError,
+    initializeAuth
   } = useAuthState();
 
   const {
@@ -31,7 +32,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     refreshSession: refreshSessionHook,
     getAccessToken,
     isRefreshing,
-    isGettingToken
+    isGettingToken,
+    validateSession
   } = useSessionManagement(
     user?.id,
     updateUser
@@ -43,6 +45,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isLoading: emailAuthLoading,
     error: emailAuthError
   } = useEmailAuth(updateUser);
+
+  // Initialize auth state and session management
+  React.useEffect(() => {
+    let mounted = true;
+
+    const initialize = async () => {
+      try {
+        // First initialize auth state
+        const initialUser = await initializeAuth();
+        
+        if (!mounted) return;
+
+        if (initialUser) {
+          // Then validate session if user exists
+          await validateSession();
+        }
+      } catch (error) {
+        if (mounted) {
+          handleAuthError(error, 'initialization');
+        }
+      }
+    };
+
+    initialize();
+
+    return () => {
+      mounted = false;
+    };
+  }, [initializeAuth, validateSession, handleAuthError]);
 
   const logout = useCallback(async () => {
     if (authStateLoading || emailAuthLoading || googleAuthLoading) {

@@ -34,7 +34,7 @@ export interface SessionMetadata {
 }
 
 export interface SessionEvent {
-  type: 'session-renewed' | 'session-expired' | 'session-invalid';
+  type: 'session-renewed' | 'session-expired' | 'session-invalid' | 'session-error';
   timestamp: number;
   sessionId?: string;
   error?: Error;
@@ -57,6 +57,7 @@ export interface SessionRefreshOptions {
   maxRetries?: number;
   baseDelay?: number;
   force?: boolean;
+  onRetry?: (attempt: number, delay: number) => void;
 }
 
 export interface SessionManagerConfig {

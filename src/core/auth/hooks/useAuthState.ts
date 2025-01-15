@@ -6,6 +6,7 @@ import { User, AuthState } from '../types/auth.types';
 export interface UseAuthStateReturn extends AuthState {
   updateUser: (user: User | null) => void;
   handleAuthError: (error: unknown, context: string) => void;
+  initializeAuth: () => Promise<User | null>;
 }
 
 export function useAuthState(): UseAuthStateReturn {
@@ -41,35 +42,61 @@ export function useAuthState(): UseAuthStateReturn {
     }));
   }, [state.user?.id]);
 
+  const initializeAuth = useCallback(async (): Promise<User | null> => {
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      Logger.info('Starting auth initialization...', {
+        timestamp: new Date().toISOString(),
+        context: 'initialization'
+      });
+      
+      const user = await authService.initializeAuth();
+      
+      Logger.info('Auth initialization successful', {
+        userId: user?.id,
+        timestamp: new Date().toISOString(),
+        context: 'initialization'
+      });
+      
+      setState(prev => ({
+        ...prev,
+        user,
+        isLoading: false,
+        isAuthenticated: !!user,
+        error: null
+      }));
+
+      return user;
+    } catch (error) {
+      Logger.error('Auth initialization error:', {
+        error,
+        timestamp: new Date().toISOString(),
+        context: 'initialization'
+      });
+      
+      setState(prev => ({
+        ...prev,
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+        error: error instanceof Error ? error.message : 'Authentication error'
+      }));
+
+      throw error;
+    }
+  }, []);
+
   useEffect(() => {
     let isSubscribed = true;
     let unsubscribe: (() => void) | undefined;
 
-    const initAuth = async () => {
+    const setupAuthSubscription = async () => {
       if (!isSubscribed) return;
 
       try {
-        Logger.info('Starting auth initialization...', {
-          timestamp: new Date().toISOString(),
-          context: 'initialization'
-        });
-        
-        const user = await authService.initializeAuth();
-        
-        if (!isSubscribed) return;
-
-        Logger.info('Auth initialization successful', {
-          userId: user?.id,
-          timestamp: new Date().toISOString(),
-          context: 'initialization'
-        });
-        
-        setState(prev => ({
-          ...prev,
-          user,
-          isLoading: false,
-          isAuthenticated: !!user
-        }));
+        // Initialize auth first
+        await initializeAuth();
 
         // Only subscribe to auth changes after successful initialization
         if (isSubscribed) {
@@ -94,22 +121,11 @@ export function useAuthState(): UseAuthStateReturn {
         }
       } catch (error) {
         if (!isSubscribed) return;
-
-        Logger.error('Auth initialization error:', {
-          error,
-          timestamp: new Date().toISOString(),
-          context: 'initialization'
-        });
-        setState(prev => ({
-          ...prev,
-          user: null,
-          isLoading: false,
-          error: error instanceof Error ? error.message : 'Authentication error'
-        }));
+        handleAuthError(error, 'authSubscription');
       }
     };
 
-    initAuth();
+    setupAuthSubscription();
 
     return () => {
       isSubscribed = false;
@@ -121,11 +137,12 @@ export function useAuthState(): UseAuthStateReturn {
         unsubscribe();
       }
     };
-  }, []);
+  }, [initializeAuth, handleAuthError]);
 
   return {
     ...state,
     updateUser,
-    handleAuthError
+    handleAuthError,
+    initializeAuth
   };
 }

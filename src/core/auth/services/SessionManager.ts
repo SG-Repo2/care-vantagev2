@@ -67,27 +67,59 @@ export class SessionManager {
 
   private async verifyAndRefreshSession(session: Session): Promise<void> {
     const now = Date.now();
+    let needsRefresh = false;
     
-    // Check if session needs backend validation
-    if (now - session.lastValidated >= session.validationInterval) {
+    try {
+      // Always validate token first
       const validationResult = await this.tokenValidator.validateToken(session.accessToken);
       if (!validationResult.isValid) {
-        throw new SessionExpiredError({ message: validationResult.error });
+        needsRefresh = true;
+        Logger.info('Token validation failed, attempting refresh', {
+          error: validationResult.error,
+          sessionId: session.deviceId
+        });
       }
-      session.lastValidated = now;
-    }
 
-    try {
-      // Attempt to refresh if needed
-      const newSession = await this.sessionRefresher.refreshWithRetry(session, {
-        maxRetries: this.config.maxRefreshRetries,
-        baseDelay: this.config.baseRefreshDelayMs
-      });
+      // Check if approaching expiry
+      const timeUntilExpiry = session.expiresAt - now;
+      if (timeUntilExpiry <= this.config.refreshBeforeExpiryMs) {
+        needsRefresh = true;
+        Logger.info('Session approaching expiry, initiating refresh', {
+          timeUntilExpiry,
+          sessionId: session.deviceId
+        });
+      }
 
-      this.currentSession = newSession;
-      await this.updateSessionState(newSession);
+      if (needsRefresh) {
+        const newSession = await this.sessionRefresher.refreshWithRetry(session, {
+          maxRetries: this.config.maxRefreshRetries,
+          baseDelay: this.config.baseRefreshDelayMs,
+          onRetry: (attempt, delay) => {
+            Logger.info('Retrying session refresh', {
+              attempt,
+              nextRetryIn: delay,
+              sessionId: session.deviceId
+            });
+          }
+        });
+
+        this.currentSession = newSession;
+        await this.updateSessionState(newSession);
+        this.emitEvent('session-renewed');
+      } else {
+        // Update last validated time if no refresh needed
+        session.lastValidated = now;
+        await this.updateSessionState(session);
+      }
     } catch (error) {
-      Logger.error('Session refresh failed', { error });
+      Logger.error('Session verification/refresh failed', {
+        error,
+        sessionId: session.deviceId
+      });
+      
+      // Clean up and propagate error
+      await this.clearSession();
+      this.emitEvent('session-error', error instanceof Error ? error : new Error('Session refresh failed'));
       throw error;
     }
   }

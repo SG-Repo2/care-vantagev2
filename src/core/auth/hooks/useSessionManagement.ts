@@ -7,6 +7,7 @@ import { User } from '../types/auth.types';
 export interface UseSessionManagementReturn {
   refreshSession: () => Promise<User | null>;
   getAccessToken: () => Promise<string>;
+  validateSession: () => Promise<void>;
   isRefreshing: boolean;
   isGettingToken: boolean;
 }
@@ -129,9 +130,40 @@ export function useSessionManagement(
     }
   }, [userId, refreshSession]);
 
+  const validateSession = useCallback(async (): Promise<void> => {
+    try {
+      Logger.info('Validating session', {
+        userId,
+        timestamp: new Date().toISOString(),
+        context: 'sessionValidation'
+      });
+
+      const token = await getAccessToken();
+      if (!token) {
+        throw new SessionExpiredError({ message: 'No valid token found during validation' });
+      }
+
+      // If we got here, the token is valid
+      Logger.info('Session validation successful', {
+        userId,
+        timestamp: new Date().toISOString(),
+        context: 'sessionValidation'
+      });
+    } catch (error) {
+      Logger.error('Session validation failed', {
+        error,
+        userId,
+        timestamp: new Date().toISOString(),
+        context: 'sessionValidation'
+      });
+      throw error;
+    }
+  }, [userId, getAccessToken]);
+
   return {
     refreshSession,
     getAccessToken,
+    validateSession,
     isRefreshing,
     isGettingToken
   };
