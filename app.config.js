@@ -115,7 +115,7 @@ module.exports = {
       }
     },
     experiments: {
-      newArchEnabled: true
+      newArchEnabled: false
     },
     developmentClient: {
       silentLaunch: true
