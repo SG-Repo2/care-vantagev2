@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Text, IconButton } from 'react-native-paper';
 import { useHealthData } from '../hooks/useHealthData';
 import { MetricCard } from '../components/MetricCard';
@@ -10,11 +10,18 @@ const STEPS_GOAL = 10000;
 export const HomeScreen = () => {
   const [date, setDate] = useState(new Date());
   const { metrics, loading, error, refresh } = useHealthData(date);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const changeDate = (numDays: number) => {
     const newDate = new Date(date);
     newDate.setDate(date.getDate() + numDays);
     setDate(newDate);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refresh();
+    setIsRefreshing(false);
   };
 
   if (error) {
@@ -27,7 +34,18 @@ export const HomeScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          tintColor="#fff"
+          titleColor="#fff"
+        />
+      }
+    >
       <View style={styles.dateSelector}>
         <IconButton icon="chevron-left" onPress={() => changeDate(-1)} />
         <Text style={styles.dateText}>{date.toDateString()}</Text>
@@ -43,27 +61,34 @@ export const HomeScreen = () => {
       <View style={styles.metrics}>
         <MetricCard
           title="Steps"
-          value={metrics?.steps || 0}
+          value={metrics?.steps}
           icon="walk"
           metricType="steps"
           loading={loading}
         />
         <MetricCard
           title="Distance"
-          value={((metrics?.distance || 0) / 1000).toFixed(2)}
+          value={metrics?.distance}
           icon="map-marker-distance"
           metricType="distance"
           loading={loading}
         />
         <MetricCard
           title="Flights"
-          value={metrics?.flights || 0}
+          value={metrics?.flights}
           icon="stairs"
           metricType="flights"
           loading={loading}
         />
+        <MetricCard
+          title="Heart Rate"
+          value={metrics?.heartRate}
+          icon="heart-pulse"
+          metricType="heartRate"
+          loading={loading}
+        />
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -71,8 +96,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  contentContainer: {
     padding: 16,
     justifyContent: 'center',
+    minHeight: '100%',
   },
   dateSelector: {
     flexDirection: 'row',

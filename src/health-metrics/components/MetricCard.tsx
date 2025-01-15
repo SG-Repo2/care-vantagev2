@@ -3,14 +3,15 @@ import { View, StyleSheet } from 'react-native';
 import { Card, Text, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-type MetricType = 'steps' | 'distance' | 'flights';
+type MetricType = 'steps' | 'distance' | 'flights' | 'heartRate';
 
 interface MetricCardProps {
   title: string;
-  value: number | string;
+  value: number | undefined;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   metricType: MetricType;
   loading?: boolean;
+  unit?: string;
 }
 
 const getMetricColor = (type: MetricType): string => {
@@ -21,8 +22,34 @@ const getMetricColor = (type: MetricType): string => {
       return '#88E0EF';
     case 'flights':
       return '#EE7752';
+    case 'heartRate':
+      return '#FF4B4B';
     default:
       return '#CCCCCC';
+  }
+};
+
+const formatValue = (value: number | undefined, type: MetricType): string => {
+  if (value === undefined) return 'N/A';
+  
+  switch (type) {
+    case 'distance':
+      return `${(value / 1000).toFixed(2)}`;
+    case 'heartRate':
+      return `${Math.round(value)}`;
+    default:
+      return `${value}`;
+  }
+};
+
+const getUnit = (type: MetricType): string => {
+  switch (type) {
+    case 'distance':
+      return 'km';
+    case 'heartRate':
+      return 'bpm';
+    default:
+      return '';
   }
 };
 
@@ -32,8 +59,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   icon,
   metricType,
   loading = false,
+  unit: customUnit,
 }) => {
   const color = getMetricColor(metricType);
+  const formattedValue = formatValue(value, metricType);
+  const unit = customUnit || getUnit(metricType);
 
   if (loading) {
     return (
@@ -47,7 +77,10 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     <Card style={[styles.card, { borderColor: color }]}>
       <View style={styles.content}>
         <MaterialCommunityIcons name={icon} size={24} color={color} />
-        <Text style={[styles.value, { color }]}>{value}</Text>
+        <View style={styles.valueContainer}>
+          <Text style={[styles.value, { color }]}>{formattedValue}</Text>
+          {unit && <Text style={[styles.unit, { color }]}>{unit}</Text>}
+        </View>
         <Text style={styles.title}>{title}</Text>
       </View>
     </Card>
@@ -68,9 +101,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  valueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
   value: {
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  unit: {
+    fontSize: 14,
+    opacity: 0.8,
   },
   title: {
     color: '#999',

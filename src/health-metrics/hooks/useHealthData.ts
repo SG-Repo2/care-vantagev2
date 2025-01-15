@@ -22,15 +22,36 @@ export const useHealthData = (date: Date): UseHealthDataResult => {
   const [metrics, setMetrics] = useState<HealthMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<HealthError | null>(null);
+  const [provider, setProvider] = useState<any>(null);
+
+  const initialize = useCallback(async () => {
+    try {
+      // Reset provider instance to ensure fresh initialization
+      await HealthProviderFactory.cleanup();
+      const newProvider = await HealthProviderFactory.createProvider();
+      setProvider(newProvider);
+      return newProvider;
+    } catch (err) {
+      const healthError: HealthError = {
+        type: 'availability',
+        message: 'Health services not available on this device',
+        details: err
+      };
+      throw healthError;
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const provider = await HealthProviderFactory.createProvider();
-      const hasPermissions = await provider.requestPermissions();
-      
+      let currentProvider = provider;
+      if (!currentProvider) {
+        currentProvider = await initialize();
+      }
+
+      const hasPermissions = await currentProvider.requestPermissions();
       if (!hasPermissions) {
         throw {
           type: 'permissions',
@@ -38,9 +59,20 @@ export const useHealthData = (date: Date): UseHealthDataResult => {
         } as HealthError;
       }
 
-      const data = await provider.getMetrics(date);
+      console.log('Fetching metrics for date:', date.toISOString());
+      const data = await currentProvider.getMetrics(date);
+      console.log('Received metrics:', data);
+      
+      if (!data) {
+        throw {
+          type: 'data',
+          message: 'No health data available'
+        } as HealthError;
+      }
+
       setMetrics(data);
     } catch (err: unknown) {
+      console.error('Health data error:', err);
       const healthError: HealthError = isHealthError(err)
         ? err
         : {
@@ -49,10 +81,11 @@ export const useHealthData = (date: Date): UseHealthDataResult => {
             details: err
           };
       setError(healthError);
+      setMetrics(null);
     } finally {
       setLoading(false);
     }
-  }, [date]);
+  }, [date, provider, initialize]);
 
   useEffect(() => {
     refresh();
