@@ -8,12 +8,12 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "clean": "cd android && ./gradlew clean && cd ..",
-    "ios:run": "expo run:ios",
-    "ios:build": "eas build --profile development --platform ios",
-    "android:build": "eas build --profile development --platform android",
-    "android:install": "yarn android:build && yarn install:apk",
-    "install:apk": "bash scripts/install-apk.sh"
+    "clean": "rm -rf node_modules && rm -rf android/build android/app/build && yarn install",
+    "android:dev": "eas build --profile development --platform android --local",
+    "ios:dev": "eas build --profile development --platform ios --local",
+    "android:run": "yarn android:dev && yarn android",
+    "ios:run": "yarn ios:dev && yarn ios",
+    "metro:reset": "yarn start --reset-cache"
   },
   "dependencies": {
     "@babel/preset-env": "^7.1.6",
@@ -62,6 +62,8 @@
     "@react-native/metro-config": "^0.76.5",
     "@types/react": "~18.3.12",
     "@types/react-native-vector-icons": "^6.4.18",
+    "eas-cli": "^14.4.1",
+    "expo-cli": "^6.3.10",
     "typescript": "^5.7.2"
   },
   "private": true,

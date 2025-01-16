@@ -11,6 +11,11 @@ export default {
       resizeMode: "contain",
       backgroundColor: "#000000"
     },
+    extra: {
+      eas: {
+        projectId: "ed8a0109-5476-4b93-9502-e9f46028b8d1"
+      }
+    },
     assetBundlePatterns: [
       "**/*"
     ],

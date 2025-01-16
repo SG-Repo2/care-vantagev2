@@ -86,19 +86,20 @@ export function HealthDataProvider({ children, config }: HealthDataProviderProps
       const provider = await HealthProviderFactory.createProvider();
       
       console.log('[HealthDataContext] Requesting permissions...');
-      const permissionsGranted = await provider.requestPermissions();
-      console.log('[HealthDataContext] Permissions granted:', permissionsGranted);
-      
-      if (!permissionsGranted) {
+      try {
+        await provider.requestPermissions();
+        console.log('[HealthDataContext] Permissions granted successfully');
+      } catch (error) {
         console.error('[HealthDataContext] Permissions not granted');
         throw {
           type: 'permissions',
-          message: 'Health permissions not granted. Please grant permissions in your device settings.'
+          message: 'Health permissions not granted. Please grant permissions in your device settings.',
+          details: error
         } as HealthError;
       }
 
       console.log('[HealthDataContext] Getting metrics...');
-      const metrics = await provider.getMetrics(new Date());
+      const metrics = await provider.getMetrics();
       console.log('[HealthDataContext] Received metrics:', JSON.stringify(metrics, null, 2));
       
       dispatch({ type: 'SET_METRICS', payload: metrics });
