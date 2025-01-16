@@ -2,7 +2,6 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../../core/auth/contexts/AuthContext';
 import { useHealthData } from '../contexts/HealthDataContext';
-import AuthScreen from '../components/AuthScreen';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ErrorScreen } from '../components/ErrorScreen';
 import { TabNavigator } from './TabNavigator';
@@ -13,12 +12,10 @@ export const SimpleNavigator = () => {
   const { status, error: authError, refreshSession } = useAuth();
   const { loading: healthLoading, error: healthError } = useHealthData();
 
-  // Only show loading during initial authentication
   if (status === 'initializing') {
     return <LoadingScreen message="Initializing app..." />;
   }
 
-  // Handle auth errors
   if (status === 'error' && authError) {
     return (
       <ErrorScreen
@@ -42,18 +39,10 @@ export const SimpleNavigator = () => {
         },
       }}
     >
-      {status === 'authenticated' ? (
-        <Stack.Screen 
-          name="MainTabs" 
+      {status === 'authenticated' && (
+        <Stack.Screen
+          name="MainTabs"
           component={TabNavigator}
-          options={{
-            gestureEnabled: false,
-          }}
-        />
-      ) : (
-        <Stack.Screen 
-          name="Auth" 
-          component={AuthScreen}
           options={{
             gestureEnabled: false,
           }}
