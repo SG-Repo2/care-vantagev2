@@ -1,6 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../../core/auth/contexts/AuthContext';
+import { useHealthData } from '../contexts/HealthDataContext';
 import AuthScreen from '../components/AuthScreen';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ErrorScreen } from '../components/ErrorScreen';
@@ -9,20 +10,43 @@ import { TabNavigator } from './TabNavigator';
 const Stack = createNativeStackNavigator();
 
 export const SimpleNavigator = () => {
-  const { status, error, refreshSession } = useAuth();
+  const { status, error: authError, refreshSession } = useAuth();
+  const { loading: healthLoading, error: healthError } = useHealthData();
 
-  // Only show loading screen during initial app load
-  if (status === 'initializing') {
-    return <LoadingScreen message="Initializing app..." />;
+  // Show loading screen during initial app load or health data initialization
+  if (status === 'initializing' || (status === 'authenticated' && healthLoading)) {
+    return (
+      <LoadingScreen
+        message={
+          status === 'initializing'
+            ? "Initializing app..."
+            : "Loading health data..."
+        }
+      />
+    );
   }
 
-  if (status === 'error' && error) {
+  // Handle auth errors
+  if (status === 'error' && authError) {
     return (
       <ErrorScreen
-        error={error}
+        error={authError}
         onRetry={() => {
           console.log('Retrying auth session...');
           refreshSession?.();
+        }}
+      />
+    );
+  }
+
+  // Handle health data errors when authenticated
+  if (status === 'authenticated' && healthError) {
+    return (
+      <ErrorScreen
+        error={healthError.message}
+        onRetry={() => {
+          console.log('Retrying health data fetch...');
+          window.location.reload();
         }}
       />
     );
