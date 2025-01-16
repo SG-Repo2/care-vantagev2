@@ -13,17 +13,9 @@ export const SimpleNavigator = () => {
   const { status, error: authError, refreshSession } = useAuth();
   const { loading: healthLoading, error: healthError } = useHealthData();
 
-  // Show loading screen during initial app load or health data initialization
-  if (status === 'initializing' || (status === 'authenticated' && healthLoading)) {
-    return (
-      <LoadingScreen
-        message={
-          status === 'initializing'
-            ? "Initializing app..."
-            : "Loading health data..."
-        }
-      />
-    );
+  // Only show loading during initial authentication
+  if (status === 'initializing') {
+    return <LoadingScreen message="Initializing app..." />;
   }
 
   // Handle auth errors
@@ -34,19 +26,6 @@ export const SimpleNavigator = () => {
         onRetry={() => {
           console.log('Retrying auth session...');
           refreshSession?.();
-        }}
-      />
-    );
-  }
-
-  // Handle health data errors when authenticated
-  if (status === 'authenticated' && healthError) {
-    return (
-      <ErrorScreen
-        error={healthError.message}
-        onRetry={() => {
-          console.log('Retrying health data fetch...');
-          window.location.reload();
         }}
       />
     );

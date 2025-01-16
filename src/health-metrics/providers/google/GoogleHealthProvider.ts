@@ -30,38 +30,51 @@ interface HeartRateRecord {
 
 export class GoogleHealthProvider implements HealthProvider {
   private initialized = false;
+  private initializationPromise: Promise<void> | null = null;
+
+  private async ensureInitialized(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    // If initialization is already in progress, wait for it
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+      return;
+    }
+
+    // Start new initialization
+    this.initializationPromise = this.performInitialization();
+    try {
+      await this.initializationPromise;
+    } finally {
+      this.initializationPromise = null;
+    }
+  }
+
+  private async performInitialization(): Promise<void> {
+    if (Platform.OS !== 'android') {
+      throw new Error('GoogleHealthProvider can only be used on Android');
+    }
+
+    console.log('[GoogleHealthProvider] Initializing Health Connect...');
+    const available = await initialize();
+    
+    if (!available) {
+      throw new Error('Health Connect is not available');
+    }
+
+    console.log('[GoogleHealthProvider] Health Connect initialized successfully');
+    this.initialized = true;
+  }
 
   async initialize(): Promise<void> {
-    try {
-      if (Platform.OS !== 'android') {
-        throw new Error('GoogleHealthProvider can only be used on Android');
-      }
-
-      if (this.initialized) {
-        console.log('[GoogleHealthProvider] Already initialized');
-        return;
-      }
-
-      console.log('[GoogleHealthProvider] Initializing Health Connect...');
-      const available = await initialize();
-      
-      if (!available) {
-        throw new Error('Health Connect is not available');
-      }
-
-      console.log('[GoogleHealthProvider] Health Connect initialized successfully');
-      this.initialized = true;
-    } catch (error) {
-      console.error('[GoogleHealthProvider] Initialization error:', error);
-      throw error;
-    }
+    await this.ensureInitialized();
   }
 
   async requestPermissions(): Promise<void> {
     try {
-      if (!this.initialized) {
-        await this.initialize();
-      }
+      await this.ensureInitialized();
 
       console.log('[GoogleHealthProvider] Requesting permissions...');
       await requestPermission([
@@ -95,9 +108,7 @@ export class GoogleHealthProvider implements HealthProvider {
 
   async getMetrics(): Promise<HealthMetrics> {
     try {
-      if (!this.initialized) {
-        await this.initialize();
-      }
+      await this.ensureInitialized();
 
       const now = new Date();
       const startOfDay = new Date(now);

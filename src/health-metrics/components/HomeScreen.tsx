@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
-import { Button, Text, ActivityIndicator } from 'react-native-paper';
-import { useHealthData } from '../../core/contexts/health/hooks/useHealthData';
+import { Button, Text } from 'react-native-paper';
+import { useHealthData } from '../contexts/HealthDataContext';
 import { MetricCard } from './MetricCard';
 import { MetricModal } from './MetricModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -93,7 +93,7 @@ const HomeScreen: React.FC = () => {
     setModalVisible(true);
   };
 
-  if (!isInitialized || (loading && !metrics)) {
+  if (loading && !metrics && !isInitialized) {
     return <LoadingScreen message="Loading health data..." />;
   }
 
@@ -126,7 +126,7 @@ const HomeScreen: React.FC = () => {
         <View style={styles.grid}>
           <MetricCard
             title="Steps"
-            value={metrics?.steps}
+            value={metrics?.steps ?? 0}
             icon="walk"
             metricType="steps"
             loading={loading}
@@ -203,18 +203,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 16,
     justifyContent: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#000',
-  },
-  errorText: {
-    color: '#FF4B4B',
-    marginBottom: 16,
-    textAlign: 'center',
   },
   refreshButton: {
     marginTop: 24,

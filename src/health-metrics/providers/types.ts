@@ -14,7 +14,7 @@ export interface HealthProvider {
 }
 
 export interface HealthError {
-  type: 'permissions' | 'data' | 'availability';
+  type: 'permissions' | 'data' | 'availability' | 'validation';
   message: string;
   details?: unknown;
 }

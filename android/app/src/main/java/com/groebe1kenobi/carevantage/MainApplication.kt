@@ -2,6 +2,7 @@ package com.groebe1kenobi.carevantage
 
 import android.app.Application
 import android.content.res.Configuration
+import androidx.health.connect.client.HealthConnectClient
 
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
@@ -47,6 +48,19 @@ class MainApplication : Application(), ReactApplication {
       // If you opted-in for the New Architecture, we load the native entry point for this app.
       load()
     }
+
+    // Initialize Health Connect if available
+    try {
+      if (HealthConnectClient.isAvailable(applicationContext)) {
+        val healthConnectClient = HealthConnectClient.getOrCreate(applicationContext)
+        println("Health Connect initialized successfully")
+      } else {
+        println("Health Connect is not available on this device")
+      }
+    } catch (e: Exception) {
+      println("Error initializing Health Connect: ${e.message}")
+    }
+
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
   }
 

@@ -2,11 +2,22 @@ import React, { createContext, useContext, useReducer, useCallback, useEffect } 
 import type { HealthMetrics, HealthError } from '../providers/types';
 import { HealthProviderFactory } from '../providers/HealthProviderFactory';
 
+export interface WeeklyMetrics {
+  weeklySteps: number;
+  weeklyDistance: number;
+  weeklyCalories: number;
+  weeklyHeartRate: number;
+  startDate?: string;
+  endDate?: string;
+}
+
 interface HealthDataState {
   metrics: HealthMetrics | null;
   loading: boolean;
   error: HealthError | null;
   lastSync: string | null;
+  weeklyData: WeeklyMetrics | null;
+  isInitialized: boolean;
 }
 
 type HealthDataAction =
@@ -15,6 +26,8 @@ type HealthDataAction =
   | { type: 'SET_ERROR'; payload: HealthError }
   | { type: 'CLEAR_ERROR' }
   | { type: 'SET_LAST_SYNC'; payload: string }
+  | { type: 'SET_WEEKLY_DATA'; payload: WeeklyMetrics }
+  | { type: 'SET_INITIALIZED'; payload: boolean }
   | { type: 'RESET_STATE' };
 
 interface HealthDataContextType extends HealthDataState {
@@ -26,7 +39,9 @@ const initialState: HealthDataState = {
   metrics: null,
   loading: true,
   error: null,
-  lastSync: null
+  lastSync: null,
+  weeklyData: null,
+  isInitialized: false
 };
 
 function healthDataReducer(state: HealthDataState, action: HealthDataAction): HealthDataState {
@@ -58,6 +73,16 @@ function healthDataReducer(state: HealthDataState, action: HealthDataAction): He
         ...state,
         lastSync: action.payload
       };
+    case 'SET_WEEKLY_DATA':
+      return {
+        ...state,
+        weeklyData: action.payload
+      };
+    case 'SET_INITIALIZED':
+      return {
+        ...state,
+        isInitialized: action.payload
+      };
     case 'RESET_STATE':
       return initialState;
     default:
@@ -86,19 +111,6 @@ export function HealthDataProvider({ children, config }: HealthDataProviderProps
       console.log('[HealthDataContext] Creating provider...');
       const provider = await HealthProviderFactory.createProvider();
       
-      console.log('[HealthDataContext] Requesting permissions...');
-      try {
-        await provider.requestPermissions();
-        console.log('[HealthDataContext] Permissions granted successfully');
-      } catch (error) {
-        console.error('[HealthDataContext] Permissions not granted');
-        throw {
-          type: 'permissions',
-          message: 'Health permissions not granted. Please grant permissions in your device settings.',
-          details: error
-        } as HealthError;
-      }
-
       console.log('[HealthDataContext] Getting metrics...');
       const metrics = await provider.getMetrics();
       console.log('[HealthDataContext] Received metrics:', JSON.stringify(metrics, null, 2));
@@ -113,8 +125,20 @@ export function HealthDataProvider({ children, config }: HealthDataProviderProps
         score: Math.max(0, metrics.score || 0)
       };
 
+      // Create weekly data from metrics
+      const weeklyMetrics: WeeklyMetrics = {
+        weeklySteps: validatedMetrics.steps * 7, // Simplified example
+        weeklyDistance: validatedMetrics.distance * 7,
+        weeklyCalories: validatedMetrics.calories * 7,
+        weeklyHeartRate: validatedMetrics.heartRate,
+        startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+        endDate: new Date().toISOString()
+      };
+
       dispatch({ type: 'SET_METRICS', payload: validatedMetrics });
+      dispatch({ type: 'SET_WEEKLY_DATA', payload: weeklyMetrics });
       dispatch({ type: 'SET_LAST_SYNC', payload: new Date().toISOString() });
+      dispatch({ type: 'SET_INITIALIZED', payload: true });
     } catch (error) {
       console.error('[HealthDataContext] Health data error:', error);
       const healthError: HealthError = {

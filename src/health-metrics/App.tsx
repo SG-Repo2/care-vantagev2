@@ -3,9 +3,8 @@ import { Platform, StatusBar } from 'react-native';
 import { NavigationContainer, DarkTheme as NavigationDarkTheme } from '@react-navigation/native';
 import { Provider as PaperProvider, MD3DarkTheme } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthProvider } from '../core/auth/contexts/AuthContext';
 import { HealthDataProvider } from './contexts/HealthDataContext';
-import { SimpleNavigator } from './navigation/SimpleNavigator';
+import HomeScreen from './components/HomeScreen';
 import { ErrorBoundary } from '../core/error/ErrorBoundary';
 import { ErrorScreen } from './components/ErrorScreen';
 
@@ -85,13 +84,11 @@ export default function HealthMetricsApp() {
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" />
         <NavigationContainer theme={navigationTheme}>
-          <AuthProvider>
-            <PaperProvider theme={theme}>
-              <HealthDataProvider config={healthConfig}>
-                <SimpleNavigator />
-              </HealthDataProvider>
-            </PaperProvider>
-          </AuthProvider>
+          <PaperProvider theme={theme}>
+            <HealthDataProvider config={healthConfig}>
+              <HomeScreen />
+            </HealthDataProvider>
+          </PaperProvider>
         </NavigationContainer>
       </SafeAreaProvider>
     </ErrorBoundary>
