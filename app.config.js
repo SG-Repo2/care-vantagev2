@@ -7,7 +7,7 @@ export default {
     icon: "./assets/icon.png",
     userInterfaceStyle: "dark",
     splash: {
-      image: "./assets/splash.png",
+      image: "./assets/splash-icon.png",
       resizeMode: "contain",
       backgroundColor: "#000000"
     },
@@ -19,7 +19,22 @@ export default {
       bundleIdentifier: "com.groebe1kenobi.carevantage",
       infoPlist: {
         NSHealthShareUsageDescription: "This app requires access to health data to track your fitness metrics.",
-        NSHealthUpdateUsageDescription: "This app requires access to health data to track your fitness metrics."
+        NSHealthUpdateUsageDescription: "This app requires access to health data to track your fitness metrics.",
+        UIBackgroundModes: ["fetch", "remote-notification"],
+      },
+      config: {
+        usesNonExemptEncryption: false
+      },
+      entitlements: {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": [
+          "health-records",
+          "HKQuantityTypeIdentifierStepCount",
+          "HKQuantityTypeIdentifierHeartRate",
+          "HKQuantityTypeIdentifierActiveEnergyBurned",
+          "HKQuantityTypeIdentifierDistanceWalkingRunning"
+        ],
+        "com.apple.developer.healthkit.background-delivery": true
       }
     },
     android: {
@@ -46,6 +61,22 @@ export default {
             "HeartRate",
             "ActiveCaloriesBurned"
           ]
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          android: {
+            compileSdkVersion: 34,
+            targetSdkVersion: 34,
+            minSdkVersion: 26,
+            buildToolsVersion: "34.0.0"
+          },
+          ios: {
+            deploymentTarget: "16.1",
+            useFrameworks: "static",
+            newArchEnabled: false
+          }
         }
       ]
     ]

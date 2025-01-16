@@ -72,12 +72,15 @@ export class AppleHealthProvider implements HealthProvider {
     };
 
     try {
+      console.log('[AppleHealthProvider] Fetching metrics...');
       const [steps, calories, distance, heartRate] = await Promise.all([
         this.getSteps(options),
         this.getCalories(options),
         this.getDistance(options),
         this.getHeartRate(options),
       ]);
+
+      console.log('[AppleHealthProvider] Metrics retrieved:', { steps, calories, distance, heartRate });
 
       return {
         steps,
@@ -95,6 +98,7 @@ export class AppleHealthProvider implements HealthProvider {
 
   private getSteps(options: HealthInputOptions): Promise<number> {
     return new Promise((resolve) => {
+      console.log('[AppleHealthProvider] Reading steps...');
       AppleHealthKit.getStepCount(
         options,
         (err: string, results: { value: number }) => {
@@ -103,7 +107,9 @@ export class AppleHealthProvider implements HealthProvider {
             resolve(0);
             return;
           }
-          resolve(Math.round(results.value || 0));
+          const steps = Math.round(results.value || 0);
+          console.log('[AppleHealthProvider] Steps:', steps);
+          resolve(steps);
         }
       );
     });
@@ -111,6 +117,7 @@ export class AppleHealthProvider implements HealthProvider {
 
   private getDistance(options: HealthInputOptions): Promise<number> {
     return new Promise((resolve) => {
+      console.log('[AppleHealthProvider] Reading distance...');
       AppleHealthKit.getDistanceWalkingRunning(
         options,
         (err: string, results: { value: number }) => {
@@ -120,7 +127,9 @@ export class AppleHealthProvider implements HealthProvider {
             return;
           }
           const kilometers = (results.value || 0) / 1000;
-          resolve(Math.round(kilometers * 100) / 100);
+          const distance = Math.round(kilometers * 100) / 100;
+          console.log('[AppleHealthProvider] Distance (km):', distance);
+          resolve(distance);
         }
       );
     });
@@ -128,6 +137,7 @@ export class AppleHealthProvider implements HealthProvider {
 
   private getCalories(options: HealthInputOptions): Promise<number> {
     return new Promise((resolve) => {
+      console.log('[AppleHealthProvider] Reading calories...');
       AppleHealthKit.getActiveEnergyBurned(
         options,
         (err: string, results: HealthValue[]) => {
@@ -137,7 +147,9 @@ export class AppleHealthProvider implements HealthProvider {
             return;
           }
           const totalCalories = results.reduce((sum, result) => sum + (result.value || 0), 0);
-          resolve(Math.round(totalCalories));
+          const calories = Math.round(totalCalories);
+          console.log('[AppleHealthProvider] Calories:', calories);
+          resolve(calories);
         }
       );
     });
@@ -145,6 +157,7 @@ export class AppleHealthProvider implements HealthProvider {
 
   private getHeartRate(options: HealthInputOptions): Promise<number> {
     return new Promise((resolve) => {
+      console.log('[AppleHealthProvider] Reading heart rate...');
       AppleHealthKit.getHeartRateSamples(
         {
           ...options,
@@ -157,7 +170,9 @@ export class AppleHealthProvider implements HealthProvider {
             resolve(0);
             return;
           }
-          resolve(results?.[0]?.value || 0);
+          const heartRate = results?.[0]?.value || 0;
+          console.log('[AppleHealthProvider] Heart rate:', heartRate);
+          resolve(heartRate);
         }
       );
     });
