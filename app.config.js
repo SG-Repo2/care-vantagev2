@@ -32,14 +32,14 @@ export default {
       },
       entitlements: {
         "com.apple.developer.healthkit": true,
-        "com.apple.developer.healthkit.access": [
-          "health-records",
-          "HKQuantityTypeIdentifierStepCount",
-          "HKQuantityTypeIdentifierHeartRate",
-          "HKQuantityTypeIdentifierActiveEnergyBurned",
-          "HKQuantityTypeIdentifierDistanceWalkingRunning"
-        ],
-        "com.apple.developer.healthkit.background-delivery": true
+        "com.apple.developer.healthkit.background-delivery": true,
+        "com.apple.developer.healthkit.access": {
+          "health-records": true,
+          "HKQuantityTypeIdentifierStepCount": true,
+          "HKQuantityTypeIdentifierHeartRate": true,
+          "HKQuantityTypeIdentifierActiveEnergyBurned": true,
+          "HKQuantityTypeIdentifierDistanceWalkingRunning": true
+        }
       }
     },
     android: {
