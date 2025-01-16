@@ -1,15 +1,11 @@
-export type RootStackParamList = {
-  MainTabs: undefined;
-  Auth: undefined;
-};
+import { NavigatorScreenParams } from '@react-navigation/native';
 
-export type TabParamList = {
+export type HealthMetricsTabParamList = {
   Home: undefined;
+  Leaderboard: undefined;
   Profile: undefined;
 };
 
-declare global {
-  namespace ReactNavigation {
-    interface RootParamList extends RootStackParamList {}
-  }
-} 
+export type HealthMetricsStackParamList = {
+  MainTabs: NavigatorScreenParams<HealthMetricsTabParamList>;
+};

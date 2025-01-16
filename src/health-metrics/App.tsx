@@ -4,11 +4,11 @@ import { NavigationContainer, DarkTheme as NavigationDarkTheme } from '@react-na
 import { Provider as PaperProvider, MD3DarkTheme } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { HealthDataProvider } from './contexts/HealthDataContext';
-import HomeScreen from './components/HomeScreen';
+import { TabNavigator } from './navigation/TabNavigator';
 import { ErrorBoundary } from '../core/error/ErrorBoundary';
 import { ErrorScreen } from './components/ErrorScreen';
 
-// Custom theme with platform-specific colors
+// Custom theme with platform-specific colors and navigation integration
 const theme = {
   ...MD3DarkTheme,
   colors: {
@@ -86,7 +86,7 @@ export default function HealthMetricsApp() {
         <NavigationContainer theme={navigationTheme}>
           <PaperProvider theme={theme}>
             <HealthDataProvider config={healthConfig}>
-              <HomeScreen />
+              <TabNavigator />
             </HealthDataProvider>
           </PaperProvider>
         </NavigationContainer>

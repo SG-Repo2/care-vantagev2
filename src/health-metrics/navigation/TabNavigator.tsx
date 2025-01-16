@@ -1,11 +1,25 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import HomeScreen from '../components/HomeScreen';
+import { LeaderboardScreen } from '../../features/leaderboard/components/LeaderboardScreen';
 import { ProfileScreen } from '../../features/profile/components/ProfileScreen';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { HealthMetricsTabParamList } from './types';
+import { HealthDataProvider } from '../contexts/HealthDataContext';
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<HealthMetricsTabParamList>();
+
+const HomeScreenWithProvider = () => (
+  <HealthDataProvider
+    config={{
+      enableBackgroundSync: true,
+      syncInterval: 300000, // 5 minutes
+    }}
+  >
+    <HomeScreen />
+  </HealthDataProvider>
+);
 
 export const TabNavigator = () => {
   const theme = useTheme();
@@ -13,31 +27,48 @@ export const TabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#23C552',
-        tabBarInactiveTintColor: '#999',
         tabBarStyle: {
-          backgroundColor: '#000',
-          borderTopColor: '#333',
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.outline,
+          borderTopWidth: 1,
+          elevation: 0,
+          shadowOpacity: 0,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
         },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
         headerStyle: {
-          backgroundColor: '#000',
+          backgroundColor: theme.colors.surface,
+          elevation: 0,
+          shadowOpacity: 0,
         },
-        headerTintColor: '#FFF',
+        headerTintColor: theme.colors.onSurface,
         headerShadowVisible: false,
       }}
     >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
+      <Tab.Screen 
+        name="Home" 
+        component={HomeScreenWithProvider}
         options={{
-          title: 'Health Dashboard',
+          title: 'Health Metrics',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home" size={size} color={color} />
+            <MaterialCommunityIcons name="heart-pulse" size={size} color={color} />
           ),
         }}
       />
-      <Tab.Screen
-        name="Profile"
+      <Tab.Screen 
+        name="Leaderboard" 
+        component={LeaderboardScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="trophy" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen 
+        name="Profile" 
         component={ProfileScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
