@@ -1,4 +1,17 @@
-export default {
+import 'dotenv/config';
+
+// Debug logging for environment variables
+console.log('Environment Variables Check:', {
+  supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing',
+  supabaseKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing',
+  googleIos: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ? 'Set' : 'Missing',
+  googleAndroid: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ? 'Set' : 'Missing',
+  googleWeb: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ? 'Set' : 'Missing',
+  googleExpo: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID ? 'Set' : 'Missing',
+});
+
+export default ({ config }) => ({
+  ...config,
   expo: {
     name: "care-vantage",
     slug: "care-vantage",
@@ -14,6 +27,16 @@ export default {
     extra: {
       eas: {
         projectId: "ed8a0109-5476-4b93-9502-e9f46028b8d1"
+      },
+      supabase: {
+        url: process.env.EXPO_PUBLIC_SUPABASE_URL,
+        anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+      },
+      googleAuth: {
+        iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+        androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+        expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID
       }
     },
     assetBundlePatterns: [
@@ -86,4 +109,4 @@ export default {
       ]
     ]
   }
-}
+});

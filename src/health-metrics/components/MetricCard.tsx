@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card, Text, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -12,6 +12,7 @@ interface MetricCardProps {
   metricType: MetricType;
   loading?: boolean;
   unit?: string;
+  onPress?: () => void;
 }
 
 const getMetricColor = (type: MetricType): string => {
@@ -34,7 +35,7 @@ const formatValue = (value: number | undefined, type: MetricType): string => {
   
   switch (type) {
     case 'distance':
-      return value.toFixed(2); // Value is already in kilometers from GoogleHealthProvider
+      return value.toFixed(2);
     case 'heartRate':
     case 'calories':
       return `${Math.round(value)}`;
@@ -63,10 +64,13 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   metricType,
   loading = false,
   unit: customUnit,
+  onPress,
 }) => {
   const color = getMetricColor(metricType);
   const formattedValue = formatValue(value, metricType);
   const unit = customUnit || getUnit(metricType);
+
+  const CardComponent = onPress ? TouchableOpacity : View;
 
   if (loading) {
     return (
@@ -80,7 +84,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   }
 
   return (
-    <Card style={[styles.card, { borderColor: color }]}>
+    <CardComponent onPress={onPress} style={[styles.card, { borderColor: color }]}>
       <View style={styles.content}>
         <MaterialCommunityIcons name={icon} size={24} color={color} />
         <View style={styles.valueContainer}>
@@ -91,7 +95,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         </View>
         <Text style={styles.title}>{title}</Text>
       </View>
-    </Card>
+    </CardComponent>
   );
 };
 

@@ -2,10 +2,20 @@ import { useState, useEffect, useCallback } from 'react';
 import { HealthMetrics, HealthError } from '../providers/types';
 import { HealthProviderFactory } from '../providers/HealthProviderFactory';
 
+export interface WeeklyMetrics {
+  weeklySteps: number;
+  weeklyDistance: number;
+  weeklyCalories: number;
+  weeklyHeartRate: number;
+  startDate?: string;
+  endDate?: string;
+}
+
 interface UseHealthDataResult {
   metrics: HealthMetrics | null;
   loading: boolean;
   error: HealthError | null;
+  weeklyData: WeeklyMetrics | null;
   refresh: () => Promise<void>;
 }
 
@@ -20,6 +30,7 @@ const isHealthError = (error: unknown): error is HealthError => {
 
 export const useHealthData = (): UseHealthDataResult => {
   const [metrics, setMetrics] = useState<HealthMetrics | null>(null);
+  const [weeklyData, setWeeklyData] = useState<WeeklyMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<HealthError | null>(null);
   const [provider, setProvider] = useState<any>(null);
@@ -67,10 +78,27 @@ export const useHealthData = (): UseHealthDataResult => {
         score: 0
       };
 
+      const defaultWeeklyMetrics: WeeklyMetrics = {
+        weeklySteps: 0,
+        weeklyDistance: 0,
+        weeklyCalories: 0,
+        weeklyHeartRate: 0,
+        startDate: new Date().toISOString(),
+        endDate: new Date().toISOString()
+      };
+
       setMetrics({
         ...defaultMetrics,
-        ...data // Override defaults with any actual data
+        ...data
       });
+
+      // Set weekly data if available
+      if ('weeklySteps' in data) {
+        setWeeklyData({
+          ...defaultWeeklyMetrics,
+          ...data
+        });
+      }
     } catch (err: unknown) {
       console.error('Health data error:', err);
       const healthError: HealthError = isHealthError(err)
@@ -95,6 +123,7 @@ export const useHealthData = (): UseHealthDataResult => {
     metrics,
     loading,
     error,
+    weeklyData,
     refresh
   };
 }; 
