@@ -4,13 +4,16 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "expo start --clear",
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "clean": "cd android && ./gradlew clean && cd ..",
     "ios:run": "expo run:ios",
     "ios:build": "eas build --profile development --platform ios",
     "android:build": "eas build --profile development --platform android",
     "android:install": "yarn android:build && yarn install:apk",
-    "install:apk": "bash scripts/install-apk.sh",
-    "web": "expo start --web"
+    "install:apk": "bash scripts/install-apk.sh"
   },
   "dependencies": {
     "@babel/preset-env": "^7.1.6",
@@ -53,9 +56,10 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@expo/cli": "^0.22.9",
     "@react-native-community/cli": "latest",
-    "@react-native/metro-config": "^0.76.5",
     "@react-native/gradle-plugin": "0.76.6",
+    "@react-native/metro-config": "^0.76.5",
     "@types/react": "~18.3.12",
     "@types/react-native-vector-icons": "^6.4.18",
     "typescript": "^5.7.2"

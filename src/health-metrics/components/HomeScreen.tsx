@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
 import { Button, Text } from 'react-native-paper';
-import { useHealthData } from '../contexts/HealthDataContext';
+import { useHealthData } from '../hooks/useHealthData';
 import { MetricCard } from './MetricCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

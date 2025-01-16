@@ -1,17 +1,17 @@
+import { Platform } from 'react-native';
 import AppleHealthKit, {
   HealthInputOptions,
+  HealthValue,
   HealthKitPermissions,
-  HealthValue
 } from 'react-native-health';
-import { Platform } from 'react-native';
 import { HealthMetrics, HealthProvider } from '../types';
 
 const permissions: HealthKitPermissions = {
   permissions: {
     read: [
-      AppleHealthKit.Constants.Permissions.Steps,
-      AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
+      AppleHealthKit.Constants.Permissions.StepCount,
       AppleHealthKit.Constants.Permissions.DistanceWalkingRunning,
+      AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
       AppleHealthKit.Constants.Permissions.HeartRate,
     ],
     write: [],
@@ -21,50 +21,53 @@ const permissions: HealthKitPermissions = {
 export class AppleHealthProvider implements HealthProvider {
   private initialized = false;
 
-  async isAvailable(): Promise<boolean> {
-    if (Platform.OS !== 'ios') return false;
-    
-    return new Promise((resolve) => {
-      AppleHealthKit.isAvailable((error, available) => {
-        console.log('HealthKit availability:', { error, available });
-        resolve(!error && available);
-      });
-    });
-  }
-
-  async requestPermissions(): Promise<boolean> {
-    console.log('Requesting HealthKit permissions...');
-    return new Promise((resolve) => {
-      AppleHealthKit.initHealthKit(permissions, (error) => {
-        if (error) {
-          console.error('HealthKit permission error:', error);
-          resolve(false);
-          return;
-        }
-        console.log('HealthKit permissions granted');
-        this.initialized = true;
-        resolve(true);
-      });
-    });
-  }
-
-  async getMetrics(date: Date): Promise<HealthMetrics> {
-    if (!this.initialized) {
-      console.error('HealthKit not initialized');
-      throw new Error('HealthKit not initialized');
+  async initialize(): Promise<void> {
+    if (Platform.OS !== 'ios') {
+      throw new Error('AppleHealthProvider can only be used on iOS');
     }
 
-    console.log('Fetching HealthKit metrics for date:', date.toISOString());
+    if (this.initialized) {
+      console.log('[AppleHealthProvider] Already initialized');
+      return;
+    }
 
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-    
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+    return new Promise((resolve, reject) => {
+      console.log('[AppleHealthProvider] Initializing HealthKit...');
+      AppleHealthKit.initHealthKit(permissions, (error) => {
+        if (error) {
+          console.error('[AppleHealthProvider] HealthKit initialization error:', error);
+          reject(new Error(`Failed to initialize HealthKit: ${error}`));
+          return;
+        }
+        this.initialized = true;
+        console.log('[AppleHealthProvider] HealthKit initialized successfully');
+        resolve();
+      });
+    });
+  }
+
+  async requestPermissions(): Promise<void> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    // HealthKit permissions are requested during initialization
+    // This method exists to maintain interface compatibility
+    return Promise.resolve();
+  }
+
+  async getMetrics(): Promise<HealthMetrics> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
 
     const options: HealthInputOptions = {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
+      startDate: startOfDay.toISOString(),
+      endDate: now.toISOString(),
       includeManuallyAdded: true,
     };
 
@@ -76,81 +79,87 @@ export class AppleHealthProvider implements HealthProvider {
         this.getHeartRate(options),
       ]);
 
-      const metrics = {
+      return {
         steps,
         calories,
         distance,
         heartRate,
+        lastUpdated: now.toISOString(),
+        score: 0,
       };
-
-      console.log('Retrieved HealthKit metrics:', metrics);
-      return metrics;
     } catch (error) {
-      console.error('Error fetching HealthKit metrics:', error);
+      console.error('[AppleHealthProvider] Error fetching metrics:', error);
       throw error;
     }
   }
 
   private getSteps(options: HealthInputOptions): Promise<number> {
-    return new Promise((resolve, reject) => {
-      AppleHealthKit.getStepCount(options, (error, results) => {
-        if (error) {
-          console.error('Error getting steps:', error);
-          reject(error);
-          return;
+    return new Promise((resolve) => {
+      AppleHealthKit.getStepCount(
+        options,
+        (err: string, results: { value: number }) => {
+          if (err) {
+            console.error('[AppleHealthProvider] Error getting steps:', err);
+            resolve(0);
+            return;
+          }
+          resolve(Math.round(results.value || 0));
         }
-        console.log('Steps data:', results);
-        resolve(results?.value || 0);
-      });
-    });
-  }
-
-  private getCalories(options: HealthInputOptions): Promise<number> {
-    return new Promise((resolve, reject) => {
-      AppleHealthKit.getActiveEnergyBurned(options, (error, results: HealthValue[]) => {
-        if (error) {
-          console.error('Error getting calories:', error);
-          reject(error);
-          return;
-        }
-        console.log('Calories data:', results);
-        const totalCalories = results.reduce((sum, result) => sum + (result.value || 0), 0);
-        resolve(totalCalories);
-      });
+      );
     });
   }
 
   private getDistance(options: HealthInputOptions): Promise<number> {
-    return new Promise((resolve, reject) => {
-      AppleHealthKit.getDistanceWalkingRunning(options, (error, results) => {
-        if (error) {
-          console.error('Error getting distance:', error);
-          reject(error);
-          return;
+    return new Promise((resolve) => {
+      AppleHealthKit.getDistanceWalkingRunning(
+        options,
+        (err: string, results: { value: number }) => {
+          if (err) {
+            console.error('[AppleHealthProvider] Error getting distance:', err);
+            resolve(0);
+            return;
+          }
+          const kilometers = (results.value || 0) / 1000;
+          resolve(Math.round(kilometers * 100) / 100);
         }
-        console.log('Distance data:', results);
-        resolve(results?.value || 0);
-      });
+      );
     });
   }
 
-  private getHeartRate(options: HealthInputOptions): Promise<number | undefined> {
+  private getCalories(options: HealthInputOptions): Promise<number> {
     return new Promise((resolve) => {
-      AppleHealthKit.getHeartRateSamples(options, (error, results) => {
-        if (error) {
-          console.error('Error getting heart rate:', error);
-          resolve(undefined);
-          return;
+      AppleHealthKit.getActiveEnergyBurned(
+        options,
+        (err: string, results: HealthValue[]) => {
+          if (err) {
+            console.error('[AppleHealthProvider] Error getting calories:', err);
+            resolve(0);
+            return;
+          }
+          const totalCalories = results.reduce((sum, result) => sum + (result.value || 0), 0);
+          resolve(Math.round(totalCalories));
         }
-        console.log('Heart rate data:', results);
-        if (!results?.length) {
-          resolve(undefined);
-          return;
+      );
+    });
+  }
+
+  private getHeartRate(options: HealthInputOptions): Promise<number> {
+    return new Promise((resolve) => {
+      AppleHealthKit.getHeartRateSamples(
+        {
+          ...options,
+          limit: 1,
+          ascending: false,
+        },
+        (err: string, results: Array<{ value: number }>) => {
+          if (err) {
+            console.error('[AppleHealthProvider] Error getting heart rate:', err);
+            resolve(0);
+            return;
+          }
+          resolve(results?.[0]?.value || 0);
         }
-        // Get the most recent heart rate reading
-        const latestReading = results[results.length - 1];
-        resolve(latestReading.value);
-      });
+      );
     });
   }
 } 

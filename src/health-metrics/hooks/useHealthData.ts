@@ -18,7 +18,7 @@ const isHealthError = (error: unknown): error is HealthError => {
   );
 };
 
-export const useHealthData = (date: Date): UseHealthDataResult => {
+export const useHealthData = (): UseHealthDataResult => {
   const [metrics, setMetrics] = useState<HealthMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<HealthError | null>(null);
@@ -53,16 +53,8 @@ export const useHealthData = (date: Date): UseHealthDataResult => {
         currentProvider = await initialize();
       }
 
-      const hasPermissions = await currentProvider.requestPermissions();
-      if (!hasPermissions) {
-        throw {
-          type: 'permissions',
-          message: 'Health permissions not granted'
-        } as HealthError;
-      }
-
-      console.log('Fetching metrics for date:', date.toISOString());
-      const data = await currentProvider.getMetrics(date);
+      console.log('Fetching metrics...');
+      const data = await currentProvider.getMetrics();
       console.log('Received metrics:', JSON.stringify(data, null, 2));
       
       // Initialize metrics with zeros if no data is available
@@ -70,7 +62,9 @@ export const useHealthData = (date: Date): UseHealthDataResult => {
         steps: 0,
         distance: 0,
         calories: 0,
-        heartRate: 0
+        heartRate: 0,
+        lastUpdated: new Date().toISOString(),
+        score: 0
       };
 
       setMetrics({
@@ -91,7 +85,7 @@ export const useHealthData = (date: Date): UseHealthDataResult => {
     } finally {
       setLoading(false);
     }
-  }, [date, provider, initialize]);
+  }, [provider, initialize]);
 
   useEffect(() => {
     refresh();

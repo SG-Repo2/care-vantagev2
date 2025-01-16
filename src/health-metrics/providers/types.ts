@@ -2,13 +2,15 @@ export interface HealthMetrics {
   steps: number;
   distance: number;
   calories: number;
-  heartRate?: number;
+  heartRate: number;
+  lastUpdated: string;
+  score?: number;
 }
 
 export interface HealthProvider {
-  isAvailable(): Promise<boolean>;
-  requestPermissions(): Promise<boolean>;
-  getMetrics(date: Date): Promise<HealthMetrics>;
+  initialize(): Promise<void>;
+  requestPermissions(): Promise<void>;
+  getMetrics(): Promise<HealthMetrics>;
 }
 
 export interface HealthError {

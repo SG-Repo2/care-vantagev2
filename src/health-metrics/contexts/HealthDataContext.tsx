@@ -82,27 +82,29 @@ export function HealthDataProvider({ children, config }: HealthDataProviderProps
     console.log('Starting refresh...');
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      console.log('Creating provider...');
+      console.log('[HealthDataContext] Creating provider...');
       const provider = await HealthProviderFactory.createProvider();
       
-      console.log('Requesting permissions...');
+      console.log('[HealthDataContext] Requesting permissions...');
       const permissionsGranted = await provider.requestPermissions();
+      console.log('[HealthDataContext] Permissions granted:', permissionsGranted);
+      
       if (!permissionsGranted) {
-        console.error('Permissions not granted');
+        console.error('[HealthDataContext] Permissions not granted');
         throw {
           type: 'permissions',
-          message: 'Health permissions not granted'
+          message: 'Health permissions not granted. Please grant permissions in your device settings.'
         } as HealthError;
       }
 
-      console.log('Getting metrics...');
+      console.log('[HealthDataContext] Getting metrics...');
       const metrics = await provider.getMetrics(new Date());
-      console.log('Received metrics:', metrics);
+      console.log('[HealthDataContext] Received metrics:', JSON.stringify(metrics, null, 2));
       
       dispatch({ type: 'SET_METRICS', payload: metrics });
       dispatch({ type: 'SET_LAST_SYNC', payload: new Date().toISOString() });
     } catch (error) {
-      console.error('Health data error:', error);
+      console.error('[HealthDataContext] Health data error:', error);
       const healthError: HealthError = {
         type: 'data',
         message: error instanceof Error ? error.message : 'Failed to fetch health data',
