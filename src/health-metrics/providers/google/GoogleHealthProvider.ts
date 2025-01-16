@@ -118,25 +118,39 @@ export class GoogleHealthProvider implements HealthProvider {
         this.getHeartRate(timeRangeFilter),
       ]);
 
-      console.log('[GoogleHealthProvider] Metrics retrieved:', {
-        steps,
-        distance,
-        calories,
-        heartRate,
-      });
-
-      return {
-        steps,
-        distance,
-        calories,
-        heartRate,
+      const metrics = {
+        steps: Math.max(0, steps),
+        distance: Math.max(0, distance),
+        calories: Math.max(0, calories),
+        heartRate: Math.max(0, heartRate),
         lastUpdated: now.toISOString(),
-        score: 0,
+        score: this.calculateHealthScore(steps, distance, calories, heartRate),
       };
+
+      console.log('[GoogleHealthProvider] Metrics retrieved:', metrics);
+      return metrics;
     } catch (error) {
       console.error('[GoogleHealthProvider] Error fetching metrics:', error);
       throw error;
     }
+  }
+
+  private calculateHealthScore(steps: number, distance: number, calories: number, heartRate: number): number {
+    // Basic health score calculation
+    const stepsScore = Math.min(steps / 10000, 1); // Max score at 10000 steps
+    const distanceScore = Math.min(distance / 5, 1); // Max score at 5km
+    const caloriesScore = Math.min(calories / 500, 1); // Max score at 500 calories
+    const heartRateScore = heartRate > 0 ? 1 : 0; // Score for having heart rate data
+
+    // Calculate weighted average (adjust weights as needed)
+    const totalScore = (
+      (stepsScore * 0.4) + 
+      (distanceScore * 0.3) + 
+      (caloriesScore * 0.2) + 
+      (heartRateScore * 0.1)
+    ) * 100;
+
+    return Math.round(totalScore);
   }
 
   private async getSteps(timeRangeFilter: any): Promise<number> {
@@ -162,7 +176,7 @@ export class GoogleHealthProvider implements HealthProvider {
         sum + (record.distance?.inMeters || 0), 0);
       const kilometers = totalMeters / 1000;
       console.log('[GoogleHealthProvider] Distance total (km):', kilometers);
-      return Math.round(kilometers * 100) / 100;
+      return Math.round(kilometers * 100) / 100; // Round to 2 decimal places
     } catch (error) {
       console.error('[GoogleHealthProvider] Error reading distance:', error);
       return 0;

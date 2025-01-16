@@ -34,7 +34,7 @@ const formatValue = (value: number | undefined, type: MetricType): string => {
   
   switch (type) {
     case 'distance':
-      return `${(value / 1000).toFixed(2)}`;
+      return value.toFixed(2); // Value is already in kilometers from GoogleHealthProvider
     case 'heartRate':
     case 'calories':
       return `${Math.round(value)}`;
@@ -126,4 +126,4 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 16,
   },
-}); 
+});

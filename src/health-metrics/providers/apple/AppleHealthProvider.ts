@@ -82,14 +82,17 @@ export class AppleHealthProvider implements HealthProvider {
 
       console.log('[AppleHealthProvider] Metrics retrieved:', { steps, calories, distance, heartRate });
 
-      return {
+      const metrics = {
         steps,
         calories,
         distance,
         heartRate,
         lastUpdated: now.toISOString(),
-        score: 0,
+        score: this.calculateHealthScore(steps, distance, calories, heartRate),
       };
+
+      console.log('[AppleHealthProvider] Final metrics:', metrics);
+      return metrics;
     } catch (error) {
       console.error('[AppleHealthProvider] Error fetching metrics:', error);
       throw error;
@@ -161,8 +164,7 @@ export class AppleHealthProvider implements HealthProvider {
       AppleHealthKit.getHeartRateSamples(
         {
           ...options,
-          limit: 1,
-          ascending: false,
+          ascending: true,
         },
         (err: string, results: Array<{ value: number }>) => {
           if (err) {
@@ -170,11 +172,48 @@ export class AppleHealthProvider implements HealthProvider {
             resolve(0);
             return;
           }
-          const heartRate = results?.[0]?.value || 0;
-          console.log('[AppleHealthProvider] Heart rate:', heartRate);
+
+          // Filter valid heart rate samples
+          const validSamples = results.filter(sample =>
+            typeof sample.value === 'number' &&
+            !isNaN(sample.value) &&
+            sample.value > 0 &&
+            sample.value < 300
+          );
+
+          if (!validSamples.length) {
+            console.log('[AppleHealthProvider] No valid heart rate samples found');
+            resolve(0);
+            return;
+          }
+
+          // Calculate average heart rate
+          const sum = validSamples.reduce((acc, sample) => acc + sample.value, 0);
+          const average = sum / validSamples.length;
+          const heartRate = Math.round(average);
+          
+          console.log('[AppleHealthProvider] Heart rate average:', heartRate, 'from', validSamples.length, 'samples');
           resolve(heartRate);
         }
       );
     });
   }
-} 
+
+  private calculateHealthScore(steps: number, distance: number, calories: number, heartRate: number): number {
+    // Basic health score calculation
+    const stepsScore = Math.min(steps / 10000, 1); // Max score at 10000 steps
+    const distanceScore = Math.min(distance / 5, 1); // Max score at 5km
+    const caloriesScore = Math.min(calories / 500, 1); // Max score at 500 calories
+    const heartRateScore = heartRate > 0 ? 1 : 0; // Score for having heart rate data
+
+    // Calculate weighted average (adjust weights as needed)
+    const totalScore = (
+      (stepsScore * 0.4) +
+      (distanceScore * 0.3) +
+      (caloriesScore * 0.2) +
+      (heartRateScore * 0.1)
+    ) * 100;
+
+    return Math.round(totalScore);
+  }
+}

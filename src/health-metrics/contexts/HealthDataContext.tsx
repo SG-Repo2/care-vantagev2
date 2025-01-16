@@ -81,6 +81,7 @@ export function HealthDataProvider({ children, config }: HealthDataProviderProps
   const refresh = useCallback(async () => {
     console.log('Starting refresh...');
     dispatch({ type: 'SET_LOADING', payload: true });
+    
     try {
       console.log('[HealthDataContext] Creating provider...');
       const provider = await HealthProviderFactory.createProvider();
@@ -102,7 +103,17 @@ export function HealthDataProvider({ children, config }: HealthDataProviderProps
       const metrics = await provider.getMetrics();
       console.log('[HealthDataContext] Received metrics:', JSON.stringify(metrics, null, 2));
       
-      dispatch({ type: 'SET_METRICS', payload: metrics });
+      // Ensure we have valid numbers for all metrics
+      const validatedMetrics: HealthMetrics = {
+        steps: Math.max(0, metrics.steps || 0),
+        distance: Math.max(0, metrics.distance || 0),
+        calories: Math.max(0, metrics.calories || 0),
+        heartRate: Math.max(0, metrics.heartRate || 0),
+        lastUpdated: metrics.lastUpdated || new Date().toISOString(),
+        score: Math.max(0, metrics.score || 0)
+      };
+
+      dispatch({ type: 'SET_METRICS', payload: validatedMetrics });
       dispatch({ type: 'SET_LAST_SYNC', payload: new Date().toISOString() });
     } catch (error) {
       console.error('[HealthDataContext] Health data error:', error);
