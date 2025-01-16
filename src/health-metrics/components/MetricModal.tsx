@@ -1,25 +1,26 @@
 import React from 'react';
 import { View, Dimensions, Animated } from 'react-native';
-import { Modal, Portal, Text, IconButton } from 'react-native-paper';
+import { Modal, Portal, Text, IconButton, useTheme } from 'react-native-paper';
 import { LineChart, BarChart, ProgressChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Card } from '../../components/common/atoms/Card';
 import { StyleSheet } from 'react-native';
 
-interface MetricModalProps {
+export interface MetricModalProps {
   visible: boolean;
   onClose: () => void;
   title: string;
   value: string | number;
+  metricType: 'steps' | 'distance' | 'calories' | 'heartRate';
   data?: {
     labels: string[];
     values: number[];
     startDate?: Date;
   };
-  additionalInfo?: {
+  additionalInfo?: Array<{
     label: string;
     value: string | number;
-  }[];
-  metricType?: 'steps' | 'distance' | 'calories' | 'heartRate';
+  }>;
 }
 
 const formatDateLabel = (date: Date): string => {
@@ -49,47 +50,64 @@ export const MetricModal: React.FC<MetricModalProps> = ({
   additionalInfo,
   metricType,
 }) => {
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const animatedValue = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    Animated.spring(animatedValue, {
-      toValue: 1,
+    if (visible) {
+      Animated.spring(animatedValue, {
+        toValue: 1,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    Animated.timing(animatedValue, {
+      toValue: 0,
+      duration: 200,
       useNativeDriver: true,
-    }).start();
-  }, []);
+    }).start(() => {
+      onClose();
+    });
+  };
 
   const animatedStyle = {
     transform: [{ scale: animatedValue }],
+    opacity: animatedValue,
+  };
+
+  const getMetricColor = (opacity = 1) => {
+    switch (metricType) {
+      case 'steps':
+        return `rgba(35, 197, 82, ${opacity})`;
+      case 'distance':
+        return `rgba(136, 224, 239, ${opacity})`;
+      case 'calories':
+        return `rgba(238, 119, 82, ${opacity})`;
+      case 'heartRate':
+        return `rgba(255, 75, 75, ${opacity})`;
+      default:
+        return `rgba(255, 255, 255, ${opacity})`;
+    }
   };
 
   const chartConfig = {
-    backgroundColor: '#1A1A1A',
-    backgroundGradientFrom: '#1A1A1A',
-    backgroundGradientTo: '#1A1A1A',
+    backgroundColor: theme.colors.surface,
+    backgroundGradientFrom: theme.colors.surface,
+    backgroundGradientTo: theme.colors.surface,
     decimalPlaces: 0,
-    color: (opacity = 1) => {
-      switch (metricType) {
-        case 'steps':
-          return `rgba(35, 197, 82, ${opacity})`;
-        case 'distance':
-          return `rgba(136, 224, 239, ${opacity})`;
-        case 'calories':
-          return `rgba(238, 119, 82, ${opacity})`;
-        case 'heartRate':
-          return `rgba(255, 75, 75, ${opacity})`;
-        default:
-          return `rgba(255, 255, 255, ${opacity})`;
-      }
-    },
-    labelColor: () => '#999',
+    color: (opacity = 1) => getMetricColor(opacity),
+    labelColor: () => theme.colors.onSurface,
     style: {
       borderRadius: 16,
     },
     propsForDots: {
       r: '6',
       strokeWidth: '2',
-      stroke: '#20B2AA',
+      stroke: getMetricColor(1),
+      fill: theme.colors.surface,
     },
   };
 
@@ -97,23 +115,28 @@ export const MetricModal: React.FC<MetricModalProps> = ({
     <Portal>
       <Modal
         visible={visible}
-        onDismiss={onClose}
+        onDismiss={handleClose}
         contentContainerStyle={[
           styles.modalContainer,
-          { paddingBottom: insets.bottom },
+          { paddingBottom: insets.bottom, flex: 1 },
         ]}
       >
         <Animated.View style={animatedStyle}>
-          <View style={styles.modalContent}>
+          <Card 
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.colors.surface }
+            ]}
+          >
             <IconButton
               icon="close"
               size={24}
-              onPress={onClose}
-              style={styles.closeButton}
+              onPress={handleClose}
+              style={[styles.closeButton, { zIndex: 1 }]}
             />
 
             <Text style={styles.modalTitle}>{title}</Text>
-            <Text style={styles.modalValue}>{value}</Text>
+            <Text style={[styles.modalValue, { color: getMetricColor() }]}>{value}</Text>
 
             {data && data.values.length > 0 && (
               <>
@@ -124,15 +147,32 @@ export const MetricModal: React.FC<MetricModalProps> = ({
                         data={{
                           labels: ['Progress'],
                           data: [data.values[data.values.length - 1] / 2000],
-                          colors: ['#EE7752']
+                          colors: [getMetricColor()]
                         }}
                         width={Dimensions.get('window').width - 48}
                         height={160}
                         chartConfig={{
                           ...chartConfig,
-                          color: () => '#EE7752'
+                          color: () => getMetricColor()
                         }}
                         hideLegend
+                      />
+                      <BarChart
+                        data={{
+                          labels: ['6AM', '9AM', '12PM', '3PM', '6PM', '9PM'],
+                          datasets: [{
+                            data: [120, 300, 450, 600, 400, 200]
+                          }]
+                        }}
+                        width={Dimensions.get('window').width - 48}
+                        height={160}
+                        chartConfig={{
+                          ...chartConfig,
+                          color: () => getMetricColor()
+                        }}
+                        yAxisLabel=""
+                        yAxisSuffix=""
+                        verticalLabelRotation={30}
                       />
                     </View>
                   </View>
@@ -163,7 +203,7 @@ export const MetricModal: React.FC<MetricModalProps> = ({
                 ))}
               </View>
             )}
-          </View>
+          </Card>
         </Animated.View>
       </Modal>
     </Portal>
@@ -181,26 +221,22 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    backgroundColor: '#1A1A1A',
   },
   closeButton: {
     position: 'absolute',
     right: 16,
     top: 16,
-    backgroundColor: '#333',
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: '800',
     marginBottom: 8,
-    color: '#FFF',
     letterSpacing: -0.5,
   },
   modalValue: {
     fontSize: 40,
     fontWeight: '800',
     marginBottom: 24,
-    color: '#23C552',
     letterSpacing: -1,
   },
   chartContainer: {
@@ -216,7 +252,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     gap: 16,
     padding: 16,
-    backgroundColor: '#333',
     borderRadius: 24,
   },
   infoRow: {
@@ -228,12 +263,11 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#999',
+    opacity: 0.6,
   },
   infoValue: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFF',
   },
   calorieCharts: {
     marginBottom: 16,
