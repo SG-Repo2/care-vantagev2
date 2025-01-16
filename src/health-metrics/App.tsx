@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Platform, StatusBar } from 'react-native';
 import { NavigationContainer, DarkTheme as NavigationDarkTheme } from '@react-navigation/native';
-import { Provider as PaperProvider, MD3DarkTheme, adaptNavigationTheme } from 'react-native-paper';
+import { Provider as PaperProvider, MD3DarkTheme } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../core/auth/contexts/AuthContext';
 import { HealthDataProvider } from './contexts/HealthDataContext';
@@ -27,21 +27,6 @@ const theme = {
   },
 };
 
-// Adapt theme for navigation
-const navigationTheme = {
-  ...NavigationDarkTheme,
-  dark: true,
-  colors: {
-    ...NavigationDarkTheme.colors,
-    primary: theme.colors.primary,
-    background: theme.colors.background,
-    card: theme.colors.surface,
-    text: theme.colors.onSurface,
-    border: '#2C2C2E',
-    notification: theme.colors.primary,
-  },
-};
-
 // Platform-specific health config
 const healthConfig = {
   enableBackgroundSync: Platform.select({
@@ -59,6 +44,20 @@ const healthConfig = {
     android: 2,
     default: 2,
   }),
+};
+
+const navigationTheme = {
+  ...NavigationDarkTheme,
+  dark: true,
+  colors: {
+    ...NavigationDarkTheme.colors,
+    primary: theme.colors.primary,
+    background: theme.colors.background,
+    card: theme.colors.surface,
+    text: theme.colors.onSurface,
+    border: '#2C2C2E',
+    notification: theme.colors.primary,
+  },
 };
 
 const ErrorFallback = () => (

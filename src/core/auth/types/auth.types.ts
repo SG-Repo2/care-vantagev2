@@ -1,10 +1,13 @@
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
+export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated' | 'error';
+
 export interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
   isLoading: boolean;
   error: string | null;
+  status: AuthStatus;
 }
 
 export interface AuthContextType extends AuthState {
@@ -14,7 +17,7 @@ export interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   getAccessToken: () => Promise<string>;
-  updateUser: (user: User) => void;
+  updateUser: (user: User | null) => void;
 }
 
 export interface GoogleAuthResponse {
@@ -53,6 +56,12 @@ export interface User {
       water: number;
     };
   };
+}
+
+export interface AuthError {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
 }
 
 export const mapSupabaseUser = (user: SupabaseUser): User => ({

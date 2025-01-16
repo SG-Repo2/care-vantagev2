@@ -3,19 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from 'react-native-paper';
 import HomeScreen from '../components/HomeScreen';
 import { ProfileScreen } from '../../features/profile/components/ProfileScreen';
-import { HealthDataProvider } from '../../core/contexts/health/HealthDataContext';
-
-const HomeScreenWithProvider = () => (
-  <HealthDataProvider
-    config={{
-      enableBackgroundSync: true,
-      syncInterval: 300000, // 5 minutes
-    }}
-    validateOnChange={true}
-  >
-    <HomeScreen />
-  </HealthDataProvider>
-);
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const Tab = createBottomTabNavigator();
 
@@ -40,15 +28,23 @@ export const TabNavigator = () => {
     >
       <Tab.Screen
         name="Home"
-        component={HomeScreenWithProvider}
+        component={HomeScreen}
         options={{
           title: 'Health Dashboard',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="home" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="account" size={size} color={color} />
+          ),
+        }}
       />
     </Tab.Navigator>
   );
-}; 
+};

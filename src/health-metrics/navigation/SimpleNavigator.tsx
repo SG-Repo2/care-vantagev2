@@ -9,13 +9,14 @@ import { TabNavigator } from './TabNavigator';
 const Stack = createNativeStackNavigator();
 
 export const SimpleNavigator = () => {
-  const { user, isLoading, error, refreshSession } = useAuth();
+  const { status, error, refreshSession } = useAuth();
 
-  if (isLoading) {
-    return <LoadingScreen message="Initializing..." />;
+  // Only show loading screen during initial app load
+  if (status === 'initializing') {
+    return <LoadingScreen message="Initializing app..." />;
   }
 
-  if (error) {
+  if (status === 'error' && error) {
     return (
       <ErrorScreen
         error={error}
@@ -38,7 +39,7 @@ export const SimpleNavigator = () => {
         },
       }}
     >
-      {user ? (
+      {status === 'authenticated' ? (
         <Stack.Screen 
           name="MainTabs" 
           component={TabNavigator}
@@ -57,4 +58,4 @@ export const SimpleNavigator = () => {
       )}
     </Stack.Navigator>
   );
-}; 
+};

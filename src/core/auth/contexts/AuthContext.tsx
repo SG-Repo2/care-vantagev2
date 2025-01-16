@@ -1,57 +1,123 @@
-import React, { createContext, useContext, useCallback } from 'react';
-import { User, AuthContextType } from '../types/auth.types';
+import React, { createContext, useContext, useCallback, useReducer, useEffect } from 'react';
+import { User, AuthContextType, AuthStatus, AuthError } from '../types/auth.types';
 import { Logger } from '../../../utils/error/Logger';
 import { authService } from '../services/AuthService';
-import { useAuthState } from '../hooks/useAuthState';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { useSessionManagement } from '../hooks/useSessionManagement';
 import { useEmailAuth } from '../hooks/useEmailAuth';
+import { useAuthState } from '../hooks/useAuthState';
+
+interface AuthStateInternal {
+  status: AuthStatus;
+  user: User | null;
+  error: string | null;
+  isLoading: boolean;
+}
+
+type AuthAction =
+  | { type: 'START_LOADING' }
+  | { type: 'INITIALIZE' }
+  | { type: 'SET_USER'; payload: User | null }
+  | { type: 'SET_ERROR'; payload: string }
+  | { type: 'FINISH_LOADING' };
+
+const initialState: AuthStateInternal = {
+  status: 'initializing',
+  user: null,
+  error: null,
+  isLoading: true,
+};
+
+function authReducer(state: AuthStateInternal, action: AuthAction): AuthStateInternal {
+  switch (action.type) {
+    case 'START_LOADING':
+      return { ...state, isLoading: true };
+    case 'INITIALIZE':
+      return {
+        ...state,
+        status: 'unauthenticated',
+        isLoading: false,
+      };
+    case 'SET_USER':
+      return {
+        ...state,
+        status: action.payload ? 'authenticated' : 'unauthenticated',
+        user: action.payload,
+        isLoading: false,
+        error: null, // Clear any previous errors
+      };
+    case 'SET_ERROR':
+      return {
+        ...state,
+        status: 'error',
+        error: action.payload,
+        isLoading: false,
+      };
+    case 'FINISH_LOADING':
+      return { ...state, isLoading: false };
+    default:
+      return state;
+  }
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children
 }) => {
-  const {
-    user,
-    isLoading: authStateLoading,
-    error: authStateError,
-    isAuthenticated,
-    updateUser,
-    handleAuthError,
-    initializeAuth
-  } = useAuthState();
+  const [state, dispatch] = useReducer(authReducer, initialState);
+  const { initializeAuth } = useAuthState();
+
+  const updateUser = useCallback((user: User | null) => {
+    dispatch({ type: 'SET_USER', payload: user });
+  }, []);
+
+  const handleAuthError = useCallback((error: unknown, source: string) => {
+    let errorMessage: string;
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = String((error as { message: unknown }).message);
+    } else {
+      errorMessage = 'An unknown error occurred';
+    }
+
+    Logger.error('Auth Error', { source, error: errorMessage });
+    dispatch({ type: 'SET_ERROR', payload: errorMessage });
+  }, []);
 
   const {
     signInWithGoogle,
-    isLoading: googleAuthLoading,
     error: googleAuthError
   } = useGoogleAuth();
 
   const {
     refreshSession: refreshSessionHook,
     getAccessToken,
-    isRefreshing,
-    isGettingToken,
     validateSession
   } = useSessionManagement(
-    user?.id,
+    state.user?.id,
     updateUser
   );
 
   const {
     login,
     register,
-    isLoading: emailAuthLoading,
     error: emailAuthError
   } = useEmailAuth(updateUser);
 
-  // Initialize auth state and session management
-  React.useEffect(() => {
+  // Initialize auth state with proper cleanup
+  useEffect(() => {
     let mounted = true;
+    let timeoutId: NodeJS.Timeout;
 
     const initialize = async () => {
       try {
+        dispatch({ type: 'START_LOADING' });
+        
         // First initialize auth state
         const initialUser = await initializeAuth();
         
@@ -60,10 +126,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         if (initialUser) {
           // Then validate session if user exists
           await validateSession();
+          if (mounted) {
+            dispatch({ type: 'SET_USER', payload: initialUser });
+          }
+        } else {
+          dispatch({ type: 'INITIALIZE' });
         }
       } catch (error) {
         if (mounted) {
           handleAuthError(error, 'initialization');
+        }
+      } finally {
+        if (mounted) {
+          // Ensure loading state is cleared even if there's an error
+          timeoutId = setTimeout(() => {
+            dispatch({ type: 'FINISH_LOADING' });
+          }, 100); // Small delay to prevent UI flicker
         }
       }
     };
@@ -72,50 +150,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     return () => {
       mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [initializeAuth, validateSession, handleAuthError]);
 
   const logout = useCallback(async () => {
-    if (authStateLoading || emailAuthLoading || googleAuthLoading) {
-      Logger.info('Logout operation already in progress');
+    if (state.isLoading) {
+      Logger.info('Auth State', { message: 'Logout operation already in progress' });
       return;
     }
 
     try {
+      dispatch({ type: 'START_LOADING' });
       await authService.clearAuthData();
-      updateUser(null);
+      dispatch({ type: 'SET_USER', payload: null });
     } catch (error) {
       handleAuthError(error, 'logout');
     }
-  }, [authStateLoading, emailAuthLoading, googleAuthLoading, updateUser, handleAuthError]);
+  }, [state.isLoading, handleAuthError]);
 
-  // Wrapper function to match AuthContextType interface
   const refreshSession = useCallback(async (): Promise<void> => {
     try {
+      dispatch({ type: 'START_LOADING' });
       await refreshSessionHook();
+      dispatch({ type: 'FINISH_LOADING' });
     } catch (error) {
       handleAuthError(error, 'refreshSession');
     }
   }, [refreshSessionHook, handleAuthError]);
 
-  // Prevent loading state from getting stuck by checking auth state first
-  const isLoading = authStateLoading ? true : (
-    googleAuthLoading ||
-    emailAuthLoading ||
-    isRefreshing ||
-    isGettingToken
-  );
-
-  const error = 
-    authStateError || 
-    googleAuthError || 
-    emailAuthError;
-
   const value: AuthContextType = {
-    user,
-    isLoading,
-    error,
-    isAuthenticated,
+    user: state.user,
+    isLoading: state.isLoading,
+    error: state.error || googleAuthError || emailAuthError || null,
+    isAuthenticated: state.status === 'authenticated',
+    status: state.status,
     login,
     register,
     signInWithGoogle,
