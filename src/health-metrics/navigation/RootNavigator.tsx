@@ -25,9 +25,9 @@ export const RootNavigator: React.FC<RootNavigatorProps> = ({ navigationTheme })
         }}
       >
         {status === 'authenticated' ? (
-          <Stack.Screen 
-            name="MainApp" 
-            component={TabNavigator} 
+          <Stack.Screen
+            name="MainTabs"
+            component={TabNavigator}
           />
         ) : (
           <Stack.Screen 

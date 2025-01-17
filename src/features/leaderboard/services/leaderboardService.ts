@@ -21,27 +21,30 @@ class LeaderboardService {
         .select(`
           id,
           display_name,
-          health_scores!inner (
+          health_scores (
             daily_score,
             date
           )
         `)
         .eq('health_scores.date', today)
-        .order('health_scores(daily_score)', { ascending: false });
+        .order('health_scores.daily_score', { ascending: false });
 
       if (error) {
         throw error;
       }
 
       // Transform the data to match LeaderboardEntry interface
-      return (data || []).map((entry, index) => ({
-        id: entry.id,
-        user_id: entry.id,
-        display_name: entry.display_name || 'Anonymous User',
-        score: entry.health_scores[0].daily_score,
-        rank: index + 1,
-        created_at: new Date().toISOString()
-      }));
+      // Filter out users without health scores and map to leaderboard entries
+      return (data || [])
+        .filter(entry => entry.health_scores && entry.health_scores.length > 0)
+        .map((entry, index) => ({
+          id: entry.id,
+          user_id: entry.id,
+          display_name: entry.display_name || 'Anonymous User',
+          score: entry.health_scores[0].daily_score,
+          rank: index + 1,
+          created_at: new Date().toISOString()
+        }));
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
       throw error;

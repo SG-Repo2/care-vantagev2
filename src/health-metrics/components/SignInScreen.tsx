@@ -31,7 +31,7 @@ export const SignInScreen = () => {
           // Initialize health provider after profile is created
           const healthInitialized = await initializeHealthProvider();
           if (healthInitialized) {
-            navigation.replace('MainApp');
+            navigation.replace('MainTabs');
           }
         } catch (err) {
           console.error('Failed to initialize user profile:', err);
