@@ -1,168 +1,122 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { TextInput, Button, Avatar, useTheme, HelperText } from 'react-native-paper';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { useAuth } from '../../../context/AuthContext';
-import { User } from '../../../services/authService';
+import React from 'react';
+import { View, ScrollView } from 'react-native';
+import { Button, Text, useTheme, ActivityIndicator, Avatar } from 'react-native-paper';
+import { useAuth } from '../../../health-metrics/contexts/AuthContext';
+import { useProfile } from '../hooks/useProfile';
+import { StyleSheet } from 'react-native';
 
-type RootStackParamList = {
-  Profile: undefined;
-  Settings: undefined;
-  Login: undefined;
-};
+export const ProfileScreen = () => {
+  const theme = useTheme();
+  const { signOut, user } = useAuth();
+  const { profile, loading } = useProfile();
 
-type ProfileScreenProps = {
-  navigation: StackNavigationProp<RootStackParamList, 'Profile'>;
-};
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
-  const paperTheme = useTheme();
-  const { user, signOut, isLoading } = useAuth();
-  const [displayName, setDisplayName] = useState('');
-  const [editMode, setEditMode] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [updateLoading, setUpdateLoading] = useState(false);
-
-  useEffect(() => {
-    setDisplayName(user?.name || '');
-  }, [user]);
-
-  const handleLogout = useCallback(async () => {
-    try {
-      await signOut();
-    } catch (err) {
-      console.error('[ProfileScreen] Logout error:', err);
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-    }
-  }, [signOut]);
-
-  const handleProfileUpdate = useCallback(async () => {
-    if (!displayName.trim()) {
-      setError('Display name cannot be empty');
-      return;
-    }
-    
-    try {
-      setUpdateLoading(true);
-      setError(null);
-      // TODO: Implement profile update
-      setEditMode(false);
-    } catch (err) {
-      console.error('[ProfileScreen] Profile update error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
-    } finally {
-      setUpdateLoading(false);
-    }
-  }, [displayName]);
+  if (!profile) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text>No profile found</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
-      <ScrollView style={styles.content}>
-        <View style={styles.avatarContainer}>
-          <Avatar.Image
-            size={100}
-            source={user?.photoUrl ? { uri: user.photoUrl } : { uri: 'https://via.placeholder.com/100' }}
-          />
-        </View>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Avatar.Text 
+          size={120} 
+          label={profile.display_name.substring(0, 2).toUpperCase()}
+        />
+        <Text style={styles.displayName}>{profile.display_name}</Text>
+        <Text style={styles.email}>{profile.email}</Text>
+      </View>
 
-        <View style={styles.form}>
-          {editMode ? (
-            <>
-              <TextInput
-                label="Display Name"
-                value={displayName}
-                onChangeText={setDisplayName}
-                mode="outlined"
-                disabled={updateLoading}
-                error={!!error}
-              />
-              {error && <HelperText type="error">{error}</HelperText>}
-              <View style={styles.buttonContainer}>
-                <Button
-                  mode="contained"
-                  onPress={handleProfileUpdate}
-                  loading={updateLoading}
-                  disabled={updateLoading}
-                  style={styles.button}
-                >
-                  Save
-                </Button>
-                <Button
-                  mode="outlined"
-                  onPress={() => {
-                    setEditMode(false);
-                    setDisplayName(user?.name || '');
-                    setError(null);
-                  }}
-                  disabled={updateLoading}
-                  style={styles.button}
-                >
-                  Cancel
-                </Button>
-              </View>
-            </>
-          ) : (
-            <>
-              <TextInput
-                label="Display Name"
-                value={user?.name || ''}
-                disabled
-                mode="outlined"
-              />
-              <TextInput
-                label="Email"
-                value={user?.email || ''}
-                disabled
-                mode="outlined"
-              />
-              <View style={styles.buttonContainer}>
-                <Button
-                  mode="contained"
-                  onPress={() => setEditMode(true)}
-                  style={styles.button}
-                >
-                  Edit Profile
-                </Button>
-                <Button
-                  mode="outlined"
-                  onPress={handleLogout}
-                  loading={isLoading}
-                  disabled={isLoading}
-                  style={styles.button}
-                >
-                  Logout
-                </Button>
-              </View>
-            </>
-          )}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account Information</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Member Since</Text>
+          <Text style={styles.value}>
+            {new Date(profile.created_at || Date.now()).toLocaleDateString()}
+          </Text>
         </View>
-      </ScrollView>
-    </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Health Permissions</Text>
+          <Text style={styles.value}>
+            {profile.permissions_granted ? 'Granted' : 'Not Granted'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Button 
+          mode="contained" 
+          onPress={signOut}
+          style={styles.signOutButton}
+        >
+          Sign Out
+        </Button>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  avatarContainer: {
+  centered: {
+    justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 20,
   },
-  form: {
-    gap: 16,
+  header: {
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  displayName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
     marginTop: 16,
   },
-  button: {
-    flex: 1,
-    marginHorizontal: 4,
+  email: {
+    fontSize: 16,
+    color: '#666',
+  },
+  section: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: 'white',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  label: {
+    fontSize: 16,
+    color: '#666',
+  },
+  value: {
+    fontSize: 16,
+  },
+  signOutButton: {
+    marginTop: 8,
   },
 });

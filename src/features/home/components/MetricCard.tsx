@@ -1,20 +1,31 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Surface, Text, TouchableRipple, useTheme, ActivityIndicator } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useCallback, useMemo, useEffect } from 'react';
+import { View } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
+import { useSharedValue, withRepeat, withSpring, useAnimatedStyle } from 'react-native-reanimated';
 import { getMetricColor, MetricColorKey } from '../../../theme';
+import { getCurrentWeekStart } from '../../../core/constants/metrics';
+import { Card } from '../../../components/common/atoms/Card';
+import { MetricIcon } from '../../../components/common/atoms/metrics/MetricIcon';
+import { MetricValue } from '../../../components/common/atoms/metrics/MetricValue';
+import { MetricProgress } from '../../../components/common/atoms/metrics/MetricProgress';
+import { MetricProgressWheel } from '../../../components/common/atoms/metrics/MetricProgressWheel';
+import { useStyles } from '../styles/MetricCard.styles';
+import { layout } from '../constants/layout';
+
+const ALL_METRIC_TYPES: MetricColorKey[] = ['steps', 'calories', 'distance'];
 
 interface MetricCardProps {
   title: string;
   value: string | number;
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  icon: string;
   metricType: MetricColorKey;
-  onPress?: () => void;
+  onPress?: (startDate?: Date) => void;
   loading?: boolean;
   error?: string | null;
+  goal?: number;
 }
 
-export const MetricCard: React.FC<MetricCardProps> = ({
+export const MetricCard = React.memo<MetricCardProps>(({
   title,
   value,
   icon,
@@ -22,85 +33,105 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   onPress,
   loading,
   error,
+  goal = 10000,
 }) => {
   const theme = useTheme();
+  const styles = useStyles();
   const metricColor = getMetricColor(metricType);
+  const progress = useSharedValue(0);
+  
+  // Randomly select a color from other metric types
+  const alternateColor = useMemo(() => {
+    const otherTypes = ALL_METRIC_TYPES.filter(type => type !== metricType);
+    const randomType = otherTypes[Math.floor(Math.random() * otherTypes.length)];
+    return getMetricColor(randomType);
+  }, [metricType]);
 
-  const renderContent = () => {
-    if (loading) {
-      return <ActivityIndicator size="small" color={metricColor} />;
+  const handlePress = useCallback(() => {
+    if (onPress) {
+      onPress(getCurrentWeekStart());
     }
+  }, [onPress]);
 
-    if (error) {
-      return <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>;
-    }
+  // Calculate progress value
+  const currentValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
+  const progressValue = Math.min(currentValue / goal, 1);
 
+  // Update progress value
+  useEffect(() => {
+    progress.value = progressValue;
+  }, [progressValue]);
+
+  const pulseStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{
+        scale: progress.value >= 1 
+          ? withRepeat(
+              withSpring(1.05, { damping: 2, stiffness: 80 }),
+              -1,
+              true
+            )
+          : 1
+      }]
+    };
+  }, [progress.value]);
+
+  if (loading) {
     return (
-      <>
-        <MaterialCommunityIcons name={icon} size={24} color={metricColor} />
-        <Text variant="titleLarge" style={[styles.value, { color: theme.colors.onSurface }]}>
-          {value}
-        </Text>
-        <Text variant="labelMedium" style={[styles.title, { color: theme.colors.onSurfaceVariant }]}>
-          {title}
-        </Text>
-      </>
+      <View style={styles.container}>
+        <Card disabled>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </Card>
+      </View>
     );
-  };
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Card disabled>
+          <Text style={styles.errorText}>{error}</Text>
+        </Card>
+      </View>
+    );
+  }
 
   return (
-    <Surface
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.surfaceVariant,
-        },
-      ]}
-      elevation={1}
-    >
-      <View style={styles.innerContainer}>
-        <TouchableRipple
-          onPress={onPress}
-          style={styles.touchable}
-          rippleColor={metricColor}
-          disabled={loading || !!error}
-        >
-          <>{renderContent()}</>
-        </TouchableRipple>
-      </View>
-    </Surface>
+    <View style={styles.container}>
+      <Card
+        onPress={handlePress}
+        gradientColors={[metricColor, metricColor]}
+        gradientStart={{ x: 0, y: 0 }}
+        gradientEnd={{ x: 1, y: 1 }}
+        testID={`metric-card-${metricType}`}
+        style={pulseStyle}
+      >
+        <View style={styles.content}>
+          <View style={styles.progressWheelContainer}>
+            <MetricProgressWheel
+              size={layout.CARD_WIDTH * 0.7}
+              strokeWidth={8}
+              progress={progress}
+              alternateColor={alternateColor}
+            />
+          </View>
+          <View style={styles.iconContainer}>
+            <MetricIcon
+              type={metricType}
+              size={styles.iconContainer.width}
+              color={metricColor}
+            />
+          </View>
+          <MetricValue
+            value={value}
+            type={metricType}
+            style={styles.value}
+          />
+          <Text style={styles.title}>
+            {title}
+          </Text>
+        </View>
+      </Card>
+    </View>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    margin: 8,
-    borderRadius: 12,
-    minHeight: 120,
-    borderWidth: 1,
-  },
-  innerContainer: {
-    flex: 1,
-    overflow: 'hidden',
-    borderRadius: 12,
-  },
-  touchable: {
-    flex: 1,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  value: {
-    marginTop: 8,
-    fontWeight: '600',
-  },
-  title: {
-    marginTop: 4,
-  },
-  errorText: {
-    textAlign: 'center',
-    padding: 8,
-  },
 });

@@ -1,20 +1,17 @@
-const { getDefaultConfig } = require('@react-native/metro-config');
+const { getDefaultConfig } = require('@expo/metro-config');
 
-const defaultConfig = getDefaultConfig(__dirname);
+const config = getDefaultConfig(__dirname);
 
-module.exports = {
-  ...defaultConfig,
-  resolver: {
-    ...defaultConfig.resolver,
-    sourceExts: [...defaultConfig.resolver.sourceExts, 'jsx', 'js', 'ts', 'tsx'],
-    resolverMainFields: ['react-native', 'browser', 'main'],
-    // Add .expo directory to watchFolders
-    watchFolders: [
-      ...defaultConfig.resolver.watchFolders || [],
-      `${__dirname}/.expo`
-    ],
-  },
-  // Ensure .expo directory is included in the project roots
-  projectRoot: __dirname,
-  watchFolders: [`${__dirname}/.expo`]
-};
+// Add additional asset extensions
+config.resolver.assetExts.push('lottie', 'json');
+
+// Add sourceExts to ensure proper file resolution
+config.resolver.sourceExts = ['jsx', 'js', 'ts', 'tsx', 'json'];
+
+// Ensure proper module resolution
+config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
+
+// Enable symlinks for proper package resolution
+config.resolver.enableSymlinks = true;
+
+module.exports = config;

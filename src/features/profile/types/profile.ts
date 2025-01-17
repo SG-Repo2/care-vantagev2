@@ -1,27 +1,18 @@
-import { BaseEntity, Gender, BloodType, MeasurementSystem, PrivacyLevel } from '../../../core/types/base';
-
-export interface Biometrics {
-  height?: number;  // in centimeters
-  weight?: number;  // in kilograms
-  bloodType?: BloodType;
-}
-
-export interface Preferences {
-  measurementSystem: MeasurementSystem;
-  notifications: boolean;
-  privacyLevel: PrivacyLevel;
-  dailyGoals?: {
-    steps?: number;
-    sleep?: number;  // in minutes
-    water?: number;  // in milliliters
+export interface Profile {
+  id: string;
+  email: string;
+  display_name: string;
+  photo_url: string;
+  settings: {
+    measurementSystem: 'metric' | 'imperial';
+    notifications: boolean;
+    privacyLevel: 'private' | 'friends' | 'public';
+    dailyGoals: {
+      steps: number;
+      sleep: number;  // in minutes
+      water: number;  // in milliliters
+    };
   };
-}
-
-export interface Profile extends BaseEntity {
-  firstName: string;
-  lastName: string;
-  dateOfBirth: Date;
-  gender: Gender;
-  biometrics: Biometrics;
-  preferences: Preferences;
+  created_at?: string;
+  updated_at?: string;
 }
