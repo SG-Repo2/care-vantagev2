@@ -23,7 +23,8 @@ export default ({ config }) => ({
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#000000"
+      backgroundColor: "#000000",
+      imageResizeMode: "contain"
     },
     extra: {
       eas: {
@@ -77,7 +78,10 @@ export default ({ config }) => ({
         "android.permission.health.READ_DISTANCE",
         "android.permission.health.READ_HEART_RATE",
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
-      ]
+      ],
+      buildProperties: {
+        useWebP: false
+      }
     },
     plugins: [
       [
@@ -99,7 +103,9 @@ export default ({ config }) => ({
             compileSdkVersion: 34,
             targetSdkVersion: 34,
             minSdkVersion: 26,
-            buildToolsVersion: "34.0.0"
+            buildToolsVersion: "34.0.0",
+            enableWebP: false,
+            enableSeparateBuildPerCPUArchitecture: false
           },
           ios: {
             deploymentTarget: "16.1",
