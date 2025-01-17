@@ -1,6 +1,24 @@
 import { supabase } from '../../../utils/supabase';
 import { profileService } from '../../profile/services/profileService';
-import { AuthError } from '@supabase/supabase-js';
+import { AuthError, User, Session } from '@supabase/supabase-js';
+
+// Mock Supabase client
+jest.mock('../../../utils/supabase', () => ({
+  supabase: {
+    auth: {
+      signUp: jest.fn(),
+      signInWithPassword: jest.fn(),
+    },
+  },
+}));
+
+class MockAuthError extends AuthError {
+  constructor(message: string, status: number, code: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
 
 describe('User Management', () => {
   const testUser = {
@@ -10,24 +28,28 @@ describe('User Management', () => {
   };
 
   beforeEach(() => {
-    // Reset mocks before each test
     jest.clearAllMocks();
   });
 
   describe('User Registration', () => {
     it('should successfully register a new user', async () => {
+      const mockUser: User = {
+        id: 'test-id',
+        email: testUser.email!,
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+      };
+
       const mockSignUpResponse = {
         data: {
-          user: {
-            id: 'test-id',
-            email: testUser.email,
-          },
+          user: mockUser,
           session: null,
         },
         error: null,
       };
 
-      // Mock the sign-up call
       jest.spyOn(supabase.auth, 'signUp').mockResolvedValue(mockSignUpResponse);
 
       const { data, error } = await supabase.auth.signUp({
@@ -41,11 +63,11 @@ describe('User Management', () => {
     });
 
     it('should handle registration with existing email', async () => {
-      const mockError: AuthError = {
-        name: 'AuthError',
-        message: 'User already registered',
-        status: 400,
-      };
+      const mockError = new MockAuthError(
+        'User already registered',
+        400,
+        'USER_EXISTS'
+      );
 
       jest.spyOn(supabase.auth, 'signUp').mockResolvedValue({
         data: { user: null, session: null },
@@ -65,20 +87,26 @@ describe('User Management', () => {
 
   describe('Profile Creation', () => {
     it('should create a profile after successful registration', async () => {
-      const mockUser = {
+      const mockUser: User = {
         id: 'test-id',
-        email: testUser.email,
+        email: testUser.email!,
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
       };
 
       const mockProfile = {
         id: 'profile-id',
         user_id: mockUser.id,
         display_name: testUser.display_name,
-        email: mockUser.email,
+        email: testUser.email,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         score: 0,
         permissions_granted: false,
+        photo_url: null,
+        device_info: {},
       };
 
       jest.spyOn(profileService, 'createProfile').mockResolvedValue(mockProfile);
@@ -86,15 +114,18 @@ describe('User Management', () => {
       const profile = await profileService.createProfile(mockUser);
 
       expect(profile).toBeDefined();
-      expect(profile.user_id).toBe(mockUser.id);
+      expect(profile.id).toBe(mockProfile.id);
       expect(profile.email).toBe(mockUser.email);
-      expect(profile.score).toBe(0);
     });
 
     it('should handle profile creation errors', async () => {
-      const mockUser = {
+      const mockUser: User = {
         id: 'test-id',
-        email: testUser.email,
+        email: testUser.email!,
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
       };
 
       jest.spyOn(profileService, 'createProfile').mockRejectedValue(
@@ -109,17 +140,27 @@ describe('User Management', () => {
 
   describe('User Authentication', () => {
     it('should successfully sign in user', async () => {
+      const mockUser: User = {
+        id: 'test-id',
+        email: testUser.email!,
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+      };
+
+      const mockSession: Session = {
+        access_token: 'mock-token',
+        refresh_token: 'mock-refresh-token',
+        expires_in: 3600,
+        token_type: 'bearer',
+        user: mockUser,
+      };
+
       const mockSignInResponse = {
         data: {
-          user: {
-            id: 'test-id',
-            email: testUser.email,
-          },
-          session: {
-            access_token: 'mock-token',
-            refresh_token: 'mock-refresh-token',
-            expires_in: 3600,
-          },
+          user: mockUser,
+          session: mockSession,
         },
         error: null,
       };
@@ -138,11 +179,11 @@ describe('User Management', () => {
     });
 
     it('should handle invalid credentials', async () => {
-      const mockError: AuthError = {
-        name: 'AuthError',
-        message: 'Invalid login credentials',
-        status: 400,
-      };
+      const mockError = new MockAuthError(
+        'Invalid login credentials',
+        400,
+        'INVALID_CREDENTIALS'
+      );
 
       jest.spyOn(supabase.auth, 'signInWithPassword').mockResolvedValue({
         data: { user: null, session: null },

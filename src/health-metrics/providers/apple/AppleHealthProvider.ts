@@ -2,21 +2,9 @@ import { Platform } from 'react-native';
 import AppleHealthKit, {
   HealthInputOptions,
   HealthValue,
-  HealthKitPermissions,
 } from 'react-native-health';
 import { HealthMetrics, HealthProvider } from '../types';
-
-const permissions: HealthKitPermissions = {
-  permissions: {
-    read: [
-      AppleHealthKit.Constants.Permissions.StepCount,
-      AppleHealthKit.Constants.Permissions.DistanceWalkingRunning,
-      AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
-      AppleHealthKit.Constants.Permissions.HeartRate,
-    ],
-    write: [],
-  },
-};
+import { permissions } from './permissions';
 
 export class AppleHealthProvider implements HealthProvider {
   private initialized = false;

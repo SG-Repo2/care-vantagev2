@@ -72,6 +72,8 @@ repomix*
 # Testing
 coverage/
 __tests__/coverage/
+.jest/
+jest.config.local.js
 
 # iOS
 ios/build/
@@ -119,6 +121,7 @@ dist/
 
 # TypeScript
 *.tsbuildinfo
+tsconfig.tsbuildinfo
 
 # macOS
 .DS_Store
@@ -126,5 +129,17 @@ dist/
 
 # Project Specific
 src/**/*.txt
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Temporary files
+*.swp
+*.swo
+*~
 
 .env
