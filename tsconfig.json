@@ -10,7 +10,12 @@
     },
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react-native",
+    "lib": ["es2017"],
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "noEmit": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

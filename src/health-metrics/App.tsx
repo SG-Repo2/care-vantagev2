@@ -1,13 +1,15 @@
 import React, { useEffect } from 'react';
 import { Platform, StatusBar } from 'react-native';
-import { DarkTheme as NavigationDarkTheme } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme as NavigationDarkTheme } from '@react-navigation/native';
 import { Provider as PaperProvider, MD3DarkTheme } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { HealthDataProvider } from './contexts/HealthDataContext';
+import { TabNavigator } from './navigation/TabNavigator';
 import { ErrorBoundary } from '../core/error/ErrorBoundary';
 import { ErrorScreen } from './components/ErrorScreen';
-import * as WebBrowser from 'expo-web-browser';
-import { RootNavigator } from './navigation/RootNavigator';
 import { AuthProvider } from './contexts/AuthContext';
+import { SimpleNavigator } from './navigation/SimpleNavigator';
+import * as WebBrowser from 'expo-web-browser';
 
 // Custom theme with platform-specific colors and navigation integration
 const theme = {
@@ -27,6 +29,25 @@ const theme = {
   },
 };
 
+// Platform-specific health config
+const healthConfig = {
+  enableBackgroundSync: Platform.select({
+    ios: true,
+    android: false,
+    default: false,
+  }),
+  syncInterval: Platform.select({
+    ios: 300000, // 5 minutes
+    android: 900000, // 15 minutes
+    default: 900000,
+  }),
+  retryAttempts: Platform.select({
+    ios: 3,
+    android: 2,
+    default: 2,
+  }),
+};
+
 const navigationTheme = {
   ...NavigationDarkTheme,
   dark: true,
@@ -40,17 +61,6 @@ const navigationTheme = {
     notification: theme.colors.primary,
   },
 };
-
-const ErrorFallback = () => (
-  <ErrorScreen
-    error="Something went wrong. Please try again later."
-    onRetry={() => {
-      if (Platform.OS === 'web') {
-        window.location.reload();
-      }
-    }}
-  />
-);
 
 export default function HealthMetricsApp() {
   useEffect(() => {
@@ -69,13 +79,15 @@ export default function HealthMetricsApp() {
   }, []);
 
   return (
-    <ErrorBoundary fallback={<ErrorFallback />}>
+    <ErrorBoundary>
       <AuthProvider>
         <SafeAreaProvider>
           <StatusBar barStyle="light-content" />
-          <PaperProvider theme={theme}>
-            <RootNavigator navigationTheme={navigationTheme} />
-          </PaperProvider>
+          <NavigationContainer theme={navigationTheme}>
+            <PaperProvider theme={theme}>
+              <SimpleNavigator />
+            </PaperProvider>
+          </NavigationContainer>
         </SafeAreaProvider>
       </AuthProvider>
     </ErrorBoundary>
