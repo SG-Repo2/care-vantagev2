@@ -1,28 +1,27 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAuth } from '../../core/auth/contexts/AuthContext';
-import { useHealthData } from '../contexts/HealthDataContext';
+import { useAuth } from '../contexts/AuthContext';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ErrorScreen } from '../components/ErrorScreen';
+import { SignInScreen } from '../components/SignInScreen';
 import { TabNavigator } from './TabNavigator';
 
 const Stack = createNativeStackNavigator();
 
 export const SimpleNavigator = () => {
-  const { status, error: authError, refreshSession } = useAuth();
-  const { loading: healthLoading, error: healthError } = useHealthData();
+  const { status, error, refreshSession } = useAuth();
 
   if (status === 'initializing') {
     return <LoadingScreen message="Initializing app..." />;
   }
 
-  if (status === 'error' && authError) {
+  if (status === 'error' && error) {
     return (
       <ErrorScreen
-        error={authError}
+        error={error}
         onRetry={() => {
           console.log('Retrying auth session...');
-          refreshSession?.();
+          refreshSession();
         }}
       />
     );
@@ -39,7 +38,7 @@ export const SimpleNavigator = () => {
         },
       }}
     >
-      {status === 'authenticated' && (
+      {status === 'authenticated' ? (
         <Stack.Screen
           name="MainTabs"
           component={TabNavigator}
@@ -47,6 +46,8 @@ export const SimpleNavigator = () => {
             gestureEnabled: false,
           }}
         />
+      ) : (
+        <Stack.Screen name="SignIn" component={SignInScreen} />
       )}
     </Stack.Navigator>
   );

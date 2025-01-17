@@ -7,6 +7,8 @@ import { HealthDataProvider } from './contexts/HealthDataContext';
 import { TabNavigator } from './navigation/TabNavigator';
 import { ErrorBoundary } from '../core/error/ErrorBoundary';
 import { ErrorScreen } from './components/ErrorScreen';
+import { AuthProvider } from './contexts/AuthContext';
+import { SimpleNavigator } from './navigation/SimpleNavigator';
 
 // Custom theme with platform-specific colors and navigation integration
 const theme = {
@@ -81,16 +83,16 @@ export default function HealthMetricsApp() {
 
   return (
     <ErrorBoundary fallback={<ErrorFallback />}>
-      <SafeAreaProvider>
-        <StatusBar barStyle="light-content" />
-        <NavigationContainer theme={navigationTheme}>
-          <PaperProvider theme={theme}>
-            <HealthDataProvider config={healthConfig}>
-              <TabNavigator />
-            </HealthDataProvider>
-          </PaperProvider>
-        </NavigationContainer>
-      </SafeAreaProvider>
+      <AuthProvider>
+        <SafeAreaProvider>
+          <StatusBar barStyle="light-content" />
+          <NavigationContainer theme={navigationTheme}>
+            <PaperProvider theme={theme}>
+              <SimpleNavigator />
+            </PaperProvider>
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

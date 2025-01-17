@@ -10,4 +10,4 @@ export interface AuthState {
   session: Session | null;
   status: AuthStatus;
   error: string | null;
-}
+} 

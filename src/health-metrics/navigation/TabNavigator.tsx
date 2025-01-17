@@ -7,6 +7,7 @@ import { LeaderboardScreen } from '../../features/leaderboard/components/Leaderb
 import { ProfileScreen } from '../../features/profile/components/ProfileScreen';
 import { HealthMetricsTabParamList } from './types';
 import { HealthDataProvider } from '../contexts/HealthDataContext';
+import { View } from 'react-native';
 
 const Tab = createBottomTabNavigator<HealthMetricsTabParamList>();
 
@@ -20,6 +21,18 @@ const HomeScreenWithProvider = () => (
     <HomeScreen />
   </HealthDataProvider>
 );
+
+// Wrapper component to provide navigation prop to ProfileScreen
+const ProfileScreenWrapper = ({ navigation }: any) => {
+  // Create a wrapper View to ensure proper layout
+  return (
+    <View style={{ flex: 1 }}>
+      <ProfileScreen 
+        navigation={navigation} 
+      />
+    </View>
+  );
+};
 
 export const TabNavigator = () => {
   const theme = useTheme();
@@ -69,11 +82,14 @@ export const TabNavigator = () => {
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfileScreen}
+        component={ProfileScreenWrapper}
         options={{
+          title: 'My Profile',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account" size={size} color={color} />
           ),
+          // Add header options specific to profile
+          headerRight: () => null, // Remove any existing header right component
         }}
       />
     </Tab.Navigator>
