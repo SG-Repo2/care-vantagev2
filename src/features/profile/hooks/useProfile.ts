@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react';
-import { profileService, UserProfile, HealthMetricsEntry } from '../services/profileService';
+import { profileService, UserProfile } from '../services/profileService';
 import { useAuth } from '../../../health-metrics/contexts/AuthContext';
 
 interface UseProfileResult {
@@ -10,15 +10,12 @@ interface UseProfileResult {
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   updateAvatar: (uri: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
-  updateHealthMetrics: (metrics: {
-    date: string;
+  updateScore: (metrics: {
     steps: number;
     distance: number;
-    heart_rate?: number;
     calories: number;
-  }) => Promise<HealthMetricsEntry>;
-  getHealthMetrics: (startDate: string, endDate: string) => Promise<HealthMetricsEntry[]>;
-  getLeaderboardRankings: (periodType: 'daily' | 'weekly' | 'monthly', date: string) => Promise<any[]>;
+    heart_rate?: number;
+  }) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -115,48 +112,23 @@ export const useProfile = (): UseProfileResult => {
     }
   }, [user?.id]);
 
-  const updateHealthMetrics = useCallback(async (metrics: {
-    date: string;
+  const updateScore = useCallback(async (metrics: {
     steps: number;
     distance: number;
-    heart_rate?: number;
     calories: number;
+    heart_rate?: number;
   }) => {
-    if (!user?.id) throw new Error('User not authenticated');
+    if (!user?.id) return;
 
     try {
       setError(null);
-      return await profileService.updateHealthMetrics(user.id, metrics);
+      const updatedProfile = await profileService.updateScore(user.id, metrics);
+      setProfile(updatedProfile);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update health metrics');
+      setError(err instanceof Error ? err.message : 'Failed to update score');
       throw err;
     }
   }, [user?.id]);
-
-  const getHealthMetrics = useCallback(async (startDate: string, endDate: string) => {
-    if (!user?.id) throw new Error('User not authenticated');
-
-    try {
-      setError(null);
-      return await profileService.getHealthMetrics(user.id, startDate, endDate);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch health metrics');
-      throw err;
-    }
-  }, [user?.id]);
-
-  const getLeaderboardRankings = useCallback(async (
-    periodType: 'daily' | 'weekly' | 'monthly',
-    date: string
-  ) => {
-    try {
-      setError(null);
-      return await profileService.getLeaderboardRankings(periodType, date);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch leaderboard rankings');
-      throw err;
-    }
-  }, []);
 
   const deleteAccount = useCallback(async () => {
     if (!user?.id) return;
@@ -182,9 +154,7 @@ export const useProfile = (): UseProfileResult => {
     updateProfile,
     updateAvatar,
     refreshProfile,
-    updateHealthMetrics,
-    getHealthMetrics,
-    getLeaderboardRankings,
+    updateScore,
     deleteAccount,
   };
 };

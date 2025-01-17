@@ -9,6 +9,7 @@ export interface UserProfile {
   photo_url: string | null;
   device_info: Record<string, any>;
   permissions_granted: boolean;
+  score: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -18,23 +19,8 @@ export const mapUserToProfile = (user: User): Partial<UserProfile> => ({
   email: user.email || '',
   display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
   photo_url: user.user_metadata?.avatar_url || null,
+  score: 0,
 });
-
-export interface HealthMetricsEntry {
-  id: string;
-  user_id: string;
-  date: string;
-  steps: number;
-  distance: number;
-  calories: number;
-  heart_rate: number | null;
-  daily_score: number;
-  weekly_score: number;
-  monthly_score: number;
-  streak_days: number;
-  created_at?: string;
-  updated_at?: string;
-}
 
 export const profileService = {
   async createProfile(user: User): Promise<UserProfile> {
@@ -139,81 +125,50 @@ export const profileService = {
     return this.updateProfile(userId, { photo_url: photoURL });
   },
 
-  async updateHealthMetrics(
-    userId: string, 
+  async updateScore(
+    userId: string,
     metrics: {
-      date: string;
       steps: number;
       distance: number;
-      heart_rate?: number;
       calories: number;
+      heart_rate?: number;
     }
-  ): Promise<HealthMetricsEntry> {
-    const { data, error } = await supabase
-      .from('health_metrics')
-      .upsert({
-        user_id: userId,
-        ...metrics,
-        // The database will calculate the scores using the calculate_health_score function
-        daily_score: 0, // This will be updated by the database trigger
-        weekly_score: 0,
-        monthly_score: 0
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating health metrics:', error);
-      throw error;
-    }
-
-    return data;
+  ): Promise<UserProfile> {
+    // Calculate health score based on metrics
+    const score = this.calculateHealthScore(metrics);
+    return this.updateProfile(userId, { score });
   },
 
-  async getHealthMetrics(
-    userId: string,
-    startDate: string,
-    endDate: string
-  ): Promise<HealthMetricsEntry[]> {
-    const { data, error } = await supabase
-      .from('health_metrics')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: false });
+  calculateHealthScore(metrics: {
+    steps: number;
+    distance: number;
+    calories: number;
+    heart_rate?: number;
+  }): number {
+    // Base score starts at 0
+    let score = 0;
 
-    if (error) {
-      console.error('Error fetching health metrics:', error);
-      throw error;
+    // Steps contribution (up to 40 points)
+    // 10000 steps is considered a good daily goal
+    score += Math.min(40, (metrics.steps / 10000) * 40);
+
+    // Distance contribution (up to 20 points)
+    // 5 miles (8 km) is considered a good daily goal
+    score += Math.min(20, (metrics.distance / 8000) * 20);
+
+    // Calories contribution (up to 30 points)
+    // 500 calories is considered a good daily burn goal
+    score += Math.min(30, (metrics.calories / 500) * 30);
+
+    // Heart rate contribution (up to 10 points)
+    // Only if heart rate data is available
+    if (metrics.heart_rate) {
+      // Assuming a healthy heart rate range of 60-100 bpm
+      const heartRateScore = metrics.heart_rate >= 60 && metrics.heart_rate <= 100 ? 10 : 5;
+      score += heartRateScore;
     }
 
-    return data || [];
-  },
-
-  async getLeaderboardRankings(
-    periodType: 'daily' | 'weekly' | 'monthly',
-    date: string
-  ): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('leaderboard_rankings')
-      .select(`
-        *,
-        users:user_id (
-          display_name,
-          photo_url
-        )
-      `)
-      .eq('period_type', periodType)
-      .lte('start_date', date)
-      .gte('end_date', date)
-      .order('rank', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching leaderboard rankings:', error);
-      throw error;
-    }
-
-    return data || [];
+    // Round to nearest integer
+    return Math.round(score);
   }
 };
