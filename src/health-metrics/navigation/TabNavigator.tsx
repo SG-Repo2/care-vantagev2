@@ -5,11 +5,10 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import HomeScreen from '../components/HomeScreen';
 import { LeaderboardScreen } from '../../features/leaderboard/components/LeaderboardScreen';
 import { ProfileScreen } from '../../features/profile/components/ProfileScreen';
-import { HealthMetricsTabParamList } from './types';
 import { HealthDataProvider } from '../contexts/HealthDataContext';
-import { View } from 'react-native';
+import { MainTabParamList } from './types';
 
-const Tab = createBottomTabNavigator<HealthMetricsTabParamList>();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const HomeScreenWithProvider = () => (
   <HealthDataProvider
@@ -21,18 +20,6 @@ const HomeScreenWithProvider = () => (
     <HomeScreen />
   </HealthDataProvider>
 );
-
-// Wrapper component to provide navigation prop to ProfileScreen
-const ProfileScreenWrapper = ({ navigation }: any) => {
-  // Create a wrapper View to ensure proper layout
-  return (
-    <View style={{ flex: 1 }}>
-      <ProfileScreen 
-        navigation={navigation} 
-      />
-    </View>
-  );
-};
 
 export const TabNavigator = () => {
   const theme = useTheme();
@@ -82,14 +69,12 @@ export const TabNavigator = () => {
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfileScreenWrapper}
+        component={ProfileScreen}
         options={{
           title: 'My Profile',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account" size={size} color={color} />
           ),
-          // Add header options specific to profile
-          headerRight: () => null, // Remove any existing header right component
         }}
       />
     </Tab.Navigator>

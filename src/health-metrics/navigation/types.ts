@@ -1,13 +1,19 @@
-import { NavigatorScreenParams } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 
-export type HealthMetricsTabParamList = {
+export type RootStackParamList = {
+  SignIn: undefined;
+  MainApp: undefined;
+};
+
+export type MainTabParamList = {
   Home: undefined;
   Leaderboard: undefined;
   Profile: undefined;
-  Settings?: undefined;
-  Login?: undefined;
 };
 
-export type HealthMetricsStackParamList = {
-  MainTabs: NavigatorScreenParams<HealthMetricsTabParamList>;
-};
+export type RootStackScreenProps<T extends keyof RootStackParamList> = 
+  NativeStackScreenProps<RootStackParamList, T>;
+
+export type MainTabScreenProps<T extends keyof MainTabParamList> = 
+  BottomTabScreenProps<MainTabParamList, T>;

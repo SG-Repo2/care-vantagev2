@@ -9,6 +9,7 @@ interface UseProfileResult {
   getProfile: () => Promise<UserProfile | null>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   updateAvatar: (uri: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
   updateHealthMetrics: (metrics: {
     date: string;
     steps: number;
@@ -51,6 +52,20 @@ export const useProfile = (): UseProfileResult => {
       setProfile(null);
     }
   }, [user, status, profile]);
+
+  const refreshProfile = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      const refreshedProfile = await profileService.getProfile(user.id);
+      setProfile(refreshedProfile);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh profile');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   const getProfile = useCallback(async () => {
     if (!user?.id) return null;
@@ -166,6 +181,7 @@ export const useProfile = (): UseProfileResult => {
     getProfile,
     updateProfile,
     updateAvatar,
+    refreshProfile,
     updateHealthMetrics,
     getHealthMetrics,
     getLeaderboardRankings,

@@ -49,6 +49,8 @@ export default ({ config }) => ({
       infoPlist: {
         NSHealthShareUsageDescription: "This app requires access to health data to track your fitness metrics.",
         NSHealthUpdateUsageDescription: "This app requires access to health data to track your fitness metrics.",
+        NSCameraUsageDescription: "This app uses the camera to let you take profile photos.",
+        NSPhotoLibraryUsageDescription: "This app accesses your photos to let you share them as profile photos.",
         UIBackgroundModes: ["fetch", "remote-notification"],
       },
       config: {
@@ -76,10 +78,20 @@ export default ({ config }) => ({
         "android.permission.health.READ_STEPS",
         "android.permission.health.READ_DISTANCE",
         "android.permission.health.READ_HEART_RATE",
-        "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     plugins: [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them as profile photos.",
+          "cameraPermission": "The app uses the camera to let you take profile photos."
+        }
+      ],
       [
         "expo-health-connect",
         {

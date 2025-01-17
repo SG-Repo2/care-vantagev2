@@ -1,15 +1,13 @@
 import React, { useEffect } from 'react';
 import { Platform, StatusBar } from 'react-native';
-import { NavigationContainer, DarkTheme as NavigationDarkTheme } from '@react-navigation/native';
+import { DarkTheme as NavigationDarkTheme } from '@react-navigation/native';
 import { Provider as PaperProvider, MD3DarkTheme } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { HealthDataProvider } from './contexts/HealthDataContext';
-import { TabNavigator } from './navigation/TabNavigator';
 import { ErrorBoundary } from '../core/error/ErrorBoundary';
 import { ErrorScreen } from './components/ErrorScreen';
-import { AuthProvider } from './contexts/AuthContext';
-import { SimpleNavigator } from './navigation/SimpleNavigator';
 import * as WebBrowser from 'expo-web-browser';
+import { RootNavigator } from './navigation/RootNavigator';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Custom theme with platform-specific colors and navigation integration
 const theme = {
@@ -27,25 +25,6 @@ const theme = {
     onSurface: '#FFFFFF',
     onBackground: '#FFFFFF',
   },
-};
-
-// Platform-specific health config
-const healthConfig = {
-  enableBackgroundSync: Platform.select({
-    ios: true,
-    android: false,
-    default: false,
-  }),
-  syncInterval: Platform.select({
-    ios: 300000, // 5 minutes
-    android: 900000, // 15 minutes
-    default: 900000,
-  }),
-  retryAttempts: Platform.select({
-    ios: 3,
-    android: 2,
-    default: 2,
-  }),
 };
 
 const navigationTheme = {
@@ -66,7 +45,6 @@ const ErrorFallback = () => (
   <ErrorScreen
     error="Something went wrong. Please try again later."
     onRetry={() => {
-      // Force reload the app
       if (Platform.OS === 'web') {
         window.location.reload();
       }
@@ -95,11 +73,9 @@ export default function HealthMetricsApp() {
       <AuthProvider>
         <SafeAreaProvider>
           <StatusBar barStyle="light-content" />
-          <NavigationContainer theme={navigationTheme}>
-            <PaperProvider theme={theme}>
-              <SimpleNavigator />
-            </PaperProvider>
-          </NavigationContainer>
+          <PaperProvider theme={theme}>
+            <RootNavigator navigationTheme={navigationTheme} />
+          </PaperProvider>
         </SafeAreaProvider>
       </AuthProvider>
     </ErrorBoundary>

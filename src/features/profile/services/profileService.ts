@@ -39,8 +39,29 @@ export interface HealthMetricsEntry {
 export const profileService = {
   async createProfile(user: User): Promise<UserProfile> {
     try {
+      // First check if profile exists
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error checking existing profile:', fetchError);
+        throw fetchError;
+      }
+
+      if (existingProfile) {
+        console.log('Found existing profile:', existingProfile);
+        return existingProfile;
+      }
+
+      // Create new profile if it doesn't exist
       const profileData = {
-        ...mapUserToProfile(user),
+        id: user.id, // Ensure this matches auth.uid()
+        email: user.email || '',
+        display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+        photo_url: user.user_metadata?.avatar_url || null,
         device_info: {},
         permissions_granted: false
       };
@@ -52,22 +73,15 @@ export const profileService = {
         .single();
 
       if (error) {
-        if (error.code === '42501') {
-          throw new Error('Permission denied: Unable to create user profile. Please check database permissions.');
-        } else if (error.code === '23505') {
-          // If profile already exists, try to fetch it
-          const { data: existingProfile, error: fetchError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-            
-          if (fetchError) throw fetchError;
-          if (existingProfile) return existingProfile;
-        }
-        throw error;
+        console.error('Error creating profile:', error);
+        throw new Error(`Failed to create profile: ${error.message}`);
       }
 
+      if (!data) {
+        throw new Error('No profile data returned after creation');
+      }
+
+      console.log('Created new profile:', data);
       return data;
     } catch (error) {
       console.error('Error in createProfile:', error);
@@ -76,18 +90,27 @@ export const profileService = {
   },
 
   async getProfile(userId: string): Promise<UserProfile | null> {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching profile:', error);
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found for user:', userId);
+          return null;
+        }
+        console.error('Error fetching profile:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getProfile:', error);
       throw error;
     }
-
-    return data;
   },
 
   async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {

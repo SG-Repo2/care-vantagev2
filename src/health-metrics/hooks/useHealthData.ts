@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { HealthMetrics, HealthError } from '../providers/types';
 import { HealthProviderFactory } from '../providers/HealthProviderFactory';
+import { profileService } from '../../features/profile/services/profileService';
+import { useAuth } from '../contexts/AuthContext';
+import { AppState, AppStateStatus } from 'react-native';
 
 export interface WeeklyMetrics {
   weeklySteps: number;
@@ -17,7 +20,11 @@ interface UseHealthDataResult {
   error: HealthError | null;
   weeklyData: WeeklyMetrics | null;
   refresh: () => Promise<void>;
+  isInitialized: boolean;
 }
+
+const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const BACKGROUND_SYNC_INTERVAL = 15 * 60 * 1000; // 15 minutes
 
 const isHealthError = (error: unknown): error is HealthError => {
   return (
@@ -34,6 +41,28 @@ export const useHealthData = (): UseHealthDataResult => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<HealthError | null>(null);
   const [provider, setProvider] = useState<any>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const { user } = useAuth();
+
+  const syncWithDatabase = useCallback(async (healthMetrics: HealthMetrics) => {
+    if (!user?.id) return;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      await profileService.updateHealthMetrics(user.id, {
+        date: today,
+        steps: healthMetrics.steps,
+        distance: healthMetrics.distance,
+        calories: healthMetrics.calories,
+        heart_rate: healthMetrics.heartRate
+      });
+      setLastSyncTime(new Date());
+    } catch (err) {
+      console.error('Failed to sync with database:', err);
+      // Don't throw error to prevent disrupting the UI
+    }
+  }, [user?.id]);
 
   const initialize = useCallback(async () => {
     try {
@@ -41,6 +70,7 @@ export const useHealthData = (): UseHealthDataResult => {
       await HealthProviderFactory.cleanup();
       const newProvider = await HealthProviderFactory.createProvider();
       setProvider(newProvider);
+      setIsInitialized(true);
       return newProvider;
     } catch (err) {
       const healthError: HealthError = {
@@ -87,10 +117,12 @@ export const useHealthData = (): UseHealthDataResult => {
         endDate: new Date().toISOString()
       };
 
-      setMetrics({
+      const updatedMetrics = {
         ...defaultMetrics,
         ...data
-      });
+      };
+
+      setMetrics(updatedMetrics);
 
       // Set weekly data if available
       if ('weeklySteps' in data) {
@@ -98,6 +130,14 @@ export const useHealthData = (): UseHealthDataResult => {
           ...defaultWeeklyMetrics,
           ...data
         });
+      }
+
+      // Sync with database if enough time has passed
+      const shouldSync = !lastSyncTime || 
+        (new Date().getTime() - lastSyncTime.getTime() > SYNC_INTERVAL);
+      
+      if (shouldSync) {
+        await syncWithDatabase(updatedMetrics);
       }
     } catch (err: unknown) {
       console.error('Health data error:', err);
@@ -113,8 +153,38 @@ export const useHealthData = (): UseHealthDataResult => {
     } finally {
       setLoading(false);
     }
-  }, [provider, initialize]);
+  }, [provider, initialize, lastSyncTime, syncWithDatabase]);
 
+  // Handle app state changes for background sync
+  useEffect(() => {
+    let backgroundSyncInterval: NodeJS.Timeout;
+
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        // App came to foreground, refresh immediately
+        await refresh();
+        // Start more frequent sync
+        backgroundSyncInterval = setInterval(refresh, SYNC_INTERVAL);
+      } else if (nextAppState === 'background') {
+        // Clear frequent sync interval
+        if (backgroundSyncInterval) clearInterval(backgroundSyncInterval);
+        // Set up less frequent background sync
+        backgroundSyncInterval = setInterval(refresh, BACKGROUND_SYNC_INTERVAL);
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // Initial setup of sync interval
+    backgroundSyncInterval = setInterval(refresh, SYNC_INTERVAL);
+
+    return () => {
+      subscription.remove();
+      if (backgroundSyncInterval) clearInterval(backgroundSyncInterval);
+    };
+  }, [refresh]);
+
+  // Initial load
   useEffect(() => {
     refresh();
   }, [refresh]);
@@ -124,6 +194,7 @@ export const useHealthData = (): UseHealthDataResult => {
     loading,
     error,
     weeklyData,
-    refresh
+    refresh,
+    isInitialized
   };
 }; 

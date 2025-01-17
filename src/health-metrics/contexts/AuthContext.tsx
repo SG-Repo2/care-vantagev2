@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../../utils/supabase';
 import * as WebBrowser from 'expo-web-browser';
-import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import { profileService } from '../../features/profile/services/profileService';
 import { HealthProviderFactory } from '../providers/HealthProviderFactory';
 
@@ -27,80 +27,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('initializing');
   const [error, setError] = useState<string | null>(null);
 
-  // Handle profile creation/update when user changes
+  // Initialize auth state
   useEffect(() => {
-    if (user) {
-      (async () => {
-        try {
-          // Try to get existing profile
-          const profile = await profileService.getProfile(user.id);
-          
-          // If no profile exists, create one
-          if (!profile) {
-            console.log('Creating new profile for user:', user.id);
-            await profileService.createProfile(user);
-          }
-        } catch (err) {
-          console.error('Error handling user profile:', err);
-          // Don't set error state here to avoid blocking the auth flow
-        }
-      })();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        console.log('Auth state changed:', event, currentSession?.user?.id);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: initialSession }, error: sessionError } = 
+          await supabase.auth.getSession();
         
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          try {
-            setStatus('initializing');
+        if (sessionError) throw sessionError;
+
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+        setStatus(initialSession ? 'authenticated' : 'unauthenticated');
+        setError(null);
+
+        // Set up auth state change listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, currentSession) => {
+            console.log('Auth state changed:', event, currentSession?.user?.id);
             
-            // 1. Set session and user
-            setSession(currentSession);
-            setUser(currentSession?.user ?? null);
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+              try {
+                setStatus('initializing');
+                setSession(currentSession);
+                setUser(currentSession?.user ?? null);
 
-            if (currentSession?.user) {
-              // 2. Initialize or get user profile
-              console.log('Initializing user profile...');
-              const profile = await profileService.getProfile(currentSession.user.id);
-              if (!profile) {
-                console.log('Creating new profile for user:', currentSession.user.id);
-                await profileService.createProfile(currentSession.user);
+                if (currentSession?.user) {
+                  // Initialize user profile and health provider
+                  await initializeUserServices(currentSession.user);
+                }
+
+                setStatus('authenticated');
+                setError(null);
+              } catch (err) {
+                console.error('Post-sign-in initialization error:', err);
+                setStatus('error');
+                setError(err instanceof Error ? err.message : 'Failed to initialize after sign-in');
               }
-
-              // 3. Initialize health provider
-              console.log('Initializing health provider...');
-              await HealthProviderFactory.createProvider();
+            } else if (event === 'SIGNED_OUT') {
+              await handleSignOut();
             }
-
-            setStatus('authenticated');
-            setError(null);
-          } catch (err) {
-            console.error('Post-sign-in initialization error:', err);
-            setStatus('error');
-            setError(err instanceof Error ? err.message : 'Failed to initialize after sign-in');
           }
-        } else if (event === 'SIGNED_OUT') {
-          // Clean up on sign out
-          setSession(null);
-          setUser(null);
-          setStatus('unauthenticated');
-          setError(null);
-          await HealthProviderFactory.cleanup();
-        }
+        );
+
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        setStatus('error');
+        setError(err instanceof Error ? err.message : 'Failed to initialize auth');
       }
-    );
-
-    // Initial session check
-    refreshSession();
-
-    return () => {
-      subscription.unsubscribe();
     };
+
+    initializeAuth();
   }, []);
+
+  const initializeUserServices = async (currentUser: User) => {
+    try {
+      // Initialize or get user profile
+      console.log('Initializing user profile...');
+      const profile = await profileService.getProfile(currentUser.id);
+      if (!profile) {
+        console.log('Creating new profile for user:', currentUser.id);
+        await profileService.createProfile(currentUser);
+      }
+
+      // Initialize health provider
+      console.log('Initializing health provider...');
+      await HealthProviderFactory.createProvider();
+    } catch (err) {
+      console.error('Error initializing user services:', err);
+      throw err;
+    }
+  };
+
+  const handleSignOut = async () => {
+    setSession(null);
+    setUser(null);
+    setStatus('unauthenticated');
+    setError(null);
+    await HealthProviderFactory.cleanup();
+  };
 
   const refreshSession = async () => {
     try {

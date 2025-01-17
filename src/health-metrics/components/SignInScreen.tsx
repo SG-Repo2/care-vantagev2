@@ -1,132 +1,160 @@
 import React, { useState, useEffect } from 'react';
 import { View, Platform } from 'react-native';
 import { Button, Text, TextInput, useTheme, MD3Theme } from 'react-native-paper';
-import { FontAwesome } from '@expo/vector-icons';
-import { useAuth } from '../contexts/AuthContext';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Constants from 'expo-constants';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { makeRedirectUri } from 'expo-auth-session';
+import { supabase } from '../../utils/supabase';
+import { HealthProviderFactory } from '../providers/HealthProviderFactory';
+import { useNavigation } from '@react-navigation/native';
+import { profileService } from '../../features/profile/services/profileService';
+import type { RootStackScreenProps } from '../navigation/types';
+
+type SignInScreenProps = RootStackScreenProps<'SignIn'>;
 
 export const SignInScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [localError, setLocalError] = useState<string | null>(null);
-  const { signIn, signInWithGoogle, status, error: authError } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
   const theme = useTheme();
-  const isLoading = status === 'initializing';
+  const navigation = useNavigation<SignInScreenProps['navigation']>();
 
-  const googleAuth = Constants.expoConfig?.extra?.googleAuth;
-  
   useEffect(() => {
-    WebBrowser.warmUpAsync();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        try {
+          // Create or get user profile
+          const profile = await profileService.createProfile(session.user);
+          console.log('Profile created/retrieved:', profile);
+          
+          // Initialize health provider after profile is created
+          const healthInitialized = await initializeHealthProvider();
+          if (healthInitialized) {
+            navigation.replace('MainApp');
+          }
+        } catch (err) {
+          console.error('Failed to initialize user profile:', err);
+          setError('Failed to initialize user profile');
+        }
+      }
+    });
+
     return () => {
-      WebBrowser.coolDownAsync();
+      subscription.unsubscribe();
     };
-  }, []);
+  }, [navigation]);
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: googleAuth?.webClientId,
-    responseType: "id_token",
-    scopes: ['openid', 'profile', 'email'],
-    extraParams: {
-      access_type: 'offline',
-      prompt: 'consent'
-    },
-    redirectUri: makeRedirectUri({
-      scheme: 'care-vantage',
-      path: 'google-auth'
-    })
-  });
+  const initializeHealthProvider = async () => {
+    try {
+      await HealthProviderFactory.cleanup();
+      await HealthProviderFactory.createProvider();
+      return true;
+    } catch (err) {
+      console.error('Failed to initialize health provider:', err);
+      setError('Failed to initialize health services. Please check permissions.');
+      return false;
+    }
+  };
 
-  const handleLogin = async () => {
+  const handleAuth = async () => {
     if (!email || !password) {
-      setLocalError('Please enter both email and password');
+      setError('Please enter both email and password');
       return;
     }
     if (password.length < 6) {
-      setLocalError('Password must be at least 6 characters');
+      setError('Password must be at least 6 characters');
       return;
     }
-    setLocalError(null);
-    try {
-      await signIn(email, password);
-    } catch (err) {
-      console.error('Login error:', err);
-      setLocalError(err instanceof Error ? err.message : 'Failed to sign in');
-    }
-  };
 
-  const handleGoogleSignIn = async () => {
-    try {
-      setLocalError(null);
-      console.log('Starting Google sign-in...');
-      
-      if (!request) {
-        throw new Error('Google auth request not initialized');
-      }
+    setLoading(true);
+    setError(null);
 
-      const result = await promptAsync();
-      console.log('Google auth result:', result);
-      
-      if (result?.type === 'success') {
-        if (!result.params?.id_token) {
-          throw new Error('No ID token present in response');
+    try {
+      if (isRegistering) {
+        // For registration, only sign up first
+        const { data, error: signUpError } = await supabase.auth.signUp({ 
+          email, 
+          password,
+        });
+
+        if (signUpError) {
+          console.error('SignUp error:', signUpError);
+          throw signUpError;
         }
-        console.log('Got ID token, signing in with Supabase...');
-        await signInWithGoogle(result.params.id_token);
-      } else if (result?.type === 'error') {
-        throw new Error(result.error?.message || 'Google sign-in failed');
-      } else if (result?.type === 'cancel') {
-        console.log('User cancelled Google sign-in');
-        return;
+
+        if (data?.user) {
+          // If registration successful, try to sign in
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+
+          if (signInError) {
+            console.error('SignIn after registration error:', signInError);
+            throw signInError;
+          }
+        }
+      } else {
+        // Regular sign in
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (signInError) {
+          console.error('SignIn error:', signInError);
+          throw signInError;
+        }
       }
     } catch (err) {
-      console.error('Google sign-in error:', err);
-      setLocalError(err instanceof Error ? err.message : 'Failed to sign in with Google');
+      console.error('Auth error:', err);
+      // More descriptive error messages
+      if (err instanceof Error) {
+        if (err.message.includes('Invalid login credentials')) {
+          setError('Invalid email or password. Please try again.');
+        } else if (err.message.includes('Email not confirmed')) {
+          setError('Please check your email to confirm your account.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Authentication failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const error = localError || authError;
   const styles = createStyles(theme);
-
-  const GoogleIcon = () => (
-    <FontAwesome name="google" size={20} color="white" style={{ marginRight: 8 }} />
-  );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.contentContainer}>
         <Text style={styles.title}>Health Metrics</Text>
-        <Text style={styles.subtitle}>Sign in to track your health journey</Text>
+        <Text style={styles.subtitle}>
+          {isRegistering ? 'Create your account' : 'Sign in to your account'}
+        </Text>
 
         <TextInput
           label="Email"
           value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            setLocalError(null);
-          }}
+          onChangeText={setEmail}
           mode="outlined"
           style={styles.input}
           autoCapitalize="none"
           keyboardType="email-address"
-          disabled={isLoading}
+          disabled={loading}
         />
         
         <TextInput
           label="Password"
           value={password}
-          onChangeText={(text) => {
-            setPassword(text);
-            setLocalError(null);
-          }}
+          onChangeText={setPassword}
           mode="outlined"
           style={styles.input}
           secureTextEntry
-          disabled={isLoading}
+          disabled={loading}
         />
 
         {error && (
@@ -135,29 +163,23 @@ export const SignInScreen = () => {
 
         <Button
           mode="contained"
-          onPress={handleLogin}
-          loading={isLoading}
-          disabled={isLoading || !email || !password || password.length < 6}
+          onPress={handleAuth}
+          loading={loading}
+          disabled={loading || !email || !password}
           style={[styles.button, styles.primaryButton]}
         >
-          Sign In with Email
+          {isRegistering ? 'Register' : 'Sign In'}
         </Button>
 
-        <View style={styles.dividerContainer}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or continue with</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
         <Button
-          mode="contained"
-          onPress={handleGoogleSignIn}
-          loading={isLoading}
-          disabled={isLoading}
-          icon={GoogleIcon}
-          style={[styles.button, styles.googleButton]}
+          mode="text"
+          onPress={() => setIsRegistering(!isRegistering)}
+          disabled={loading}
+          style={styles.button}
         >
-          Sign in with Google
+          {isRegistering 
+            ? 'Already have an account? Sign In' 
+            : "Don't have an account? Register"}
         </Button>
       </View>
     </SafeAreaView>
@@ -211,29 +233,11 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.outlineVariant,
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: theme.colors.onSurfaceVariant,
-    fontSize: 14,
-  },
   button: {
     marginBottom: 16,
     borderRadius: 12,
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,
-  },
-  googleButton: {
-    backgroundColor: '#4285F4',
   },
 }); 
