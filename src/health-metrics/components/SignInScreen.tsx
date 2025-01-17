@@ -30,9 +30,8 @@ export const SignInScreen = () => {
           
           // Initialize health provider after profile is created
           const healthInitialized = await initializeHealthProvider();
-          if (healthInitialized) {
-            navigation.replace('MainTabs');
-          }
+          // Navigation will be handled automatically by SimpleNavigator
+          // based on the auth status change
         } catch (err) {
           console.error('Failed to initialize user profile:', err);
           setError('Failed to initialize user profile');

@@ -150,7 +150,7 @@ export const useProfile = (): UseProfileResult => {
             // Create profile if it doesn't exist
             userProfile = await profileService.createProfile({
               id: user.id,
-              email: user.email || null,
+              email: user.email,
               user_metadata: {
                 full_name: user.user_metadata?.full_name,
                 avatar_url: user.user_metadata?.avatar_url
