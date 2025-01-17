@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Platform } from 'react-native';
-import { TextInput, Text, useTheme, MD3Theme } from 'react-native-paper';
+import { Button, Text, TextInput, useTheme, MD3Theme } from 'react-native-paper';
 import { FontAwesome } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
+import { StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import * as AuthSession from 'expo-auth-session';
-import { useAuth } from '../contexts/AuthContext';
-import { StyleSheet } from 'react-native';
+import { makeRedirectUri } from 'expo-auth-session';
 
 export const SignInScreen = () => {
   const [email, setEmail] = useState('');
@@ -16,6 +17,29 @@ export const SignInScreen = () => {
   const { signIn, signInWithGoogle, status, error: authError } = useAuth();
   const theme = useTheme();
   const isLoading = status === 'initializing';
+
+  const googleAuth = Constants.expoConfig?.extra?.googleAuth;
+  
+  useEffect(() => {
+    WebBrowser.warmUpAsync();
+    return () => {
+      WebBrowser.coolDownAsync();
+    };
+  }, []);
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    clientId: googleAuth?.webClientId,
+    responseType: "id_token",
+    scopes: ['openid', 'profile', 'email'],
+    extraParams: {
+      access_type: 'offline',
+      prompt: 'consent'
+    },
+    redirectUri: makeRedirectUri({
+      scheme: 'care-vantage',
+      path: 'google-auth'
+    })
+  });
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -35,60 +59,45 @@ export const SignInScreen = () => {
     }
   };
 
-  const googleAuth = Constants.expoConfig?.extra?.googleAuth;
-  
-  // Initialize AuthSession and WebBrowser for OAuth
-  AuthSession.useAutoDiscovery('https://accounts.google.com');
-
-  useEffect(() => {
-    WebBrowser.maybeCompleteAuthSession();
-    WebBrowser.warmUpAsync();
-    return () => {
-      WebBrowser.coolDownAsync();
-    };
-  }, []);
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: googleAuth?.androidClientId,
-    iosClientId: googleAuth?.iosClientId,
-    clientId: googleAuth?.webClientId,
-    responseType: "token",
-    scopes: ['openid', 'profile', 'email']
-  });
-
   const handleGoogleSignIn = async () => {
     try {
       setLocalError(null);
+      console.log('Starting Google sign-in...');
+      
+      if (!request) {
+        throw new Error('Google auth request not initialized');
+      }
+
       const result = await promptAsync();
+      console.log('Google auth result:', result);
       
       if (result?.type === 'success') {
-        if (!result.authentication?.accessToken) {
-          throw new Error('No access token present in response');
+        if (!result.params?.id_token) {
+          throw new Error('No ID token present in response');
         }
-        await signInWithGoogle(result.authentication.accessToken);
+        console.log('Got ID token, signing in with Supabase...');
+        await signInWithGoogle(result.params.id_token);
       } else if (result?.type === 'error') {
         throw new Error(result.error?.message || 'Google sign-in failed');
       } else if (result?.type === 'cancel') {
-        // User cancelled the login flow
+        console.log('User cancelled Google sign-in');
         return;
       }
     } catch (err) {
       console.error('Google sign-in error:', err);
-      setLocalError(err instanceof Error ? err.message : 'Failed to sign in with Google. Please try again.');
+      setLocalError(err instanceof Error ? err.message : 'Failed to sign in with Google');
     }
   };
 
   const error = localError || authError;
   const styles = createStyles(theme);
 
-  const GoogleIcon = (
-    <View style={{ marginRight: 8 }}>
-      <FontAwesome name="google" size={20} color="white" />
-    </View>
+  const GoogleIcon = () => (
+    <FontAwesome name="google" size={20} color="white" style={{ marginRight: 8 }} />
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.contentContainer}>
         <Text style={styles.title}>Health Metrics</Text>
         <Text style={styles.subtitle}>Sign in to track your health journey</Text>
@@ -124,7 +133,7 @@ export const SignInScreen = () => {
           <Text style={styles.errorText}>{error}</Text>
         )}
 
-        <TextInput.Button
+        <Button
           mode="contained"
           onPress={handleLogin}
           loading={isLoading}
@@ -132,7 +141,7 @@ export const SignInScreen = () => {
           style={[styles.button, styles.primaryButton]}
         >
           Sign In with Email
-        </TextInput.Button>
+        </Button>
 
         <View style={styles.dividerContainer}>
           <View style={styles.dividerLine} />
@@ -140,18 +149,18 @@ export const SignInScreen = () => {
           <View style={styles.dividerLine} />
         </View>
 
-        <TextInput.Button
+        <Button
           mode="contained"
           onPress={handleGoogleSignIn}
           loading={isLoading}
-          disabled={!request || isLoading}
-          icon={() => GoogleIcon}
+          disabled={isLoading}
+          icon={GoogleIcon}
           style={[styles.button, styles.googleButton]}
         >
           Sign in with Google
-        </TextInput.Button>
+        </Button>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -160,9 +169,10 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
     flex: 1,
     padding: 24,
     backgroundColor: theme.colors.background,
-    justifyContent: 'center',
   },
   contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
     backgroundColor: theme.colors.surface,
     borderRadius: 24,
     padding: 24,
@@ -225,8 +235,5 @@ const createStyles = (theme: MD3Theme) => StyleSheet.create({
   },
   googleButton: {
     backgroundColor: '#4285F4',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 }); 

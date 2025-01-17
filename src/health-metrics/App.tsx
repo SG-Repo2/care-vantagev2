@@ -9,6 +9,7 @@ import { ErrorBoundary } from '../core/error/ErrorBoundary';
 import { ErrorScreen } from './components/ErrorScreen';
 import { AuthProvider } from './contexts/AuthContext';
 import { SimpleNavigator } from './navigation/SimpleNavigator';
+import * as WebBrowser from 'expo-web-browser';
 
 // Custom theme with platform-specific colors and navigation integration
 const theme = {
@@ -79,6 +80,14 @@ export default function HealthMetricsApp() {
       StatusBar.setBackgroundColor('#000000');
     }
     StatusBar.setBarStyle('light-content');
+  }, []);
+
+  useEffect(() => {
+    // Initialize WebBrowser for OAuth
+    WebBrowser.warmUpAsync();
+    return () => {
+      WebBrowser.coolDownAsync();
+    };
   }, []);
 
   return (

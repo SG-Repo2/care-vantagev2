@@ -15,6 +15,7 @@ export default ({ config }) => ({
   expo: {
     name: "care-vantage",
     slug: "care-vantage",
+    scheme: "care-vantage",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
