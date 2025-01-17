@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   currentUserCard: {
-    backgroundColor: '#f0f8ff',
+    backgroundColor: '#000000',
   },
   row: {
     flexDirection: 'row',
