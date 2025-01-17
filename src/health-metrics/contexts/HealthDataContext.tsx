@@ -1,190 +1,154 @@
-import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
-import type { HealthMetrics, HealthError } from '../providers/types';
-import { HealthProviderFactory } from '../providers/HealthProviderFactory';
-
-export interface WeeklyMetrics {
-  weeklySteps: number;
-  weeklyDistance: number;
-  weeklyCalories: number;
-  weeklyHeartRate: number;
-  startDate?: string;
-  endDate?: string;
-}
+import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import { HealthMetrics, HealthError } from '../types';
+import { syncQueue } from '../services/HealthMetricsService';
 
 interface HealthDataState {
   metrics: HealthMetrics | null;
-  loading: boolean;
+  isLoading: boolean;
   error: HealthError | null;
-  lastSync: string | null;
-  weeklyData: WeeklyMetrics | null;
-  isInitialized: boolean;
+  lastSynced: string | null;
 }
 
 type HealthDataAction =
-  | { type: 'SET_METRICS'; payload: HealthMetrics }
+  | { type: 'UPDATE_METRICS_OPTIMISTIC'; payload: Partial<HealthMetrics> }
+  | { type: 'UPDATE_METRICS_SUCCESS'; payload: Partial<HealthMetrics> }
+  | { type: 'UPDATE_METRICS_FAILURE'; payload: Error }
+  | { type: 'UPDATE_PROVIDER_DATA'; payload: { provider: string; data: HealthMetrics } }
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: HealthError }
-  | { type: 'CLEAR_ERROR' }
-  | { type: 'SET_LAST_SYNC'; payload: string }
-  | { type: 'SET_WEEKLY_DATA'; payload: WeeklyMetrics }
-  | { type: 'SET_INITIALIZED'; payload: boolean }
-  | { type: 'RESET_STATE' };
+  | { type: 'SET_ERROR'; payload: HealthError | null };
 
-interface HealthDataContextType extends HealthDataState {
-  refresh: () => Promise<void>;
-  clearError: () => void;
+interface HealthDataContextValue extends HealthDataState {
+  updateMetrics: (metrics: Partial<HealthMetrics>) => Promise<void>;
+  initializeHealthProviders: () => Promise<void>;
 }
 
 const initialState: HealthDataState = {
   metrics: null,
-  loading: true,
+  isLoading: false,
   error: null,
-  lastSync: null,
-  weeklyData: null,
-  isInitialized: false
+  lastSynced: null,
 };
 
-function healthDataReducer(state: HealthDataState, action: HealthDataAction): HealthDataState {
+const HealthDataContext = createContext<HealthDataContextValue | undefined>(undefined);
+
+const healthDataReducer = (state: HealthDataState, action: HealthDataAction): HealthDataState => {
   switch (action.type) {
-    case 'SET_METRICS':
+    case 'UPDATE_METRICS_OPTIMISTIC':
       return {
         ...state,
-        metrics: action.payload,
-        error: null
+        metrics: state.metrics ? { ...state.metrics, ...action.payload } : null,
+      };
+    case 'UPDATE_METRICS_SUCCESS':
+      return {
+        ...state,
+        metrics: state.metrics ? { ...state.metrics, ...action.payload } : null,
+        lastSynced: new Date().toISOString(),
+        error: null,
+      };
+    case 'UPDATE_METRICS_FAILURE':
+      return {
+        ...state,
+        error: {
+          type: 'sync',
+          message: action.payload.message,
+          timestamp: new Date().toISOString(),
+        },
+      };
+    case 'UPDATE_PROVIDER_DATA':
+      return {
+        ...state,
+        metrics: action.payload.data,
+        lastSynced: new Date().toISOString(),
       };
     case 'SET_LOADING':
       return {
         ...state,
-        loading: action.payload
+        isLoading: action.payload,
       };
     case 'SET_ERROR':
       return {
         ...state,
         error: action.payload,
-        loading: false
       };
-    case 'CLEAR_ERROR':
-      return {
-        ...state,
-        error: null
-      };
-    case 'SET_LAST_SYNC':
-      return {
-        ...state,
-        lastSync: action.payload
-      };
-    case 'SET_WEEKLY_DATA':
-      return {
-        ...state,
-        weeklyData: action.payload
-      };
-    case 'SET_INITIALIZED':
-      return {
-        ...state,
-        isInitialized: action.payload
-      };
-    case 'RESET_STATE':
-      return initialState;
     default:
       return state;
   }
-}
-
-const HealthDataContext = createContext<HealthDataContextType | undefined>(undefined);
+};
 
 interface HealthDataProviderProps {
   children: React.ReactNode;
   config?: {
-    enableBackgroundSync?: boolean;
+    validateOnChange?: boolean;
     syncInterval?: number;
   };
 }
 
-export function HealthDataProvider({ children, config }: HealthDataProviderProps) {
+export const HealthDataProvider: React.FC<HealthDataProviderProps> = ({
+  children,
+  config = { validateOnChange: true, syncInterval: 5000 },
+}) => {
   const [state, dispatch] = useReducer(healthDataReducer, initialState);
 
-  const refresh = useCallback(async () => {
-    console.log('Starting refresh...');
-    dispatch({ type: 'SET_LOADING', payload: true });
-    
+  const updateMetrics = useCallback(async (metrics: Partial<HealthMetrics>) => {
     try {
-      console.log('[HealthDataContext] Creating provider...');
-      const provider = await HealthProviderFactory.createProvider();
-      
-      console.log('[HealthDataContext] Getting metrics...');
-      const metrics = await provider.getMetrics();
-      console.log('[HealthDataContext] Received metrics:', JSON.stringify(metrics, null, 2));
-      
-      // Ensure we have valid numbers for all metrics
-      const validatedMetrics: HealthMetrics = {
-        steps: Math.max(0, metrics.steps || 0),
-        distance: Math.max(0, metrics.distance || 0),
-        calories: Math.max(0, metrics.calories || 0),
-        heartRate: Math.max(0, metrics.heartRate || 0),
-        lastUpdated: metrics.lastUpdated || new Date().toISOString(),
-        score: Math.max(0, metrics.score || 0)
-      };
+      dispatch({ type: 'UPDATE_METRICS_OPTIMISTIC', payload: metrics });
 
-      // Create weekly data from metrics
-      const weeklyMetrics: WeeklyMetrics = {
-        weeklySteps: validatedMetrics.steps * 7, // Simplified example
-        weeklyDistance: validatedMetrics.distance * 7,
-        weeklyCalories: validatedMetrics.calories * 7,
-        weeklyHeartRate: validatedMetrics.heartRate,
-        startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
-        endDate: new Date().toISOString()
-      };
+      if (!navigator.onLine) {
+        await syncQueue.add('updateMetrics', { metrics });
+        return;
+      }
 
-      dispatch({ type: 'SET_METRICS', payload: validatedMetrics });
-      dispatch({ type: 'SET_WEEKLY_DATA', payload: weeklyMetrics });
-      dispatch({ type: 'SET_LAST_SYNC', payload: new Date().toISOString() });
-      dispatch({ type: 'SET_INITIALIZED', payload: true });
+      // Implement actual API call here
+      // const response = await healthMetricsService.updateMetrics(metrics);
+      dispatch({ type: 'UPDATE_METRICS_SUCCESS', payload: metrics });
     } catch (error) {
-      console.error('[HealthDataContext] Health data error:', error);
-      const healthError: HealthError = {
-        type: 'data',
-        message: error instanceof Error ? error.message : 'Failed to fetch health data',
-        details: error
-      };
-      dispatch({ type: 'SET_ERROR', payload: healthError });
+      dispatch({ 
+        type: 'UPDATE_METRICS_FAILURE', 
+        payload: error instanceof Error ? error : new Error('Unknown error') 
+      });
+    }
+  }, []);
+
+  const initializeHealthProviders = useCallback(async () => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      // Implement provider detection and initialization
+      // const providers = await detectHealthProviders();
+      // for (const provider of providers) {
+      //   const data = await healthMetricsService.getProviderData(provider);
+      //   dispatch({ type: 'UPDATE_PROVIDER_DATA', payload: { provider, data }});
+      // }
+    } catch (error) {
+      dispatch({ 
+        type: 'SET_ERROR', 
+        payload: {
+          type: 'initialization',
+          message: error instanceof Error ? error.message : 'Failed to initialize health providers',
+          timestamp: new Date().toISOString(),
+        }
+      });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
   }, []);
 
-  const clearError = useCallback(() => {
-    dispatch({ type: 'CLEAR_ERROR' });
-  }, []);
-
-  // Initial data fetch
-  useEffect(() => {
-    console.log('Initial health data fetch...');
-    refresh();
-
-    // Set up background sync if enabled
-    if (config?.enableBackgroundSync) {
-      const interval = setInterval(refresh, config.syncInterval || 300000);
-      return () => clearInterval(interval);
-    }
-  }, [refresh, config?.enableBackgroundSync, config?.syncInterval]);
-
-  const contextValue: HealthDataContextType = {
+  const value: HealthDataContextValue = {
     ...state,
-    refresh,
-    clearError
+    updateMetrics,
+    initializeHealthProviders,
   };
 
   return (
-    <HealthDataContext.Provider value={contextValue}>
+    <HealthDataContext.Provider value={value}>
       {children}
     </HealthDataContext.Provider>
   );
-}
+};
 
-export function useHealthData(): HealthDataContextType {
+export const useHealthData = (): HealthDataContextValue => {
   const context = useContext(HealthDataContext);
   if (context === undefined) {
     throw new Error('useHealthData must be used within a HealthDataProvider');
   }
   return context;
-}
+};
