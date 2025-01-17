@@ -73,8 +73,18 @@ export class HealthMonitor {
     if (this.metrics.length === 0) return;
 
     try {
-      // Implement actual metrics sending logic here
-      // await sendMetricsToAnalyticsService(this.metrics);
+      const analyticsEndpoint = process.env.ANALYTICS_ENDPOINT || '/api/analytics/metrics';
+      await fetch(analyticsEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          metrics: this.metrics,
+          timestamp: new Date().toISOString(),
+          deviceInfo: this.getDeviceInfo()
+        }),
+      });
       this.metrics = [];
     } catch (error) {
       console.error('Failed to flush metrics:', error);

@@ -1,5 +1,3 @@
-import Bull, { Job } from 'bull';
-import rateLimit from 'express-rate-limit';
 import { HealthMetrics, HealthMetricsValidation, UserId } from '../types';
 
 export interface HealthMetricsService {
@@ -10,56 +8,75 @@ export interface HealthMetricsService {
   getProviderData(source: 'apple_health' | 'health_connect'): Promise<HealthMetrics>;
 }
 
-interface SyncJobData {
-  metrics: Partial<HealthMetrics>;
+// Simple in-memory rate limiting
+const requestTimestamps: { [key: string]: number[] } = {};
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const MAX_REQUESTS = 100;
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const userTimestamps = requestTimestamps[userId] || [];
+  
+  // Remove timestamps outside the window
+  const validTimestamps = userTimestamps.filter(
+    timestamp => now - timestamp < RATE_LIMIT_WINDOW
+  );
+  
+  requestTimestamps[userId] = validTimestamps;
+  
+  if (validTimestamps.length >= MAX_REQUESTS) {
+    return false;
+  }
+  
+  requestTimestamps[userId] = [...validTimestamps, now];
+  return true;
 }
 
-// API Rate Limiting
-export const rateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again after 15 minutes'
-});
+// Queue for offline data
+const syncQueue: Array<{ metrics: Partial<HealthMetrics> }> = [];
 
-// Offline Sync Queue
-export const syncQueue = new Bull<SyncJobData>('healthMetricsSync', {
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 1000
-    },
-    removeOnComplete: true,
-    removeOnFail: false
+async function updateMetricsWithRetry(userId: string, metrics: Partial<HealthMetrics>): Promise<void> {
+  if (!checkRateLimit(userId)) {
+    throw new Error('Rate limit exceeded. Please try again later.');
   }
-});
 
-// Queue event handlers
-syncQueue.on('completed', (job: Job<SyncJobData>) => {
-  console.log(`Job ${job.id} completed for metrics sync`);
-});
+  const maxRetries = 3;
+  const baseDelay = 1000;
+  let attempt = 0;
 
-syncQueue.on('failed', (job: Job<SyncJobData>, err: Error) => {
-  console.error(`Job ${job.id} failed for metrics sync:`, err);
-});
+  while (attempt < maxRetries) {
+    try {
+      const response = await fetch('/api/health-metrics', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userId}` // Add user context for rate limiting
+        },
+        body: JSON.stringify(metrics),
+      });
 
-// Process jobs
-syncQueue.process(async (job: Job<SyncJobData>) => {
-  const { metrics } = job.data;
-  try {
-    // Implement actual sync logic here
-    await updateMetricsWithRetry(metrics);
-    return { success: true };
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to sync metrics: ${error.message}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return;
+    } catch (error) {
+      attempt++;
+      if (attempt === maxRetries) {
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error('Failed to update metrics');
+      }
+
+      // Exponential backoff
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
-    throw new Error('Failed to sync metrics: Unknown error');
   }
-});
+}
 
-async function updateMetricsWithRetry(metrics: Partial<HealthMetrics>): Promise<void> {
-  // Implement retry logic with exponential backoff
-  // This is a placeholder for the actual implementation
-  throw new Error('Not implemented');
+// Add metrics to sync queue for offline support
+function queueMetricsSync(metrics: Partial<HealthMetrics>): void {
+  syncQueue.push({ metrics });
 }

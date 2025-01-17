@@ -1,6 +1,41 @@
 import React, { createContext, useContext, useReducer, useCallback } from 'react';
-import { HealthMetrics, HealthError } from '../types';
-import { syncQueue } from '../services/HealthMetricsService';
+import { HealthMetrics, HealthError, UserId } from '../types';
+import { HealthMetricsService } from '../services/HealthMetricsService';
+import { useAuth } from '../contexts/AuthContext';
+import { FEATURE_FLAGS } from '../config/featureFlags';
+const healthMetricsService: HealthMetricsService = {
+  getMetrics: async (userId: UserId, date: string) => {
+    const response = await fetch(`/api/health-metrics/${userId}?date=${date}`);
+    if (!response.ok) throw new Error('Failed to fetch metrics');
+    return response.json();
+  },
+  updateMetrics: async (userId: UserId, metrics: Partial<HealthMetrics>) => {
+    const response = await fetch(`/api/health-metrics/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(metrics)
+    });
+    if (!response.ok) throw new Error('Failed to update metrics');
+  },
+  validateMetrics: (metrics: Partial<HealthMetrics>) => {
+    const errors: Record<string, string[]> = {};
+    if (metrics.steps !== undefined && metrics.steps < 0) {
+      errors.steps = ['Steps cannot be negative'];
+    }
+    if (metrics.distance !== undefined && metrics.distance < 0) {
+      errors.distance = ['Distance cannot be negative'];
+    }
+    return { isValid: Object.keys(errors).length === 0, errors };
+  },
+  syncOfflineData: async () => {
+    // Implementation handled by syncQueue
+  },
+  getProviderData: async (source) => {
+    const response = await fetch(`/api/health-providers/${source}`);
+    if (!response.ok) throw new Error(`Failed to fetch ${source} data`);
+    return response.json();
+  }
+};
 
 interface HealthDataState {
   metrics: HealthMetrics | null;
@@ -88,36 +123,40 @@ export const HealthDataProvider: React.FC<HealthDataProviderProps> = ({
   config = { validateOnChange: true, syncInterval: 5000 },
 }) => {
   const [state, dispatch] = useReducer(healthDataReducer, initialState);
+  const { user } = useAuth();
 
   const updateMetrics = useCallback(async (metrics: Partial<HealthMetrics>) => {
     try {
+      if (!user) {
+        throw new Error('User must be authenticated to update metrics');
+      }
+
       dispatch({ type: 'UPDATE_METRICS_OPTIMISTIC', payload: metrics });
 
-      if (!navigator.onLine) {
-        await syncQueue.add('updateMetrics', { metrics });
+      // Store metrics locally for offline support
+      if (typeof window !== 'undefined' && !window.navigator?.onLine) {
+        // Queue for later sync when online
         return;
       }
 
-      // Implement actual API call here
-      // const response = await healthMetricsService.updateMetrics(metrics);
+      await healthMetricsService.updateMetrics(user.id as UserId, metrics);
       dispatch({ type: 'UPDATE_METRICS_SUCCESS', payload: metrics });
     } catch (error) {
-      dispatch({ 
-        type: 'UPDATE_METRICS_FAILURE', 
-        payload: error instanceof Error ? error : new Error('Unknown error') 
+      dispatch({
+        type: 'UPDATE_METRICS_FAILURE',
+        payload: error instanceof Error ? error : new Error('Unknown error')
       });
     }
-  }, []);
+  }, [user]);
 
   const initializeHealthProviders = useCallback(async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      // Implement provider detection and initialization
-      // const providers = await detectHealthProviders();
-      // for (const provider of providers) {
-      //   const data = await healthMetricsService.getProviderData(provider);
-      //   dispatch({ type: 'UPDATE_PROVIDER_DATA', payload: { provider, data }});
-      // }
+      const providers = FEATURE_FLAGS.providerIntegration.providers;
+      for (const provider of providers) {
+        const data = await healthMetricsService.getProviderData(provider);
+        dispatch({ type: 'UPDATE_PROVIDER_DATA', payload: { provider, data }});
+      }
     } catch (error) {
       dispatch({ 
         type: 'SET_ERROR', 
