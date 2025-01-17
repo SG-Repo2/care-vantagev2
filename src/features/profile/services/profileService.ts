@@ -1,6 +1,15 @@
-import { supabase } from '../../../utils/supabase';
-import type { User } from '../../../core/auth/types/auth.types';
-import type { HealthMetrics } from '../../../core/contexts/health/types';
+import { supabase } from '@utils/supabase';
+import type { UserId } from '../../../health-metrics/types';
+import { userValidationService, UserValidationError } from '../../../health-metrics/services/UserValidationService';
+
+interface User {
+  id: string;
+  email: string | null;
+  user_metadata?: {
+    full_name?: string;
+    avatar_url?: string;
+  };
+}
 
 export interface UserProfile {
   id: string;
@@ -12,6 +21,7 @@ export interface UserProfile {
   score: number;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
 }
 
 export const mapUserToProfile = (user: User): Partial<UserProfile> => ({
@@ -23,6 +33,13 @@ export const mapUserToProfile = (user: User): Partial<UserProfile> => ({
 });
 
 export const profileService = {
+  async validateUserAccess(userId: string): Promise<void> {
+    const { isValid, error } = await userValidationService.validateUser(userId as UserId);
+    if (!isValid) {
+      throw error || new UserValidationError('Invalid user access');
+    }
+  },
+
   async createProfile(user: User): Promise<UserProfile> {
     try {
       // First check if profile exists
@@ -30,6 +47,7 @@ export const profileService = {
         .from('users')
         .select('*')
         .eq('id', user.id)
+        .is('deleted_at', null)
         .single();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
@@ -44,12 +62,13 @@ export const profileService = {
 
       // Create new profile if it doesn't exist
       const profileData = {
-        id: user.id, // Ensure this matches auth.uid()
+        id: user.id,
         email: user.email || '',
         display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
         photo_url: user.user_metadata?.avatar_url || null,
         device_info: {},
-        permissions_granted: false
+        permissions_granted: false,
+        deleted_at: null
       };
 
       const { data, error } = await supabase
@@ -77,10 +96,13 @@ export const profileService = {
 
   async getProfile(userId: string): Promise<UserProfile | null> {
     try {
+      await this.validateUserAccess(userId);
+
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
+        .is('deleted_at', null)
         .single();
 
       if (error) {
@@ -94,22 +116,29 @@ export const profileService = {
 
       return data;
     } catch (error) {
+      if (error instanceof UserValidationError) {
+        throw error;
+      }
       console.error('Error in getProfile:', error);
       throw error;
     }
   },
 
   async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
+    await this.validateUserAccess(userId);
+
     const safeUpdates = { ...updates };
     delete safeUpdates.id;
     delete safeUpdates.email;
     delete safeUpdates.created_at;
     delete safeUpdates.updated_at;
+    delete safeUpdates.deleted_at;
 
     const { data, error } = await supabase
       .from('users')
       .update(safeUpdates)
       .eq('id', userId)
+      .is('deleted_at', null)
       .select()
       .single();
 
@@ -134,9 +163,24 @@ export const profileService = {
       heart_rate?: number;
     }
   ): Promise<UserProfile> {
-    // Calculate health score based on metrics
+    await this.validateUserAccess(userId);
     const score = this.calculateHealthScore(metrics);
     return this.updateProfile(userId, { score });
+  },
+
+  async deleteAccount(userId: string): Promise<void> {
+    await this.validateUserAccess(userId);
+
+    const { error } = await supabase
+      .rpc('soft_delete_user', { user_id: userId });
+
+    if (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
+
+    // Clear validation cache for this user
+    userValidationService.clearCache(userId);
   },
 
   calculateHealthScore(metrics: {
@@ -145,30 +189,23 @@ export const profileService = {
     calories: number;
     heart_rate?: number;
   }): number {
-    // Base score starts at 0
     let score = 0;
 
     // Steps contribution (up to 40 points)
-    // 10000 steps is considered a good daily goal
     score += Math.min(40, (metrics.steps / 10000) * 40);
 
     // Distance contribution (up to 20 points)
-    // 5 miles (8 km) is considered a good daily goal
     score += Math.min(20, (metrics.distance / 8000) * 20);
 
     // Calories contribution (up to 30 points)
-    // 500 calories is considered a good daily burn goal
     score += Math.min(30, (metrics.calories / 500) * 30);
 
     // Heart rate contribution (up to 10 points)
-    // Only if heart rate data is available
     if (metrics.heart_rate) {
-      // Assuming a healthy heart rate range of 60-100 bpm
       const heartRateScore = metrics.heart_rate >= 60 && metrics.heart_rate <= 100 ? 10 : 5;
       score += heartRateScore;
     }
 
-    // Round to nearest integer
     return Math.round(score);
   }
 };
