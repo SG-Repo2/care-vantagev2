@@ -12,26 +12,35 @@ export interface LeaderboardEntry {
 class LeaderboardService {
   async fetchLeaderboard(): Promise<LeaderboardEntry[]> {
     try {
-      // Fetch profiles with their scores, ordered by score descending
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+
+      // Fetch users with their latest health scores, ordered by daily_score descending
       const { data, error } = await supabase
-        .from('profiles')
+        .from('users')
         .select(`
           id,
-          user_id,
           display_name,
-          score,
-          created_at
+          health_scores!inner (
+            daily_score,
+            date
+          )
         `)
-        .order('score', { ascending: false });
+        .eq('health_scores.date', today)
+        .order('health_scores(daily_score)', { ascending: false });
 
       if (error) {
         throw error;
       }
 
-      // Add rank to each entry
+      // Transform the data to match LeaderboardEntry interface
       return (data || []).map((entry, index) => ({
-        ...entry,
-        rank: index + 1
+        id: entry.id,
+        user_id: entry.id,
+        display_name: entry.display_name || 'Anonymous User',
+        score: entry.health_scores[0].daily_score,
+        rank: index + 1,
+        created_at: new Date().toISOString()
       }));
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
@@ -41,10 +50,17 @@ class LeaderboardService {
 
   async updateScore(userId: string, newScore: number): Promise<void> {
     try {
+      const today = new Date().toISOString().split('T')[0];
+
       const { error } = await supabase
-        .from('profiles')
-        .update({ score: newScore })
-        .eq('user_id', userId);
+        .from('health_scores')
+        .upsert({
+          user_id: userId,
+          date: today,
+          daily_score: newScore
+        }, {
+          onConflict: 'user_id,date'
+        });
 
       if (error) {
         throw error;
