@@ -38,9 +38,9 @@ export class HealthMonitor {
       steps: metrics.steps,
       distance: metrics.distance,
       calories: metrics.calories,
-      heartRate: metrics.heartRate,
-      dailyScore: metrics.dailyScore,
-      weeklyScore: metrics.weeklyScore
+      heart_rate: metrics.heart_rate,
+      daily_score: metrics.daily_score,
+      weekly_score: metrics.weekly_score
     });
   }
 

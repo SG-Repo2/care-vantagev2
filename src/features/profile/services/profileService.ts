@@ -1,5 +1,5 @@
 import { supabase } from '@utils/supabase';
-import type { UserId } from '../../../health-metrics/types';
+import type { UserId, HealthMetrics, BaseHealthMetrics } from '../../../health-metrics/types';
 import { userValidationService, UserValidationError } from '../../../health-metrics/services/UserValidationService';
 
 interface User {
@@ -154,17 +154,56 @@ export const profileService = {
     return this.updateProfile(userId, { photo_url: photoURL });
   },
 
-  async updateScore(
+  async updateHealthMetrics(
     userId: string,
-    metrics: {
-      steps: number;
-      distance: number;
-      calories: number;
-      heart_rate?: number;
-    }
+    metrics: Partial<BaseHealthMetrics> & { date: string }
   ): Promise<UserProfile> {
     await this.validateUserAccess(userId);
-    const score = this.calculateHealthScore(metrics);
+
+    // Calculate daily score based on metrics
+    const daily_score = this.calculateHealthScore({
+      steps: metrics.steps ?? null,
+      distance: metrics.distance ?? null,
+      calories: metrics.calories ?? null,
+      heart_rate: metrics.heart_rate ?? null
+    });
+
+    // Update both metrics and score
+    const { data, error } = await supabase
+      .from('health_metrics')
+      .upsert({
+        user_id: userId,
+        date: metrics.date,
+        steps: metrics.steps ?? null,
+        distance: metrics.distance ?? null,
+        calories: metrics.calories ?? null,
+        heart_rate: metrics.heart_rate ?? null,
+        daily_score,
+        last_updated: metrics.last_updated ?? new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating health metrics:', error);
+      throw error;
+    }
+
+    // Update user profile with new score
+    return this.updateProfile(userId, { score: daily_score });
+  },
+
+  async updateScore(
+    userId: string,
+    metrics: Partial<BaseHealthMetrics>
+  ): Promise<UserProfile> {
+    await this.validateUserAccess(userId);
+    const score = this.calculateHealthScore({
+      steps: metrics.steps ?? null,
+      distance: metrics.distance ?? null,
+      calories: metrics.calories ?? null,
+      heart_rate: metrics.heart_rate ?? null
+    });
     return this.updateProfile(userId, { score });
   },
 
@@ -184,26 +223,32 @@ export const profileService = {
   },
 
   calculateHealthScore(metrics: {
-    steps: number;
-    distance: number;
-    calories: number;
-    heart_rate?: number;
+    steps: number | null;
+    distance: number | null;
+    calories: number | null;
+    heart_rate: number | null;
   }): number {
     let score = 0;
 
     // Steps contribution (up to 40 points)
-    score += Math.min(40, (metrics.steps / 10000) * 40);
+    if (metrics.steps !== null) {
+      score += Math.min(40, (metrics.steps / 10000) * 40);
+    }
 
     // Distance contribution (up to 20 points)
-    score += Math.min(20, (metrics.distance / 8000) * 20);
+    if (metrics.distance !== null) {
+      score += Math.min(20, (metrics.distance / 8000) * 20);
+    }
 
     // Calories contribution (up to 30 points)
-    score += Math.min(30, (metrics.calories / 500) * 30);
+    if (metrics.calories !== null) {
+      score += Math.min(30, (metrics.calories / 500) * 30);
+    }
 
     // Heart rate contribution (up to 10 points)
-    if (metrics.heart_rate) {
-      const heartRateScore = metrics.heart_rate >= 60 && metrics.heart_rate <= 100 ? 10 : 5;
-      score += heartRateScore;
+    if (metrics.heart_rate !== null) {
+      const heart_rate_score = metrics.heart_rate >= 60 && metrics.heart_rate <= 100 ? 10 : 5;
+      score += heart_rate_score;
     }
 
     return Math.round(score);

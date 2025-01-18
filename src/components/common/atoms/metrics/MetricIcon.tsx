@@ -8,6 +8,23 @@ export interface MetricIconProps {
   color: string;
 }
 
+export type MetricType = 'steps' | 'distance' | 'calories' | 'heart_rate';
+
+export const getMetricIcon = (type: MetricType): string => {
+  switch (type) {
+    case 'steps':
+      return 'walk';
+    case 'distance':
+      return 'map-marker-distance';
+    case 'calories':
+      return 'fire';
+    case 'heart_rate':
+      return 'heart-pulse';
+    default:
+      return 'help-circle';
+  }
+};
+
 export const MetricIcon: React.FC<MetricIconProps> = ({
   type,
   size,
@@ -21,7 +38,7 @@ export const MetricIcon: React.FC<MetricIconProps> = ({
         return 'fire';
       case 'distance':
         return 'map-marker-distance';
-      case 'heartRate':
+      case 'heart_rate':
         return 'heart-pulse';
       default:
         return 'walk';

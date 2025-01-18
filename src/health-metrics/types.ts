@@ -1,29 +1,29 @@
 export interface BaseHealthMetrics {
-  steps: number;
-  distance: number;
+  steps: number | null;
+  distance: number | null;
   calories: number | null;
-  heartRate: number | null;
-  lastUpdated: string;
+  heart_rate: number | null;
+  last_updated: string | null;
 }
 
 export interface HealthMetrics extends BaseHealthMetrics {
   id: string;
-  userId: string;
+  user_id: string;
   date: string;
-  dailyScore: number;
-  weeklyScore: number | null;
-  streakDays: number | null;
-  createdAt: string;
-  updatedAt: string;
+  daily_score: number;
+  weekly_score: number | null;
+  streak_days: number | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface WeeklyMetrics {
-  weeklySteps: number;
-  weeklyDistance: number;
-  weeklyCalories: number | null;
-  weeklyHeartRate: number | null;
-  startDate: string;
-  endDate: string;
+  weekly_steps: number | null;
+  weekly_distance: number | null;
+  weekly_calories: number | null;
+  weekly_heart_rate: number | null;
+  start_date: string;
+  end_date: string;
 }
 
 export interface HealthMetricsValidation {
@@ -32,8 +32,8 @@ export interface HealthMetricsValidation {
     steps?: string[];
     distance?: string[];
     calories?: string[];
-    heartRate?: string[];
-    dailyScore?: string[];
+    heart_rate?: string[];
+    daily_score?: string[];
   };
 }
 
@@ -42,7 +42,7 @@ export interface HealthError {
   message: string;
   details?: unknown;
   timestamp: string;
-  deviceId?: string;
+  device_id?: string;
 }
 
 // Branded types for stronger type safety
@@ -51,7 +51,7 @@ export type MetricId = string & { readonly __brand: unique symbol };
 
 // Provider-specific types
 export interface ProviderMetrics extends BaseHealthMetrics {
-  score?: number;  // Provider-calculated score before normalization
+  score: number | null;  // Provider-calculated score before normalization
 }
 
 // Sync types
@@ -59,12 +59,12 @@ export interface SyncQueueItem {
   id: string;
   metrics: Partial<HealthMetrics>;
   timestamp: string;
-  deviceId: string;
-  retryCount: number;
+  device_id: string;
+  retry_count: number;
 }
 
 export interface SyncResult {
   success: boolean;
-  error?: HealthError;
-  metrics?: HealthMetrics;
+  error: HealthError | null;
+  metrics: HealthMetrics | null;
 }

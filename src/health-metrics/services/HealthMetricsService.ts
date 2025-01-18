@@ -22,13 +22,13 @@ class SyncQueue {
   private readonly maxQueueSize = 1000;
   private processing = false;
 
-  async add(metrics: Partial<HealthMetrics>, deviceId: string): Promise<void> {
+  async add(metrics: Partial<HealthMetrics>, device_id: string): Promise<void> {
     const item: SyncQueueItem = {
       id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       metrics,
       timestamp: new Date().toISOString(),
-      deviceId,
-      retryCount: 0
+      device_id,
+      retry_count: 0
     };
 
     // Remove old items if queue is too large
@@ -47,7 +47,7 @@ class SyncQueue {
     }
   }
 
-  private async processQueue(): Promise<void> {
+  async processQueue(): Promise<void> {
     if (this.processing || this.queue.length === 0) return;
 
     this.processing = true;
@@ -55,7 +55,7 @@ class SyncQueue {
       while (this.queue.length > 0) {
         const item = this.queue[0];
         
-        if (item.retryCount >= this.maxRetries) {
+        if (item.retry_count >= this.maxRetries) {
           Logger.error('Max retries exceeded for sync item:', { item });
           this.queue.shift();
           continue;
@@ -67,18 +67,18 @@ class SyncQueue {
             this.queue.shift();
             monitor.trackMetricUpdate(result.metrics as HealthMetrics);
           } else {
-            item.retryCount++;
+            item.retry_count++;
             // Move to end of queue for retry
             this.queue.push(this.queue.shift()!);
           }
         } catch (error) {
-          item.retryCount++;
+          item.retry_count++;
           Logger.error('Error syncing item:', { error, item });
           // Move to end of queue for retry
           this.queue.push(this.queue.shift()!);
           // Add exponential backoff delay
           await new Promise(resolve => 
-            setTimeout(resolve, Math.pow(2, item.retryCount) * 1000)
+            setTimeout(resolve, Math.pow(2, item.retry_count) * 1000)
           );
         }
 
@@ -95,7 +95,7 @@ class SyncQueue {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-Device-ID': item.deviceId
+          'X-Device-ID': item.device_id
         },
         body: JSON.stringify({
           metrics: item.metrics,
@@ -108,15 +108,16 @@ class SyncQueue {
       }
 
       const result = await response.json();
-      return { success: true, metrics: result };
+      return { success: true, metrics: result, error: null };
     } catch (error) {
       return {
         success: false,
+        metrics: null,
         error: {
           type: 'sync',
           message: error instanceof Error ? error.message : 'Sync failed',
           timestamp: new Date().toISOString(),
-          deviceId: item.deviceId,
+          device_id: item.device_id,
           details: error
         }
       };
@@ -179,14 +180,14 @@ function checkRateLimit(userId: string): boolean {
 export async function updateMetricsWithRetry(
   userId: string,
   metrics: Partial<HealthMetrics>,
-  deviceId: string
+  device_id: string
 ): Promise<void> {
   if (!checkRateLimit(userId)) {
     throw new Error('Rate limit exceeded. Please try again later.');
   }
 
   // Always queue updates for offline support
-  await syncQueue.add(metrics, deviceId);
+  await syncQueue.add(metrics, device_id);
 
   // If online, start processing the queue
   if (typeof window !== 'undefined' && window.navigator?.onLine) {

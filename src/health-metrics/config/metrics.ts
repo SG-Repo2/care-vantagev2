@@ -34,12 +34,12 @@ export const getHistoryStartDate = (days: number = HEALTH_METRICS.STEPS.HISTORY_
   return startDate;
 };
 
-export type MetricKey = 'steps' | 'distance' | 'calories' | 'heartRate' | 'score';
+export type MetricKey = 'steps' | 'distance' | 'calories' | 'heart_rate' | 'score';
 
-export const METRICS: Array<{ key: MetricKey; label: string }> = [
+export const METRIC_CONFIG = [
   { key: 'steps', label: 'Steps' },
   { key: 'distance', label: 'Distance' },
   { key: 'calories', label: 'Calories' },
-  { key: 'heartRate', label: 'Heart Rate' },
+  { key: 'heart_rate', label: 'Heart Rate' },
   { key: 'score', label: 'Score' }
 ]; 

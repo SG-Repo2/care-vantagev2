@@ -26,10 +26,10 @@ const healthMetricsService: HealthMetricsService = {
   },
   validateMetrics: (metrics: Partial<HealthMetrics>) => {
     const errors: Record<string, string[]> = {};
-    if (metrics.steps !== undefined && metrics.steps < 0) {
+    if (metrics.steps !== undefined && metrics.steps !== null && metrics.steps < 0) {
       errors.steps = ['Steps cannot be negative'];
     }
-    if (metrics.distance !== undefined && metrics.distance < 0) {
+    if (metrics.distance !== undefined && metrics.distance !== null && metrics.distance < 0) {
       errors.distance = ['Distance cannot be negative'];
     }
     return { isValid: Object.keys(errors).length === 0, errors };
@@ -100,8 +100,8 @@ const healthDataReducer = (state: HealthDataState, action: HealthDataAction): He
       // Convert provider metrics to our internal format
       const normalizedMetrics: Partial<HealthMetrics> = {
         ...action.payload.data,
-        dailyScore: action.payload.data.score || 0,
-        updatedAt: action.payload.data.lastUpdated,
+        daily_score: action.payload.data.score || 0,
+        updated_at: action.payload.data.last_updated || new Date().toISOString(),
       };
       return {
         ...state,
@@ -190,7 +190,7 @@ export const HealthDataProvider: React.FC<HealthDataProviderProps> = ({
       for (const provider of providers) {
         const data = await healthMetricsService.getProviderData(provider);
         if (!isMountedRef.current) return;
-        dispatch({ type: 'UPDATE_PROVIDER_DATA', payload: { provider, data }});
+        dispatch({ type: 'UPDATE_PROVIDER_DATA', payload: { provider, data: { ...data, score: data.daily_score } }});
       }
 
       monitor.trackPerformance('apiLatency', performance.now() - startTime);

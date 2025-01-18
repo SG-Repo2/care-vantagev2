@@ -3,19 +3,17 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card, Text, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-type MetricType = 'steps' | 'distance' | 'calories' | 'heartRate';
-
-interface MetricCardProps {
+export interface MetricCardProps {
   title: string;
-  value: number | undefined;
+  value: number;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  metricType: MetricType;
-  loading?: boolean;
-  unit?: string;
+  metricType: 'steps' | 'distance' | 'calories' | 'heart_rate';
+  loading: boolean;
   onPress?: () => void;
+  score?: number | null;
 }
 
-const getMetricColor = (type: MetricType): string => {
+const getMetricColor = (type: MetricCardProps['metricType']): string => {
   switch (type) {
     case 'steps':
       return '#23C552';
@@ -23,20 +21,20 @@ const getMetricColor = (type: MetricType): string => {
       return '#88E0EF';
     case 'calories':
       return '#EE7752';
-    case 'heartRate':
+    case 'heart_rate':
       return '#FF4B4B';
     default:
       return '#CCCCCC';
   }
 };
 
-const formatValue = (value: number | undefined, type: MetricType): string => {
-  if (value === undefined || value === 0) return '--';
+const formatValue = (value: number, type: MetricCardProps['metricType']): string => {
+  if (value === 0) return '--';
   
   switch (type) {
     case 'distance':
       return value.toFixed(2);
-    case 'heartRate':
+    case 'heart_rate':
     case 'calories':
       return `${Math.round(value)}`;
     default:
@@ -44,11 +42,11 @@ const formatValue = (value: number | undefined, type: MetricType): string => {
   }
 };
 
-const getUnit = (type: MetricType): string => {
+const getUnit = (type: MetricCardProps['metricType']): string => {
   switch (type) {
     case 'distance':
       return 'km';
-    case 'heartRate':
+    case 'heart_rate':
       return 'bpm';
     case 'calories':
       return 'kcal';
@@ -62,15 +60,28 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   value,
   icon,
   metricType,
-  loading = false,
-  unit: customUnit,
+  loading,
   onPress,
+  score
 }) => {
   const color = getMetricColor(metricType);
   const formattedValue = formatValue(value, metricType);
-  const unit = customUnit || getUnit(metricType);
+  const unit = getUnit(metricType);
 
-  const CardComponent = onPress ? TouchableOpacity : View;
+  const Wrapper = ({ children }: { children: React.ReactNode }) => {
+    if (onPress) {
+      return (
+        <TouchableOpacity onPress={onPress} style={[styles.card, { borderColor: color }]}>
+          {children}
+        </TouchableOpacity>
+      );
+    }
+    return (
+      <View style={[styles.card, { borderColor: color }]}>
+        {children}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -78,13 +89,16 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         <View style={styles.content}>
           <ActivityIndicator size="small" color={color} />
           <Text style={styles.title}>{title}</Text>
+          {score !== undefined && score !== null && (
+            <Text style={[styles.score, { color }]}>Score: {score}</Text>
+          )}
         </View>
       </Card>
     );
   }
 
   return (
-    <CardComponent onPress={onPress} style={[styles.card, { borderColor: color }]}>
+    <Wrapper>
       <View style={styles.content}>
         <MaterialCommunityIcons name={icon} size={24} color={color} />
         <View style={styles.valueContainer}>
@@ -94,8 +108,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           )}
         </View>
         <Text style={styles.title}>{title}</Text>
+        {score !== undefined && score !== null && (
+          <Text style={[styles.score, { color }]}>Score: {score}</Text>
+        )}
       </View>
-    </CardComponent>
+    </Wrapper>
   );
 };
 
@@ -129,5 +146,11 @@ const styles = StyleSheet.create({
   title: {
     color: '#999',
     fontSize: 16,
+  },
+  score: {
+    fontSize: 12,
+    opacity: 0.8,
+    marginTop: 4,
+    fontWeight: '500',
   },
 });

@@ -61,22 +61,29 @@ export class AppleHealthProvider implements HealthProvider {
 
     try {
       console.log('[AppleHealthProvider] Fetching metrics...');
-      const [steps, calories, distance, heartRate] = await Promise.all([
+      const [steps, calories, distance, heart_rate] = await Promise.all([
         this.getSteps(options),
         this.getCalories(options),
         this.getDistance(options),
         this.getHeartRate(options),
       ]);
 
-      console.log('[AppleHealthProvider] Metrics retrieved:', { steps, calories, distance, heartRate });
+      console.log('[AppleHealthProvider] Metrics retrieved:', { steps, calories, distance, heart_rate });
 
-      const metrics = {
+      const metrics: HealthMetrics = {
+        id: '', // This should be set by the service layer
+        user_id: '', // This should be set by the service layer
+        date: startOfDay.toISOString().split('T')[0],
         steps,
         calories,
         distance,
-        heartRate,
-        lastUpdated: now.toISOString(),
-        score: this.calculateHealthScore(steps, distance, calories, heartRate),
+        heart_rate,
+        last_updated: now.toISOString(),
+        daily_score: this.calculateHealthScore(steps, distance, calories, heart_rate),
+        weekly_score: null,
+        streak_days: null,
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
       };
 
       console.log('[AppleHealthProvider] Final metrics:', metrics);

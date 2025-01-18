@@ -3,7 +3,7 @@ import { MD3Colors } from 'react-native-paper/lib/typescript/types';
 import { Theme as NavigationTheme } from '@react-navigation/native';
 import { MD3Theme } from 'react-native-paper/lib/typescript/types';
 
-export interface ExtendedTheme extends MD3Theme, NavigationTheme {
+export interface ExtendedTheme extends Omit<MD3Theme, 'fonts'>, Omit<NavigationTheme, 'fonts'> {
   colors: MD3Colors & {
     card: string;
     text: string;
@@ -12,6 +12,7 @@ export interface ExtendedTheme extends MD3Theme, NavigationTheme {
     shadow: string;
     textSecondary: string;
   };
+  fonts: MD3Theme['fonts'];
   textVariants: {
     body: {
       fontSize: number;
@@ -189,7 +190,7 @@ export const customDarkTheme: ExtendedTheme = {
 };
 
 export type AppTheme = ExtendedTheme;
-export type MetricColorKey = 'steps' | 'calories' | 'distance' | 'heartRate';
+export type MetricColorKey = 'steps' | 'calories' | 'distance' | 'heart_rate';
 
 // Helper function to get metric color
 export const getMetricColor = (metricType: MetricColorKey): string => {
@@ -198,7 +199,7 @@ export const getMetricColor = (metricType: MetricColorKey): string => {
       return '#EE7752';
     case 'distance':
       return '#88E0EF';
-    case 'heartRate':
+    case 'heart_rate':
       return '#FF5E7D';
     case 'steps':
       return '#23C552';

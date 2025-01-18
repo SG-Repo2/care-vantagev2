@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
 import { Button, Text } from 'react-native-paper';
-import { useHealthData } from '../contexts/HealthDataContext';
+import { useHealthData } from '../hooks/useHealthData';
 import { MetricCard } from './MetricCard';
 import { MetricModal } from './MetricModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LoadingScreen } from './LoadingScreen';
 import { ErrorScreen } from './ErrorScreen';
+import { HealthMetrics } from '../providers/types';
 
-type MetricType = 'steps' | 'distance' | 'calories' | 'heartRate';
+type MetricType = 'steps' | 'distance' | 'calories' | 'heart_rate';
 
 interface MetricModalProps {
   visible: boolean;
@@ -27,6 +28,21 @@ interface MetricModalProps {
   }[];
 }
 
+const getMetricValue = (metrics: HealthMetrics | null, type: MetricType): number => {
+  if (!metrics) return 0;
+  const value = metrics[type];
+  return value ?? 0;
+};
+
+const getMetricTitle = (type: MetricType): string => {
+  switch (type) {
+    case 'heart_rate':
+      return 'Heart Rate';
+    default:
+      return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+};
+
 const HomeScreen: React.FC = () => {
   const { metrics, loading, error, refresh, weeklyData, isInitialized } = useHealthData();
   const [modalVisible, setModalVisible] = useState(false);
@@ -39,13 +55,13 @@ const HomeScreen: React.FC = () => {
       if (!weeklyData) return 0;
       switch (type) {
         case 'steps':
-          return weeklyData.weeklySteps;
+          return weeklyData.weekly_steps;
         case 'distance':
-          return weeklyData.weeklyDistance;
+          return weeklyData.weekly_distance;
         case 'calories':
-          return weeklyData.weeklyCalories;
-        case 'heartRate':
-          return weeklyData.weeklyHeartRate;
+          return weeklyData.weekly_calories;
+        case 'heart_rate':
+          return weeklyData.weekly_heart_rate;
         default:
           return 0;
       }
@@ -55,8 +71,8 @@ const HomeScreen: React.FC = () => {
     const dailyAverage = weeklyValue / 7;
 
     // Calculate daily values based on the weekly trend
-    const startDate = weeklyData.startDate ? new Date(weeklyData.startDate) : new Date();
-    const endDate = weeklyData.endDate ? new Date(weeklyData.endDate) : new Date();
+    const startDate = weeklyData.start_date ? new Date(weeklyData.start_date) : new Date();
+    const endDate = weeklyData.end_date ? new Date(weeklyData.end_date) : new Date();
     const daysDiff = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     
     // Generate daily values with some variation around the average
@@ -66,13 +82,14 @@ const HomeScreen: React.FC = () => {
     });
 
     // Ensure the last value matches today's actual value
-    dailyValues[dailyValues.length - 1] = metrics[type];
+    const currentValue = getMetricValue(metrics, type);
+    dailyValues[dailyValues.length - 1] = currentValue;
 
     const modalData: MetricModalProps = {
       visible: true,
       onClose: () => handleCloseModal(),
-      title: type.charAt(0).toUpperCase() + type.slice(1),
-      value: metrics[type].toString(),
+      title: getMetricTitle(type),
+      value: currentValue.toString(),
       metricType: type,
       data: {
         labels: Array.from({ length: daysDiff + 1 }, (_, i) => {
@@ -89,25 +106,29 @@ const HomeScreen: React.FC = () => {
             return [
               { label: 'Daily Average', value: Math.round(dailyAverage).toLocaleString() },
               { label: 'Weekly Total', value: Math.round(weeklyValue).toLocaleString() },
-              { label: 'Today\'s Goal', value: '10,000 steps' }
+              { label: 'Today\'s Goal', value: '10,000 steps' },
+              { label: 'Daily Score', value: metrics.daily_score ?? 0 }
             ];
           case 'calories':
             return [
               { label: 'Daily Average', value: `${Math.round(dailyAverage)} cal` },
               { label: 'Weekly Total', value: `${Math.round(weeklyValue)} cal` },
-              { label: 'Daily Goal', value: '2000 cal' }
+              { label: 'Daily Goal', value: '2000 cal' },
+              { label: 'Daily Score', value: metrics.daily_score ?? 0 }
             ];
           case 'distance':
             return [
               { label: 'Daily Average', value: `${dailyAverage.toFixed(2)} km` },
               { label: 'Weekly Total', value: `${weeklyValue.toFixed(2)} km` },
-              { label: 'Today\'s Goal', value: '5.0 km' }
+              { label: 'Today\'s Goal', value: '5.0 km' },
+              { label: 'Daily Score', value: metrics.daily_score ?? 0 }
             ];
-          case 'heartRate':
+          case 'heart_rate':
             return [
-              { label: 'Current', value: `${metrics.heartRate} bpm` },
+              { label: 'Current', value: `${getMetricValue(metrics, 'heart_rate')} bpm` },
               { label: 'Average', value: `${Math.round(dailyAverage)} bpm` },
-              { label: 'Target Range', value: '60-100 bpm' }
+              { label: 'Target Range', value: '60-100 bpm' },
+              { label: 'Daily Score', value: metrics.daily_score ?? 0 }
             ];
           default:
             return undefined;
@@ -160,35 +181,39 @@ const HomeScreen: React.FC = () => {
         <View style={styles.grid}>
           <MetricCard
             title="Steps"
-            value={metrics?.steps ?? 0}
+            value={getMetricValue(metrics, 'steps')}
             icon="walk"
             metricType="steps"
             loading={loading}
             onPress={() => handleMetricPress('steps')}
+            score={metrics?.daily_score}
           />
           <MetricCard
             title="Distance"
-            value={metrics?.distance}
+            value={getMetricValue(metrics, 'distance')}
             icon="map-marker-distance"
             metricType="distance"
             loading={loading}
             onPress={() => handleMetricPress('distance')}
+            score={metrics?.daily_score}
           />
           <MetricCard
             title="Calories"
-            value={metrics?.calories}
+            value={getMetricValue(metrics, 'calories')}
             icon="fire"
             metricType="calories"
             loading={loading}
             onPress={() => handleMetricPress('calories')}
+            score={metrics?.daily_score}
           />
           <MetricCard
             title="Heart Rate"
-            value={metrics?.heartRate}
+            value={getMetricValue(metrics, 'heart_rate')}
             icon="heart-pulse"
-            metricType="heartRate"
+            metricType="heart_rate"
             loading={loading}
-            onPress={() => handleMetricPress('heartRate')}
+            onPress={() => handleMetricPress('heart_rate')}
+            score={metrics?.daily_score}
           />
         </View>
         <Button 
