@@ -45,6 +45,16 @@ The following files can be safely removed as their functionality has been consol
    - src/utils/health/* (functionality moved to health-metrics/utils)
    - src/core/utils/health-transforms.ts (logic now in health-metrics services)
 
+5. Core Module Files:
+   - src/core/auth/* (consolidate with src/health-metrics/core/auth/)
+   - src/core/database/* (remove in favor of direct Supabase client usage)
+   - src/core/error/ErrorBoundary.tsx (move to src/health-metrics/core/error/)
+   - src/core/storage/StorageService.ts (consolidate with health-metrics services)
+   - src/core/supabase/* (use centralized client from src/utils/supabase.ts)
+   - src/core/types/* (consolidate with src/health-metrics/types.ts)
+   - src/core/utils/* (migrate useful utilities to src/health-metrics/utils/)
+   - src/core/constants/* (move to src/health-metrics/config/)
+
 ## Next Steps
 1. Database Migration:
    - Apply new migration for user profile trigger
@@ -82,3 +92,13 @@ The following files can be safely removed as their functionality has been consol
    - Test offline functionality
    - Validate provider integrations
    - Test auth flow with various providers
+
+7. Core Module Migration:
+   - Move ErrorBoundary to health-metrics while preserving functionality
+   - Update all imports to use centralized Supabase client
+   - Migrate useful utilities and constants
+   - Remove complex database abstraction layer
+   - Test all features after migration
+   - Update documentation to reflect new structure
+   - Verify error handling across the application
+   - Clean up any remaining unused imports

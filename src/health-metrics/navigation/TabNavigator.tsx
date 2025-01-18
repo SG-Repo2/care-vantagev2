@@ -8,6 +8,12 @@ import { ProfileScreen } from '../../features/profile/components/ProfileScreen';
 import { HealthDataProvider } from '../contexts/HealthDataContext';
 import { MainTabParamList } from './types';
 
+interface TabNavigatorConfig {
+  validateOnChange?: boolean;
+  syncInterval?: number;
+  enableBackgroundSync?: boolean;  // Add the new property
+}
+
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const HomeScreenWithProvider = () => (
