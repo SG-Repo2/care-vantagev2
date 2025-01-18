@@ -1,11 +1,15 @@
-export interface HealthMetrics {
-  id: string;
-  userId: string;
-  date: string;
+export interface BaseHealthMetrics {
   steps: number;
   distance: number;
   calories: number | null;
   heartRate: number | null;
+  lastUpdated: string;
+}
+
+export interface HealthMetrics extends BaseHealthMetrics {
+  id: string;
+  userId: string;
+  date: string;
   dailyScore: number;
   weeklyScore: number | null;
   streakDays: number | null;
@@ -44,3 +48,23 @@ export interface HealthError {
 // Branded types for stronger type safety
 export type UserId = string & { readonly __brand: unique symbol };
 export type MetricId = string & { readonly __brand: unique symbol };
+
+// Provider-specific types
+export interface ProviderMetrics extends BaseHealthMetrics {
+  score?: number;  // Provider-calculated score before normalization
+}
+
+// Sync types
+export interface SyncQueueItem {
+  id: string;
+  metrics: Partial<HealthMetrics>;
+  timestamp: string;
+  deviceId: string;
+  retryCount: number;
+}
+
+export interface SyncResult {
+  success: boolean;
+  error?: HealthError;
+  metrics?: HealthMetrics;
+}

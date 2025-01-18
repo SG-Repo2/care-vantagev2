@@ -1,8 +1,15 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
-import { HealthMetrics, HealthError, UserId } from '../types';
+import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
+import { HealthMetrics, HealthError, UserId, ProviderMetrics } from '../types';
 import { HealthMetricsService } from '../services/HealthMetricsService';
 import { useAuth } from '../contexts/AuthContext';
 import { FEATURE_FLAGS } from '../config/featureFlags';
+import { Logger } from '../../utils/error/Logger';
+import { monitor } from '../config/featureFlags';
+import { Platform } from 'react-native';
+
+const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const BACKGROUND_SYNC_INTERVAL = 15 * 60 * 1000; // 15 minutes
+
 const healthMetricsService: HealthMetricsService = {
   getMetrics: async (userId: UserId, date: string) => {
     const response = await fetch(`/api/health-metrics/${userId}?date=${date}`);
@@ -48,7 +55,7 @@ type HealthDataAction =
   | { type: 'UPDATE_METRICS_OPTIMISTIC'; payload: Partial<HealthMetrics> }
   | { type: 'UPDATE_METRICS_SUCCESS'; payload: Partial<HealthMetrics> }
   | { type: 'UPDATE_METRICS_FAILURE'; payload: Error }
-  | { type: 'UPDATE_PROVIDER_DATA'; payload: { provider: string; data: HealthMetrics } }
+  | { type: 'UPDATE_PROVIDER_DATA'; payload: { provider: string; data: ProviderMetrics } }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: HealthError | null };
 
@@ -90,9 +97,15 @@ const healthDataReducer = (state: HealthDataState, action: HealthDataAction): He
         },
       };
     case 'UPDATE_PROVIDER_DATA':
+      // Convert provider metrics to our internal format
+      const normalizedMetrics: Partial<HealthMetrics> = {
+        ...action.payload.data,
+        dailyScore: action.payload.data.score || 0,
+        updatedAt: action.payload.data.lastUpdated,
+      };
       return {
         ...state,
-        metrics: action.payload.data,
+        metrics: state.metrics ? { ...state.metrics, ...normalizedMetrics } : null,
         lastSynced: new Date().toISOString(),
       };
     case 'SET_LOADING':
@@ -120,10 +133,22 @@ interface HealthDataProviderProps {
 
 export const HealthDataProvider: React.FC<HealthDataProviderProps> = ({
   children,
-  config = { validateOnChange: true, syncInterval: 5000 },
+  config = { validateOnChange: true, syncInterval: SYNC_INTERVAL },
 }) => {
   const [state, dispatch] = useReducer(healthDataReducer, initialState);
   const { user } = useAuth();
+  const syncIntervalRef = useRef<NodeJS.Timeout>();
+  const backgroundSyncIntervalRef = useRef<NodeJS.Timeout>();
+  const isMountedRef = useRef(true);
+
+  // Memoize device ID
+  const deviceId = useRef<string>(
+    Platform.select({
+      ios: 'ios',
+      android: 'android',
+      default: 'web'
+    }) + '_' + Math.random().toString(36).substring(7)
+  ).current;
 
   const updateMetrics = useCallback(async (metrics: Partial<HealthMetrics>) => {
     try {
@@ -131,17 +156,22 @@ export const HealthDataProvider: React.FC<HealthDataProviderProps> = ({
         throw new Error('User must be authenticated to update metrics');
       }
 
+      if (!isMountedRef.current) return;
+
       dispatch({ type: 'UPDATE_METRICS_OPTIMISTIC', payload: metrics });
 
-      // Store metrics locally for offline support
-      if (typeof window !== 'undefined' && !window.navigator?.onLine) {
-        // Queue for later sync when online
-        return;
-      }
+      // Track performance
+      const startTime = performance.now();
 
       await healthMetricsService.updateMetrics(user.id as UserId, metrics);
+      
+      monitor.trackPerformance('apiLatency', performance.now() - startTime);
+      
+      if (!isMountedRef.current) return;
       dispatch({ type: 'UPDATE_METRICS_SUCCESS', payload: metrics });
     } catch (error) {
+      Logger.error('Failed to update metrics:', { error, metrics });
+      if (!isMountedRef.current) return;
       dispatch({
         type: 'UPDATE_METRICS_FAILURE',
         payload: error instanceof Error ? error : new Error('Unknown error')
@@ -151,13 +181,22 @@ export const HealthDataProvider: React.FC<HealthDataProviderProps> = ({
 
   const initializeHealthProviders = useCallback(async () => {
     try {
+      if (!isMountedRef.current) return;
       dispatch({ type: 'SET_LOADING', payload: true });
+
       const providers = FEATURE_FLAGS.providerIntegration.providers;
+      const startTime = performance.now();
+
       for (const provider of providers) {
         const data = await healthMetricsService.getProviderData(provider);
+        if (!isMountedRef.current) return;
         dispatch({ type: 'UPDATE_PROVIDER_DATA', payload: { provider, data }});
       }
+
+      monitor.trackPerformance('apiLatency', performance.now() - startTime);
     } catch (error) {
+      Logger.error('Failed to initialize health providers:', { error });
+      if (!isMountedRef.current) return;
       dispatch({ 
         type: 'SET_ERROR', 
         payload: {
@@ -167,8 +206,22 @@ export const HealthDataProvider: React.FC<HealthDataProviderProps> = ({
         }
       });
     } finally {
+      if (!isMountedRef.current) return;
       dispatch({ type: 'SET_LOADING', payload: false });
     }
+  }, []);
+
+  // Cleanup function
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+      }
+      if (backgroundSyncIntervalRef.current) {
+        clearInterval(backgroundSyncIntervalRef.current);
+      }
+    };
   }, []);
 
   const value: HealthDataContextValue = {
