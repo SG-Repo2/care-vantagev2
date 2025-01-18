@@ -185,3 +185,4 @@ yarn-error.*
 *.tsbuildinfo
 
 # @end expo-cli
+prompts/architectural_analysis.md
