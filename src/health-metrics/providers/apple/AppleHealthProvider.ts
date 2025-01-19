@@ -38,9 +38,39 @@ export class AppleHealthProvider implements HealthProvider {
     if (!this.initialized) {
       await this.initialize();
     }
+    return Promise.resolve();
+  }
 
-    // HealthKit permissions are requested during initialization
-    // This method exists to maintain interface compatibility
+  async checkPermissionsStatus(): Promise<boolean> {
+    return new Promise((resolve) => {
+      AppleHealthKit.isAvailable((error: Object, available: boolean) => {
+        if (error) {
+          console.error('[AppleHealthProvider] Availability check failed:', error);
+          resolve(false);
+          return;
+        }
+
+        if (!available) {
+          console.log('[AppleHealthProvider] HealthKit is not available');
+          resolve(false);
+          return;
+        }
+
+        AppleHealthKit.initHealthKit(permissions, (initError: string) => {
+          if (initError) {
+            console.error('[AppleHealthProvider] Permission check failed:', initError);
+            resolve(false);
+            return;
+          }
+          resolve(true);
+        });
+      });
+    });
+  }
+
+  async cleanup(): Promise<void> {
+    this.initialized = false;
+    console.log('[AppleHealthProvider] Cleanup complete');
     return Promise.resolve();
   }
 

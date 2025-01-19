@@ -1,5 +1,5 @@
 import React from 'react';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { MetricColorKey } from '../../../../theme';
 
 export interface MetricIconProps {

@@ -65,7 +65,41 @@ export class HealthProviderFactory {
 
   static async cleanup(): Promise<void> {
     console.log('[HealthProviderFactory] Cleaning up provider instance');
+    if (this.instance) {
+      try {
+        // Allow providers to perform cleanup if needed
+        if (typeof this.instance.cleanup === 'function') {
+          await this.instance.cleanup();
+        }
+      } catch (error) {
+        console.error('[HealthProviderFactory] Error during provider cleanup:', error);
+      }
+    }
     this.instance = null;
     this.initializationAttempted = false;
+  }
+
+  static async checkPermissions(): Promise<boolean> {
+    try {
+      if (!this.instance) {
+        return false;
+      }
+
+      // Create a new provider instance without initializing
+      const provider = Platform.select<() => HealthProvider>({
+        ios: () => new AppleHealthProvider(),
+        android: () => new GoogleHealthProvider(),
+        default: () => {
+          throw new Error(`Platform ${Platform.OS} not supported`);
+        },
+      })();
+
+      // Only check permissions, don't initialize
+      await provider.requestPermissions();
+      return true;
+    } catch (error) {
+      console.error('[HealthProviderFactory] Permission check failed:', error);
+      return false;
+    }
   }
 } 

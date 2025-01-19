@@ -81,29 +81,55 @@ export class GoogleHealthProvider implements HealthProvider {
         { accessType: 'read', recordType: 'Steps' },
         { accessType: 'read', recordType: 'Distance' },
         { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
-        { accessType: 'read', recordType: 'HeartRate' },
+        { accessType: 'read', recordType: 'HeartRate' }
       ]);
       
-      // Verify permissions with a test read
-      const now = new Date();
-      const testRange = {
-        operator: 'between' as const,
-        startTime: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-        endTime: now.toISOString(),
-      };
-      
-      await Promise.all([
-        readRecords('Steps', { timeRangeFilter: testRange }),
-        readRecords('Distance', { timeRangeFilter: testRange }),
-        readRecords('ActiveCaloriesBurned', { timeRangeFilter: testRange }),
-        readRecords('HeartRate', { timeRangeFilter: testRange }),
-      ]);
-      
+      await this.verifyPermissions();
       console.log('[GoogleHealthProvider] Permissions granted and verified');
     } catch (error) {
       console.error('[GoogleHealthProvider] Permission request failed:', error);
       throw error;
     }
+  }
+
+  async checkPermissionsStatus(): Promise<boolean> {
+    try {
+      if (!this.initialized) {
+        const available = await initialize();
+        if (!available) {
+          console.log('[GoogleHealthProvider] Health Connect is not available');
+          return false;
+        }
+      }
+      
+      await this.verifyPermissions();
+      return true;
+    } catch (error) {
+      console.error('[GoogleHealthProvider] Permission check failed:', error);
+      return false;
+    }
+  }
+
+  private async verifyPermissions(): Promise<void> {
+    const now = new Date();
+    const testRange = {
+      operator: 'between' as const,
+      startTime: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+      endTime: now.toISOString(),
+    };
+    
+    await Promise.all([
+      readRecords('Steps', { timeRangeFilter: testRange }),
+      readRecords('Distance', { timeRangeFilter: testRange }),
+      readRecords('ActiveCaloriesBurned', { timeRangeFilter: testRange }),
+      readRecords('HeartRate', { timeRangeFilter: testRange })
+    ]);
+  }
+
+  async cleanup(): Promise<void> {
+    this.initialized = false;
+    this.initializationPromise = null;
+    console.log('[GoogleHealthProvider] Cleanup complete');
   }
 
   async getMetrics(): Promise<HealthMetrics> {

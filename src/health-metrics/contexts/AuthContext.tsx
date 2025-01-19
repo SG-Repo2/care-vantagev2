@@ -87,17 +87,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Initialize or get user profile
       console.log('Initializing user profile...');
-      const profile = await profileService.getProfile(currentUser.id);
+      let profile = await profileService.getProfile(currentUser.id);
+      
       if (!profile) {
         console.log('Creating new profile for user:', currentUser.id);
-        await profileService.createProfile(currentUser);
+        profile = await profileService.createProfile(currentUser);
+      }
+
+      // Validate profile exists before proceeding
+      if (!profile) {
+        throw new Error('Failed to create or retrieve user profile');
       }
 
       // Initialize health provider
       console.log('Initializing health provider...');
-      await HealthProviderFactory.createProvider();
+      const provider = await HealthProviderFactory.createProvider();
+      
+      // Update profile with permissions status
+      if (provider) {
+        await profileService.updateProfile(currentUser.id, {
+          permissions_granted: true,
+          last_health_sync: new Date().toISOString()
+        });
+        console.log('Health provider initialized and permissions granted');
+      }
     } catch (err) {
       console.error('Error initializing user services:', err);
+      // Update profile to indicate initialization failure
+      await profileService.updateProfile(currentUser.id, {
+        permissions_granted: false,
+        last_error: err instanceof Error ? err.message : 'Unknown error during initialization'
+      }).catch(updateErr => {
+        console.error('Failed to update profile with error status:', updateErr);
+      });
       throw err;
     }
   };

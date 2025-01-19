@@ -30,6 +30,18 @@ export interface HealthProvider {
   initialize(): Promise<void>;
   requestPermissions(): Promise<void>;
   getMetrics(): Promise<HealthMetrics>;
+  cleanup?(): Promise<void>;
+  checkPermissionsStatus?(): Promise<boolean>;
+}
+
+export interface HealthPermissionStatus {
+  granted: boolean;
+  permissions: {
+    steps: boolean;
+    distance: boolean;
+    heartRate: boolean;
+    calories: boolean;
+  };
 }
 
 export interface HealthError {
