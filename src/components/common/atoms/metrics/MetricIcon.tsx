@@ -1,5 +1,5 @@
 import React from 'react';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { MetricColorKey } from '../../../../theme';
 
 export interface MetricIconProps {
@@ -7,6 +7,23 @@ export interface MetricIconProps {
   size: number;
   color: string;
 }
+
+export type MetricType = 'steps' | 'distance' | 'calories' | 'heart_rate';
+
+export const getMetricIcon = (type: MetricType): string => {
+  switch (type) {
+    case 'steps':
+      return 'walk';
+    case 'distance':
+      return 'map-marker-distance';
+    case 'calories':
+      return 'fire';
+    case 'heart_rate':
+      return 'heart-pulse';
+    default:
+      return 'help-circle';
+  }
+};
 
 export const MetricIcon: React.FC<MetricIconProps> = ({
   type,
@@ -21,7 +38,7 @@ export const MetricIcon: React.FC<MetricIconProps> = ({
         return 'fire';
       case 'distance':
         return 'map-marker-distance';
-      case 'heartRate':
+      case 'heart_rate':
         return 'heart-pulse';
       default:
         return 'walk';

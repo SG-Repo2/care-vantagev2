@@ -1,0 +1,164 @@
+
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+
+CREATE SCHEMA IF NOT EXISTS "public";
+
+
+ALTER SCHEMA "public" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_daily_ranks"("target_date" "date") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+  -- Update daily_score based on ranking
+  WITH ranked_metrics AS (
+    SELECT
+      id,
+      ROW_NUMBER() OVER (ORDER BY daily_score DESC) as rank_position
+    FROM health_metrics
+    WHERE date = target_date
+  )
+  UPDATE health_metrics hm
+  SET daily_score = 100 - LEAST((rm.rank_position - 1) * 5, 100)  -- Score decreases by 5 for each rank, minimum 0
+  FROM ranked_metrics rm
+  WHERE hm.id = rm.id
+    AND hm.date = target_date;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_daily_ranks"("target_date" "date") OWNER TO "postgres";
+
+SET default_tablespace = '';
+
+SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."health_metrics" (
+    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "user_id" "uuid",
+    "date" "date" NOT NULL,
+    "steps" integer,
+    "distance" numeric,
+    "calories" integer,
+    "heart_rate" integer,
+    "daily_score" integer,
+    "weekly_score" integer,
+    "streak_days" integer,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."health_metrics" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."users" (
+    "id" "uuid" NOT NULL,
+    "email" "text" NOT NULL,
+    "display_name" "text",
+    "photo_url" "text",
+    "device_info" "jsonb",
+    "permissions_granted" boolean DEFAULT false,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "deleted_at" timestamp with time zone,
+    "score" integer
+);
+
+
+ALTER TABLE "public"."users" OWNER TO "postgres";
+
+
+ALTER TABLE ONLY "public"."health_metrics"
+    ADD CONSTRAINT "health_metrics_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."health_metrics"
+    ADD CONSTRAINT "health_metrics_unique_daily_entry" UNIQUE ("user_id", "date");
+
+
+
+ALTER TABLE ONLY "public"."users"
+    ADD CONSTRAINT "users_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE INDEX "idx_health_metrics_user_date" ON "public"."health_metrics" USING "btree" ("user_id", "date" DESC);
+
+
+
+CREATE INDEX "idx_users_email" ON "public"."users" USING "btree" ("email");
+
+
+
+ALTER TABLE ONLY "public"."health_metrics"
+    ADD CONSTRAINT "health_metrics_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."users"
+    ADD CONSTRAINT "users_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id");
+
+
+
+CREATE POLICY "Users can insert their own metrics" ON "public"."health_metrics" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can read their own metrics" ON "public"."health_metrics" FOR SELECT TO "authenticated" USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can read their own profile" ON "public"."users" FOR SELECT TO "authenticated" USING (("auth"."uid"() = "id"));
+
+
+
+CREATE POLICY "Users can update their own metrics" ON "public"."health_metrics" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can update their own profile" ON "public"."users" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "id"));
+
+
+
+ALTER TABLE "public"."health_metrics" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."users" ENABLE ROW LEVEL SECURITY;
+
+
+REVOKE USAGE ON SCHEMA "public" FROM PUBLIC;
+GRANT USAGE ON SCHEMA "public" TO "authenticated";
+GRANT USAGE ON SCHEMA "public" TO "anon";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_daily_ranks"("target_date" "date") TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."health_metrics" TO "anon";
+GRANT ALL ON TABLE "public"."health_metrics" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."users" TO "anon";
+GRANT ALL ON TABLE "public"."users" TO "authenticated";
+
+
+
+RESET ALL;

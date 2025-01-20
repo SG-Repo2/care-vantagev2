@@ -10,17 +10,17 @@ export interface MetricModalProps {
   visible: boolean;
   onClose: () => void;
   title: string;
-  value: string | number;
-  metricType: 'steps' | 'distance' | 'calories' | 'heartRate';
-  data?: {
+  value: string;
+  metricType: 'steps' | 'distance' | 'calories' | 'heart_rate';
+  data: {
     labels: string[];
     values: number[];
     startDate?: Date;
   };
-  additionalInfo?: Array<{
+  additionalInfo?: {
     label: string;
     value: string | number;
-  }>;
+  }[];
 }
 
 const formatDateLabel = (date: Date): string => {
@@ -46,9 +46,9 @@ export const MetricModal: React.FC<MetricModalProps> = ({
   onClose,
   title,
   value,
-  data,
-  additionalInfo,
   metricType,
+  data,
+  additionalInfo
 }) => {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -86,7 +86,7 @@ export const MetricModal: React.FC<MetricModalProps> = ({
         return `rgba(136, 224, 239, ${opacity})`;
       case 'calories':
         return `rgba(238, 119, 82, ${opacity})`;
-      case 'heartRate':
+      case 'heart_rate':
         return `rgba(255, 75, 75, ${opacity})`;
       default:
         return `rgba(255, 255, 255, ${opacity})`;

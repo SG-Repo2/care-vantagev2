@@ -1,18 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { HealthMetrics, HealthError } from '../providers/types';
+import { HealthMetrics, HealthError, WeeklyMetrics } from '../providers/types';
 import { HealthProviderFactory } from '../providers/HealthProviderFactory';
 import { profileService } from '../../features/profile/services/profileService';
 import { useAuth } from '../contexts/AuthContext';
 import { AppState, AppStateStatus } from 'react-native';
-
-export interface WeeklyMetrics {
-  weeklySteps: number;
-  weeklyDistance: number;
-  weeklyCalories: number;
-  weeklyHeartRate: number;
-  startDate?: string;
-  endDate?: string;
-}
 
 interface UseHealthDataResult {
   metrics: HealthMetrics | null;
@@ -52,10 +43,11 @@ export const useHealthData = (): UseHealthDataResult => {
       const today = new Date().toISOString().split('T')[0];
       await profileService.updateHealthMetrics(user.id, {
         date: today,
-        steps: healthMetrics.steps,
-        distance: healthMetrics.distance,
-        calories: healthMetrics.calories,
-        heart_rate: healthMetrics.heartRate
+        steps: healthMetrics.steps || 0,
+        distance: healthMetrics.distance || 0,
+        calories: healthMetrics.calories || 0,
+        heart_rate: healthMetrics.heart_rate || 0,
+        last_updated: healthMetrics.last_updated || new Date().toISOString()
       });
       setLastSyncTime(new Date());
     } catch (err) {
@@ -99,33 +91,40 @@ export const useHealthData = (): UseHealthDataResult => {
       console.log('Received metrics:', JSON.stringify(data, null, 2));
       
       // Initialize metrics with zeros if no data is available
-      const defaultMetrics: HealthMetrics = {
+      const defaultMetrics: Partial<HealthMetrics> = {
+        id: '',
+        user_id: user?.id || '',
+        date: new Date().toISOString().split('T')[0],
         steps: 0,
         distance: 0,
         calories: 0,
-        heartRate: 0,
-        lastUpdated: new Date().toISOString(),
-        score: 0
+        heart_rate: 0,
+        daily_score: 0,
+        weekly_score: 0,
+        streak_days: 0,
+        last_updated: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       const defaultWeeklyMetrics: WeeklyMetrics = {
-        weeklySteps: 0,
-        weeklyDistance: 0,
-        weeklyCalories: 0,
-        weeklyHeartRate: 0,
-        startDate: new Date().toISOString(),
-        endDate: new Date().toISOString()
+        weekly_steps: 0,
+        weekly_distance: 0,
+        weekly_calories: 0,
+        weekly_heart_rate: 0,
+        start_date: new Date().toISOString(),
+        end_date: new Date().toISOString()
       };
 
       const updatedMetrics = {
         ...defaultMetrics,
         ...data
-      };
+      } as HealthMetrics;
 
       setMetrics(updatedMetrics);
 
       // Set weekly data if available
-      if ('weeklySteps' in data) {
+      if ('weekly_steps' in data) {
         setWeeklyData({
           ...defaultWeeklyMetrics,
           ...data

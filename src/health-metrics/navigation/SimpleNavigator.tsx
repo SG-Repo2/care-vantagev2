@@ -5,8 +5,9 @@ import { LoadingScreen } from '../components/LoadingScreen';
 import { ErrorScreen } from '../components/ErrorScreen';
 import { SignInScreen } from '../components/SignInScreen';
 import { TabNavigator } from './TabNavigator';
+import type { RootStackParamList } from './types';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const SimpleNavigator = () => {
   const { status, error, refreshSession } = useAuth();

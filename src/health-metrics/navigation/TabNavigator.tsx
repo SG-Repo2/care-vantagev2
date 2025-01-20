@@ -13,7 +13,6 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const HomeScreenWithProvider = () => (
   <HealthDataProvider
     config={{
-      enableBackgroundSync: true,
       syncInterval: 300000, // 5 minutes
     }}
   >

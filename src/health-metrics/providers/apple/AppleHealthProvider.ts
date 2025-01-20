@@ -38,9 +38,39 @@ export class AppleHealthProvider implements HealthProvider {
     if (!this.initialized) {
       await this.initialize();
     }
+    return Promise.resolve();
+  }
 
-    // HealthKit permissions are requested during initialization
-    // This method exists to maintain interface compatibility
+  async checkPermissionsStatus(): Promise<boolean> {
+    return new Promise((resolve) => {
+      AppleHealthKit.isAvailable((error: Object, available: boolean) => {
+        if (error) {
+          console.error('[AppleHealthProvider] Availability check failed:', error);
+          resolve(false);
+          return;
+        }
+
+        if (!available) {
+          console.log('[AppleHealthProvider] HealthKit is not available');
+          resolve(false);
+          return;
+        }
+
+        AppleHealthKit.initHealthKit(permissions, (initError: string) => {
+          if (initError) {
+            console.error('[AppleHealthProvider] Permission check failed:', initError);
+            resolve(false);
+            return;
+          }
+          resolve(true);
+        });
+      });
+    });
+  }
+
+  async cleanup(): Promise<void> {
+    this.initialized = false;
+    console.log('[AppleHealthProvider] Cleanup complete');
     return Promise.resolve();
   }
 
@@ -61,22 +91,29 @@ export class AppleHealthProvider implements HealthProvider {
 
     try {
       console.log('[AppleHealthProvider] Fetching metrics...');
-      const [steps, calories, distance, heartRate] = await Promise.all([
+      const [steps, calories, distance, heart_rate] = await Promise.all([
         this.getSteps(options),
         this.getCalories(options),
         this.getDistance(options),
         this.getHeartRate(options),
       ]);
 
-      console.log('[AppleHealthProvider] Metrics retrieved:', { steps, calories, distance, heartRate });
+      console.log('[AppleHealthProvider] Metrics retrieved:', { steps, calories, distance, heart_rate });
 
-      const metrics = {
+      const metrics: HealthMetrics = {
+        id: '', // This should be set by the service layer
+        user_id: '', // This should be set by the service layer
+        date: startOfDay.toISOString().split('T')[0],
         steps,
         calories,
         distance,
-        heartRate,
-        lastUpdated: now.toISOString(),
-        score: this.calculateHealthScore(steps, distance, calories, heartRate),
+        heart_rate,
+        last_updated: now.toISOString(),
+        daily_score: this.calculateHealthScore(steps, distance, calories, heart_rate),
+        weekly_score: null,
+        streak_days: null,
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
       };
 
       console.log('[AppleHealthProvider] Final metrics:', metrics);

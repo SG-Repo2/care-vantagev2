@@ -1,11 +1,14 @@
 import { useCallback, useState, useEffect } from 'react';
 import { profileService, UserProfile } from '../services/profileService';
 import { useAuth } from '../../../health-metrics/contexts/AuthContext';
+import { useUserValidation } from '../../../health-metrics/hooks/useUserValidation';
+import { UserValidationError } from '../../../health-metrics/services/UserValidationService';
 
 interface UseProfileResult {
   profile: UserProfile | null;
   loading: boolean;
   error: string | null;
+  isValid: boolean;
   getProfile: () => Promise<UserProfile | null>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   updateAvatar: (uri: string) => Promise<void>;
@@ -21,64 +24,52 @@ interface UseProfileResult {
 
 export const useProfile = (): UseProfileResult => {
   const { user, status } = useAuth();
+  const { isValid, validateSession, clearSession } = useUserValidation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  // Initialize profile when user is authenticated
-  useEffect(() => {
-    if (status === 'authenticated' && user && !profile) {
-      (async () => {
-        try {
-          setLoading(true);
-          let userProfile = await profileService.getProfile(user.id);
-          
-          if (!userProfile) {
-            // Create profile if it doesn't exist
-            userProfile = await profileService.createProfile(user);
-          }
-          
-          setProfile(userProfile);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to initialize profile');
-        } finally {
-          setLoading(false);
-        }
-      })();
-    } else if (status === 'unauthenticated') {
+  const handleError = useCallback((err: unknown) => {
+    if (err instanceof UserValidationError) {
+      setError(err.message);
       setProfile(null);
+      clearSession();
+    } else {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
-  }, [user, status, profile]);
+  }, [clearSession]);
 
   const refreshProfile = useCallback(async () => {
     if (!user?.id) return;
     
     try {
       setLoading(true);
+      setError(null);
       const refreshedProfile = await profileService.getProfile(user.id);
       setProfile(refreshedProfile);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to refresh profile');
+      handleError(err);
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, handleError]);
 
   const getProfile = useCallback(async () => {
     if (!user?.id) return null;
     
     try {
       setLoading(true);
+      setError(null);
       const profile = await profileService.getProfile(user.id);
       setProfile(profile);
       return profile;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
+      handleError(err);
       return null;
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, handleError]);
 
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
     if (!user?.id) return;
@@ -89,12 +80,12 @@ export const useProfile = (): UseProfileResult => {
       const updatedProfile = await profileService.updateProfile(user.id, updates);
       setProfile(updatedProfile);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      handleError(err);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, handleError]);
 
   const updateAvatar = useCallback(async (uri: string) => {
     if (!user?.id) return;
@@ -105,12 +96,12 @@ export const useProfile = (): UseProfileResult => {
       const updatedProfile = await profileService.updateProfilePhoto(user.id, uri);
       setProfile(updatedProfile);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update avatar');
+      handleError(err);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, handleError]);
 
   const updateScore = useCallback(async (metrics: {
     steps: number;
@@ -125,10 +116,10 @@ export const useProfile = (): UseProfileResult => {
       const updatedProfile = await profileService.updateScore(user.id, metrics);
       setProfile(updatedProfile);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update score');
+      handleError(err);
       throw err;
     }
-  }, [user?.id]);
+  }, [user?.id, handleError]);
 
   const deleteAccount = useCallback(async () => {
     if (!user?.id) return;
@@ -136,20 +127,54 @@ export const useProfile = (): UseProfileResult => {
     try {
       setLoading(true);
       setError(null);
-      // TODO: Implement account deletion
-      throw new Error('Account deletion not implemented');
+      await profileService.deleteAccount(user.id);
+      await clearSession();
+      setProfile(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete account');
+      handleError(err);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, clearSession, handleError]);
+
+  // Initialize profile when user is authenticated
+  useEffect(() => {
+    if (status === 'authenticated' && user && !profile && isValid) {
+      (async () => {
+        try {
+          setLoading(true);
+          let userProfile = await profileService.getProfile(user.id);
+          
+          if (!userProfile) {
+            // Create profile if it doesn't exist
+            userProfile = await profileService.createProfile({
+              id: user.id,
+              email: user.email,
+              user_metadata: {
+                full_name: user.user_metadata?.full_name,
+                avatar_url: user.user_metadata?.avatar_url
+              }
+            });
+          }
+          
+          setProfile(userProfile);
+        } catch (err) {
+          handleError(err);
+        } finally {
+          setLoading(false);
+        }
+      })();
+    } else if (status === 'unauthenticated' || !isValid) {
+      setProfile(null);
+    }
+  }, [user, status, profile, isValid, handleError]);
 
   return {
     profile,
     loading,
     error,
+    isValid,
     getProfile,
     updateProfile,
     updateAvatar,
