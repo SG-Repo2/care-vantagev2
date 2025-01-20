@@ -23,19 +23,63 @@ export const SignInScreen = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        try {
-          // Create or get user profile
-          const profile = await profileService.createProfile(session.user);
-          console.log('Profile created/retrieved:', profile);
-          
-          // Initialize health provider after profile is created
-          const healthInitialized = await initializeHealthProvider();
-          // Navigation will be handled automatically by SimpleNavigator
-          // based on the auth status change
-        } catch (err) {
-          console.error('Failed to initialize user profile:', err);
-          setError('Failed to initialize user profile');
-        }
+        const initializeUser = async () => {
+          let retryCount = 0;
+          const maxRetries = 3;
+          const baseDelay = 1000; // 1 second base delay
+  
+          while (retryCount < maxRetries) {
+            try {
+              // Wait a bit before first attempt or retry
+              if (retryCount > 0) {
+                const delay = baseDelay * Math.pow(2, retryCount - 1);
+                await new Promise(resolve => setTimeout(resolve, delay));
+              }
+  
+              // Create or get user profile
+              const profile = await profileService.createProfile(session.user);
+              console.log('Profile created/retrieved:', profile);
+              
+              // Initialize health provider after profile is created
+              const healthInitialized = await initializeHealthProvider();
+              if (!healthInitialized) {
+                throw new Error('Failed to initialize health services');
+              }
+  
+              // Success - clear any error and exit
+              setError(null);
+              return;
+  
+            } catch (err) {
+              console.error(`Attempt ${retryCount + 1} failed:`, err);
+              retryCount++;
+  
+              // If we still have retries left, continue to next attempt
+              if (retryCount < maxRetries) {
+                continue;
+              }
+  
+              // All retries exhausted - handle final error
+              if (err instanceof Error) {
+                if (err.message.includes('Permission denied')) {
+                  setError('Unable to create profile. Please try signing out and signing in again.');
+                } else if (err.message.includes('health services')) {
+                  setError('Unable to access health services. Please check app permissions.');
+                } else {
+                  setError(err.message);
+                }
+              } else {
+                setError('Failed to initialize profile. Please try again.');
+              }
+            }
+          }
+        };
+  
+        // Start initialization process
+        initializeUser().catch(err => {
+          console.error('Unexpected error during initialization:', err);
+          setError('An unexpected error occurred. Please try again.');
+        });
       }
     });
 
