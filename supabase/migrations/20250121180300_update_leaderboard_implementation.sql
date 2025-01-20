@@ -8,12 +8,17 @@ DROP INDEX IF EXISTS public.idx_users_score_privacy;
 DROP POLICY IF EXISTS "Public can view leaderboard_public" ON public.users;
 DROP POLICY IF EXISTS "Users can update their own privacy" ON public.users;
 
+-- Drop existing constraint if it exists
+ALTER TABLE public.users 
+DROP CONSTRAINT IF EXISTS privacy_level_check;
+
 -- Ensure privacy_level column is properly configured
 ALTER TABLE public.users 
 ALTER COLUMN privacy_level SET NOT NULL,
-ALTER COLUMN privacy_level SET DEFAULT 'private',
+ALTER COLUMN privacy_level TYPE text,
+ALTER COLUMN privacy_level SET DEFAULT 'private'::text,
 ADD CONSTRAINT privacy_level_check 
-    CHECK (privacy_level IN ('private', 'friends', 'public'));
+    CHECK (privacy_level = ANY (ARRAY['private'::text, 'public'::text, 'friends'::text]));
 
 -- Update existing NULL privacy levels to private
 UPDATE public.users 
@@ -48,78 +53,51 @@ WITH ranked_users AS (
       WHEN privacy_level = 'private' THEN 
         'anonymous_user_' || encode(digest(id::text, 'sha256'), 'base64')
       WHEN display_name IS NULL OR display_name = '' THEN 
-        'anonymous_user_' || encode(digest(id::text, 'sha256'), 'base64')
+        'user_' || encode(digest(id::text, 'sha256'), 'base64')
       ELSE display_name
     END AS display_name,
-    CASE
-      WHEN privacy_level = 'private' THEN NULL
-      ELSE photo_url
-    END AS photo_url,
-    CASE
-      WHEN privacy_level = 'private' THEN 0
-      ELSE GREATEST(COALESCE(score, 0), 0) -- Prevent negative scores
-    END AS score,
-    ROW_NUMBER() OVER (
-      ORDER BY 
-        CASE 
-          WHEN privacy_level = 'private' THEN 0 
-          ELSE COALESCE(score, 0) 
-        END DESC,
-        created_at ASC -- Consistent tie-breaking
-    ) as rank
+    photo_url,
+    GREATEST(COALESCE(score, 0), 0) as score, -- Prevent negative scores
+    privacy_level,
+    created_at,
+    ROW_NUMBER() OVER (ORDER BY GREATEST(COALESCE(score, 0), 0) DESC, created_at ASC) as rank
   FROM public.users
-  WHERE deleted_at IS NULL
+  WHERE 
+    deleted_at IS NULL
+    AND privacy_level != 'private'
 )
-SELECT *
+SELECT
+  public_id,
+  display_name,
+  CASE 
+    WHEN privacy_level = 'public' THEN photo_url
+    ELSE NULL
+  END as photo_url,
+  score,
+  rank,
+  privacy_level
 FROM ranked_users;
--- Note: Removed LIMIT clause to support proper pagination in the service layer
 
--- Set view owner to postgres to enable security definer behavior
+-- Set view owner to postgres for security definer behavior
 ALTER VIEW public.leaderboard_public OWNER TO postgres;
 
--- Create updated public view policy that works alongside existing policies
-CREATE POLICY "Public can view leaderboard_public"
-ON public.users FOR SELECT
-TO PUBLIC
-USING (
-  deleted_at IS NULL
-  AND (
-    privacy_level = 'public'
-    OR privacy_level = 'friends'
-    OR auth.uid() = id
-  )
-);
-
--- Add new privacy-specific update policy
-CREATE POLICY "Users can update their own privacy"
-ON public.users FOR UPDATE
-USING (auth.uid() = id)
-WITH CHECK (
-  auth.uid() = id 
-  AND (
-    -- Only allow valid privacy levels
-    NEW.privacy_level IN ('private', 'friends', 'public')
-    -- Only allow updating privacy_level and updated_at
-    AND (
-      NEW.id = OLD.id
-      AND NEW.email = OLD.email
-      AND NEW.display_name = OLD.display_name
-      AND NEW.photo_url = OLD.photo_url
-      AND NEW.device_info = OLD.device_info
-      AND NEW.permissions_granted = OLD.permissions_granted
-      AND NEW.last_error = OLD.last_error
-      AND NEW.last_health_sync = OLD.last_health_sync
-      AND NEW.created_at = OLD.created_at
-      AND NEW.deleted_at = OLD.deleted_at
-      AND NEW.score = OLD.score
-    )
-  )
-);
-
--- Grant necessary permissions
-GRANT SELECT ON public.leaderboard_public TO PUBLIC;
-GRANT SELECT ON public.leaderboard_public TO authenticated;
+-- Grant access to the view
 GRANT SELECT ON public.leaderboard_public TO anon;
+GRANT SELECT ON public.leaderboard_public TO authenticated;
+
+-- Add privacy-specific update policy
+CREATE POLICY "Users can update their own privacy"
+ON public.users
+FOR UPDATE
+USING (
+  auth.uid() = id
+)
+WITH CHECK (
+  auth.uid() = id
+  AND (
+    privacy_level = ANY (ARRAY['private'::text, 'public'::text, 'friends'::text])
+  )
+);
 
 -- Notify PostgREST to reload schema
 NOTIFY pgrst, 'reload schema';

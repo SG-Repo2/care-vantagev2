@@ -1,74 +1,106 @@
 import React from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
-import { Card, Text, Avatar } from 'react-native-paper';
+import { FlatList, View, RefreshControl, StyleSheet } from 'react-native';
+import { Card, Avatar, Text, ActivityIndicator } from 'react-native-paper';
 import { useLeaderboard } from '../hooks/useLeaderboard';
-import { useAuth } from '../../../core/auth/useAuth';
-import { LoadingScreen } from '../../../health-metrics/components/LoadingScreen';
-import { ErrorScreen } from '../../../health-metrics/components/ErrorScreen';
 
 export const LeaderboardScreen: React.FC = () => {
-  const { data, loading, error, loadMore } = useLeaderboard();
-  const { user } = useAuth();
+  const { data, loading, error, loadMore, refresh } = useLeaderboard();
 
   if (loading && !data.length) {
-    return <LoadingScreen />;
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
   }
 
   if (error) {
-    return <ErrorScreen error={error.message} />;
+    return (
+      <View style={styles.centerContainer}>
+        <Text variant="bodyLarge" style={styles.errorText}>
+          Error: {error.message}
+        </Text>
+      </View>
+    );
   }
 
+  const renderItem = ({ item }: { item: typeof data[0] }) => (
+    <Card style={styles.card}>
+      <Card.Content style={styles.cardContent}>
+        <Text style={styles.rankText}>#{item.rank}</Text>
+        <Avatar.Image 
+          size={40} 
+          source={
+            item.photo_url 
+              ? { uri: item.photo_url } 
+              : require('../../../assets/user.png')
+          } 
+        />
+        <View style={styles.userInfo}>
+          <Text variant="titleMedium">
+            {item.display_name || 'Anonymous User'}
+          </Text>
+          <Text variant="bodyMedium">{item.score} points</Text>
+        </View>
+      </Card.Content>
+    </Card>
+  );
+
   return (
-    <FlatList
-      data={data}
-      keyExtractor={(item) => item.public_id}
-      renderItem={({ item }) => (
-        <Card 
-          style={[
-            styles.card,
-            user?.id === item.public_id && styles.currentUserCard
-          ]}
-        >
-          <Card.Content style={styles.cardContent}>
-            <View style={styles.rankContainer}>
-              <Text variant="titleLarge">#{item.rank}</Text>
-            </View>
-            <Avatar.Image 
-              size={40} 
-              source={item.photo_url ? { uri: item.photo_url } : require('../../../assets/user.png')} 
-            />
-            <View style={styles.userInfo}>
-              <Text variant="titleMedium">{item.display_name}</Text>
-              <Text variant="bodyLarge">{item.score} points</Text>
-            </View>
-          </Card.Content>
-        </Card>
-      )}
-      onEndReached={loadMore}
-      onEndReachedThreshold={0.5}
-    />
+    <View style={styles.container}>
+      <FlatList
+        data={data}
+        keyExtractor={(item) => item.public_id}
+        renderItem={renderItem}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading && !!data.length}
+            onRefresh={refresh}
+          />
+        }
+        contentContainerStyle={styles.listContent}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    margin: 8,
-    elevation: 2,
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  currentUserCard: {
-    backgroundColor: '#e3f2fd',
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  card: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    elevation: 2,
   },
   cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  rankContainer: {
-    width: 40,
-    alignItems: 'center',
+  rankText: {
+    minWidth: 40,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   userInfo: {
     flex: 1,
     marginLeft: 12,
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+  },
+  listContent: {
+    paddingVertical: 8,
   },
 });

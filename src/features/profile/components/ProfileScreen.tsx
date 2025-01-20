@@ -1,215 +1,173 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Alert } from 'react-native';
-import { Button, Text, useTheme, ActivityIndicator, Avatar, Portal, Dialog } from 'react-native-paper';
-import { useAuth } from '../../../health-metrics/contexts/AuthContext';
+import { View, StyleSheet, Platform } from 'react-native';
+import { Button, Avatar, TextInput, Text, ActivityIndicator } from 'react-native-paper';
+import * as ImagePicker from 'expo-image-picker';
 import { useProfile } from '../hooks/useProfile';
-import { StyleSheet } from 'react-native';
-import { PrivacySettings } from './PrivacySettings';
+import { useAuth } from '../../../core/auth/useAuth';
 
-export const ProfileScreen = () => {
-  const theme = useTheme();
-  const { signOut } = useAuth();
-  const { profile, loading, error, isValid, deleteAccount, updateProfile } = useProfile();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+export const ProfileScreen: React.FC = () => {
+  const { user } = useAuth();
+  const { profile, loading, error, updating, updateProfile, uploadProfilePhoto } = useProfile(user?.id || '');
+  const [displayName, setDisplayName] = useState(profile?.display_name || '');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleDeleteAccount = async () => {
-    try {
-      await deleteAccount();
-      // User will be automatically signed out by useProfile
-    } catch (err) {
-      Alert.alert('Error', 'Failed to delete account. Please try again.');
-    }
-  };
-
-  if (loading) {
+  if (loading && !profile) {
     return (
-      <View style={[styles.container, styles.centered]}>
+      <View style={styles.centerContainer}>
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
-  if (!isValid) {
+  if (error || !profile) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.errorText}>Your account is no longer valid</Text>
-        <Button mode="contained" onPress={signOut} style={styles.signOutButton}>
-          Sign Out
-        </Button>
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>
+          {error?.message || 'Profile not found'}
+        </Text>
       </View>
     );
   }
 
-  if (error) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.errorText}>{error}</Text>
-        <Button mode="contained" onPress={signOut} style={styles.signOutButton}>
-          Sign Out
-        </Button>
-      </View>
-    );
-  }
+  const handleSave = async () => {
+    try {
+      setSaveError(null);
+      await updateProfile({ display_name: displayName });
+    } catch (err) {
+      setSaveError((err as Error).message);
+    }
+  };
 
-  if (!profile) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Text>No profile found</Text>
-      </View>
-    );
-  }
+  const handleImagePick = async () => {
+    try {
+      // Request permissions
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          alert('Sorry, we need camera roll permissions to change your profile photo.');
+          return;
+        }
+      }
+
+      // Pick the image
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets[0].uri) {
+        await uploadProfilePhoto(result.assets[0].uri);
+      }
+    } catch (err) {
+      setSaveError((err as Error).message);
+    }
+  };
 
   return (
-    <>
-      <ScrollView style={styles.container}>
-        <View style={styles.header}>
-          <Avatar.Text 
-            size={120} 
-            label={(profile.display_name || profile.email || 'U').substring(0, 2).toUpperCase()}
-          />
-          <Text style={styles.displayName}>{profile.display_name || profile.email || 'User'}</Text>
-          <Text style={styles.email}>{profile.email}</Text>
-        </View>
+    <View style={styles.container}>
+      <View style={styles.avatarContainer}>
+        <Avatar.Image 
+          size={120} 
+          source={
+            profile.photo_url 
+              ? { uri: profile.photo_url }
+              : require('../../../assets/user.png')
+          }
+        />
+        <Button 
+          mode="outlined" 
+          onPress={handleImagePick}
+          style={styles.photoButton}
+          disabled={updating}
+        >
+          Change Photo
+        </Button>
+      </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Information</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Member Since</Text>
-            <Text style={styles.value}>
-              {new Date(profile.created_at || Date.now()).toLocaleDateString()}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Health Permissions</Text>
-            <Text style={styles.value}>
-              {profile.permissions_granted ? 'Granted' : 'Not Granted'}
-            </Text>
-          </View>
-        </View>
+      <TextInput
+        label="Display Name"
+        value={displayName}
+        onChangeText={setDisplayName}
+        style={styles.input}
+        disabled={updating}
+      />
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Privacy Settings</Text>
-          <Text style={styles.sectionDescription}>
-            Control how your information appears to others
-          </Text>
-          <PrivacySettings
-            privacyLevel={profile.privacy_level || 'public'}
-            onChange={async (level) => {
-              try {
-                await updateProfile({ privacy_level: level });
-              } catch (err) {
-                Alert.alert('Error', 'Failed to update privacy settings');
-              }
-            }}
-          />
-        </View>
+      {saveError && (
+        <Text style={styles.errorText}>
+          {saveError}
+        </Text>
+      )}
 
-        <View style={styles.section}>
-          <Button 
-            mode="contained" 
-            onPress={signOut}
-            style={styles.signOutButton}
-          >
-            Sign Out
-          </Button>
-          <Button 
-            mode="outlined" 
-            onPress={() => setShowDeleteDialog(true)}
-            style={styles.deleteButton}
-            textColor={theme.colors.error}
-          >
-            Delete Account
-          </Button>
-        </View>
-      </ScrollView>
+      <Button 
+        mode="contained" 
+        onPress={handleSave}
+        style={styles.saveButton}
+        loading={updating}
+        disabled={updating}
+      >
+        Save Changes
+      </Button>
 
-      <Portal>
-        <Dialog visible={showDeleteDialog} onDismiss={() => setShowDeleteDialog(false)}>
-          <Dialog.Title>Delete Account</Dialog.Title>
-          <Dialog.Content>
-            <Text>
-              Are you sure you want to delete your account? This action cannot be undone.
-              All your health data and progress will be lost.
-            </Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setShowDeleteDialog(false)}>Cancel</Button>
-            <Button textColor={theme.colors.error} onPress={handleDeleteAccount}>
-              Delete
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
-    </>
+      <View style={styles.statsContainer}>
+        <Text variant="titleMedium" style={styles.statsTitle}>
+          Your Stats
+        </Text>
+        <Text style={styles.statsText}>
+          Current Score: {profile.score}
+        </Text>
+        <Text style={styles.statsText}>
+          Member Since: {new Date(profile.created_at).toLocaleDateString()}
+        </Text>
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 16,
     backgroundColor: '#f5f5f5',
   },
-  centered: {
+  centerContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  displayName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    marginTop: 16,
-  },
-  email: {
-    fontSize: 16,
-    color: '#666',
-  },
-  section: {
-    marginTop: 16,
     padding: 16,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  photoButton: {
+    marginTop: 8,
+  },
+  input: {
+    marginBottom: 16,
     backgroundColor: 'white',
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  sectionDescription: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  label: {
-    fontSize: 16,
-    color: '#666',
-  },
-  value: {
-    fontSize: 16,
-  },
-  signOutButton: {
+  saveButton: {
     marginTop: 8,
-  },
-  deleteButton: {
-    marginTop: 8,
-    borderColor: 'transparent',
   },
   errorText: {
-    color: '#FF4B4B',
-    fontSize: 16,
-    marginBottom: 16,
+    color: 'red',
+    marginVertical: 8,
     textAlign: 'center',
+  },
+  statsContainer: {
+    marginTop: 32,
+    padding: 16,
+    backgroundColor: 'white',
+    borderRadius: 8,
+  },
+  statsTitle: {
+    marginBottom: 8,
+    fontWeight: 'bold',
+  },
+  statsText: {
+    fontSize: 16,
+    marginVertical: 4,
   },
 });

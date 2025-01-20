@@ -13,36 +13,85 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase configuration');
 }
 
+const CHUNK_SIZE = 1800; // Safely under 2048 byte limit
+
+const storage = {
+  async getItem(key: string): Promise<string | null> {
+    try {
+      const countStr = await SecureStore.getItemAsync(`${key}_count`);
+      if (!countStr) {
+        return await SecureStore.getItemAsync(key);
+      }
+
+      const count = parseInt(countStr, 10);
+      let value = '';
+      for (let i = 0; i < count; i++) {
+        const chunk = await SecureStore.getItemAsync(`${key}_${i}`);
+        if (chunk === null) {
+          console.warn(`Missing chunk ${i} for key ${key}`);
+          return null;
+        }
+        value += chunk;
+      }
+      return value;
+    } catch (error) {
+      console.error('Error reading from secure storage:', error);
+      return null;
+    }
+  },
+
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      if (value.length <= CHUNK_SIZE) {
+        await SecureStore.setItemAsync(key, value);
+        return;
+      }
+
+      const chunks = [];
+      for (let i = 0; i < value.length; i += CHUNK_SIZE) {
+        chunks.push(value.slice(i, i + CHUNK_SIZE));
+      }
+
+      await Promise.all([
+        SecureStore.setItemAsync(`${key}_count`, chunks.length.toString()),
+        ...chunks.map((chunk, i) => 
+          SecureStore.setItemAsync(`${key}_${i}`, chunk)
+        )
+      ]);
+    } catch (error) {
+      console.error('Error writing to secure storage:', error);
+      throw error; // Propagate error to Supabase client
+    }
+  },
+
+  async removeItem(key: string): Promise<void> {
+    try {
+      const countStr = await SecureStore.getItemAsync(`${key}_count`);
+      if (!countStr) {
+        await SecureStore.deleteItemAsync(key);
+        return;
+      }
+
+      const count = parseInt(countStr, 10);
+      await Promise.all([
+        SecureStore.deleteItemAsync(`${key}_count`),
+        ...Array.from({ length: count }, (_, i) => 
+          SecureStore.deleteItemAsync(`${key}_${i}`)
+        )
+      ]);
+    } catch (error) {
+      console.error('Error removing from secure storage:', error);
+    }
+  }
+};
+
 // Create the Supabase client with proper database typing
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
-    storage: {
-      async getItem(key: string) {
-        try {
-          return await SecureStore.getItemAsync(key);
-        } catch (error) {
-          console.error('Error reading from secure storage:', error);
-          return null;
-        }
-      },
-      async setItem(key: string, value: string) {
-        try {
-          await SecureStore.setItemAsync(key, value);
-        } catch (error) {
-          console.error('Error writing to secure storage:', error);
-        }
-      },
-      async removeItem(key: string) {
-        try {
-          await SecureStore.deleteItemAsync(key);
-        } catch (error) {
-          console.error('Error removing from secure storage:', error);
-        }
-      },
-    },
+    storage,
   },
 });
 

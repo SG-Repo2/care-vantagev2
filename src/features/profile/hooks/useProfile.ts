@@ -1,185 +1,76 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { profileService, UserProfile } from '../services/profileService';
-import { useAuth } from '../../../health-metrics/contexts/AuthContext';
-import { useUserValidation } from '../../../health-metrics/hooks/useUserValidation';
-import { UserValidationError } from '../../../health-metrics/services/UserValidationService';
 
-interface UseProfileResult {
-  profile: UserProfile | null;
-  loading: boolean;
-  error: string | null;
-  isValid: boolean;
-  getProfile: () => Promise<UserProfile | null>;
-  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
-  updateAvatar: (uri: string) => Promise<void>;
-  refreshProfile: () => Promise<void>;
-  updateScore: (metrics: {
-    steps: number;
-    distance: number;
-    calories: number;
-    heart_rate?: number;
-  }) => Promise<void>;
-  deleteAccount: () => Promise<void>;
-}
-
-export const useProfile = (): UseProfileResult => {
-  const { user, status } = useAuth();
-  const { isValid, validateSession, clearSession } = useUserValidation();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const useProfile = (userId: string) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [updating, setUpdating] = useState(false);
 
-  const handleError = useCallback((err: unknown) => {
-    if (err instanceof UserValidationError) {
-      setError(err.message);
-      setProfile(null);
-      clearSession();
-    } else {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-    }
-  }, [clearSession]);
-
-  const refreshProfile = useCallback(async () => {
-    if (!user?.id) return;
-    
-    try {
-      setLoading(true);
-      setError(null);
-      const refreshedProfile = await profileService.getProfile(user.id);
-      setProfile(refreshedProfile);
-    } catch (err) {
-      handleError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, handleError]);
-
-  const getProfile = useCallback(async () => {
-    if (!user?.id) return null;
-    
-    try {
-      setLoading(true);
-      setError(null);
-      const profile = await profileService.getProfile(user.id);
-      setProfile(profile);
-      return profile;
-    } catch (err) {
-      handleError(err);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, handleError]);
-
-  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
-    if (!user?.id) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const updatedProfile = await profileService.updateProfile(user.id, updates);
-      setProfile(updatedProfile);
-    } catch (err) {
-      handleError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, handleError]);
-
-  const updateAvatar = useCallback(async (uri: string) => {
-    if (!user?.id) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const updatedProfile = await profileService.updateProfilePhoto(user.id, uri);
-      setProfile(updatedProfile);
-    } catch (err) {
-      handleError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, handleError]);
-
-  const updateScore = useCallback(async (metrics: {
-    steps: number;
-    distance: number;
-    calories: number;
-    heart_rate?: number;
-  }) => {
-    if (!user?.id) return;
-
-    try {
-      setError(null);
-      const updatedProfile = await profileService.updateScore(user.id, metrics);
-      setProfile(updatedProfile);
-    } catch (err) {
-      handleError(err);
-      throw err;
-    }
-  }, [user?.id, handleError]);
-
-  const deleteAccount = useCallback(async () => {
-    if (!user?.id) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      await profileService.deleteAccount(user.id);
-      await clearSession();
-      setProfile(null);
-    } catch (err) {
-      handleError(err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, clearSession, handleError]);
-
-  // Initialize profile when user is authenticated
   useEffect(() => {
-    if (status === 'authenticated' && user && !profile && isValid) {
-      (async () => {
-        try {
-          setLoading(true);
-          let userProfile = await profileService.getProfile(user.id);
-          
-          if (!userProfile) {
-            // Create profile if it doesn't exist
-            userProfile = await profileService.createProfile({
-              id: user.id,
-              email: user.email,
-              user_metadata: {
-                full_name: user.user_metadata?.full_name,
-                avatar_url: user.user_metadata?.avatar_url
-              }
-            });
-          }
-          
-          setProfile(userProfile);
-        } catch (err) {
-          handleError(err);
-        } finally {
-          setLoading(false);
-        }
-      })();
-    } else if (status === 'unauthenticated' || !isValid) {
-      setProfile(null);
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const data = await profileService.getProfile(userId);
+        setProfile(data);
+      } catch (err) {
+        setError(err as Error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (userId) fetchProfile();
+  }, [userId]);
+
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    try {
+      setUpdating(true);
+      const updated = await profileService.updateProfile(userId, updates);
+      setProfile(updated);
+      return updated;
+    } catch (err) {
+      setError(err as Error);
+      throw err;
+    } finally {
+      setUpdating(false);
     }
-  }, [user, status, profile, isValid, handleError]);
+  };
+
+  const updateScore = async (newScore: number) => {
+    try {
+      setUpdating(true);
+      await profileService.updateScore(userId, newScore);
+      setProfile(prev => prev ? { ...prev, score: newScore } : null);
+    } catch (err) {
+      setError(err as Error);
+      throw err;
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const uploadProfilePhoto = async (photoUri: string) => {
+    try {
+      setUpdating(true);
+      const publicUrl = await profileService.uploadProfilePhoto(userId, photoUri);
+      setProfile(prev => prev ? { ...prev, photo_url: publicUrl } : null);
+      return publicUrl;
+    } catch (err) {
+      setError(err as Error);
+      throw err;
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return {
     profile,
     loading,
     error,
-    isValid,
-    getProfile,
+    updating,
     updateProfile,
-    updateAvatar,
-    refreshProfile,
     updateScore,
-    deleteAccount,
+    uploadProfilePhoto
   };
 };

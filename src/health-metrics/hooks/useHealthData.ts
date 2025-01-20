@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { HealthMetrics, HealthError, WeeklyMetrics } from '../providers/types';
 import { HealthProviderFactory } from '../providers/HealthProviderFactory';
 import { profileService } from '../../features/profile/services/profileService';
-import { useAuth } from '../contexts/AuthContext';
 import { AppState, AppStateStatus } from 'react-native';
 import { DateUtils } from '../../utils/DateUtils';
+import { useAuth } from '@core/auth/useAuth';
 
 interface UseHealthDataResult {
   metrics: HealthMetrics | null;
@@ -35,10 +35,10 @@ export const useHealthData = (): UseHealthDataResult => {
   const [provider, setProvider] = useState<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const { user } = useAuth();
+  const { user, profileInitialized } = useAuth();
 
   const syncWithDatabase = useCallback(async (healthMetrics: HealthMetrics) => {
-    if (!user?.id) return;
+    if (!user?.id || !profileInitialized) return;
 
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -55,7 +55,7 @@ export const useHealthData = (): UseHealthDataResult => {
       console.error('Failed to sync with database:', err);
       // Don't throw error to prevent disrupting the UI
     }
-  }, [user?.id]);
+  }, [user?.id, profileInitialized]);
 
   const initialize = useCallback(async () => {
     try {
@@ -78,6 +78,11 @@ export const useHealthData = (): UseHealthDataResult => {
   }, []);
 
   const refresh = useCallback(async () => {
+    if (!profileInitialized) {
+      console.log('Skipping health data refresh: Profile not initialized');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -153,10 +158,12 @@ export const useHealthData = (): UseHealthDataResult => {
     } finally {
       setLoading(false);
     }
-  }, [provider, initialize, lastSyncTime, syncWithDatabase]);
+  }, [provider, initialize, lastSyncTime, syncWithDatabase, profileInitialized]);
 
   // Handle app state changes for background sync
   useEffect(() => {
+    if (!profileInitialized) return;
+
     let backgroundSyncInterval: NodeJS.Timeout;
 
     const handleAppStateChange = async (nextAppState: AppStateStatus) => {
@@ -182,12 +189,14 @@ export const useHealthData = (): UseHealthDataResult => {
       subscription.remove();
       if (backgroundSyncInterval) clearInterval(backgroundSyncInterval);
     };
-  }, [refresh]);
+  }, [refresh, profileInitialized]);
 
-  // Initial load
+  // Initial load only after profile is initialized
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (profileInitialized) {
+      refresh();
+    }
+  }, [refresh, profileInitialized]);
 
   return {
     metrics,

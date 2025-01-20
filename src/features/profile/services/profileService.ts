@@ -1,266 +1,288 @@
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../../../utils/supabase';
-import { CreateProfileParams, UpdateProfileParams, UserProfile } from '../types/profile.types';
-import { HealthMetrics } from '../../../health-metrics/types';
-import { DateUtils } from '../../../utils/DateUtils';
 import { Platform } from 'react-native';
-import { PrivacyLevel } from '../../../core/types/base';
 
-export interface UpdatePrivacyParams {
-  privacy_level: PrivacyLevel;
+export interface UserProfile {
+  id: string;
+  email: string;
+  display_name: string | null;
+  photo_url: string | null;
+  score: number;
+  permissions_granted?: boolean;
+  last_health_sync?: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
 }
 
-export interface IProfileService {
-  createProfile(user: User): Promise<UserProfile>;
-  getProfile(userId: string): Promise<UserProfile | null>;
-  updateProfile(userId: string, params: UpdateProfileParams): Promise<UserProfile>;
-  validateUserAccess(userId: string): Promise<void>;
-  updateHealthMetrics(userId: string, metrics: Partial<HealthMetrics>): Promise<void>;
-  updatePrivacy(userId: string, privacy: PrivacyLevel): Promise<void>;
-  getPrivacyLevel(userId: string): Promise<PrivacyLevel>;
+export interface HealthMetricsUpdate {
+  date: string;
+  steps: number;
+  distance: number;
+  calories: number;
+  heart_rate: number;
+  last_updated: string;
 }
 
-class ProfileServiceImpl implements IProfileService {
-  async createProfile(user: User): Promise<UserProfile> {
+type UserIdInput = string | User | { id: string; email?: string };
+
+class ProfileService {
+  async validateSession(): Promise<User> {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.user) {
+      throw new Error('No valid session found. Please sign in again.');
+    }
+    return session.user;
+  }
+
+  async signOut(): Promise<void> {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      // Clear any cached data or state here
+      await this.clearLocalState();
+    } catch (err) {
+      console.error('Error signing out:', err);
+      throw err;
+    }
+  }
+
+  private async clearLocalState(): Promise<void> {
+    try {
+      // Clear any local storage or state related to the profile
+      // This is a placeholder - add any necessary cleanup
+      console.log('Clearing local profile state');
+    } catch (err) {
+      console.error('Error clearing local state:', err);
+    }
+  }
+
+  private async waitForAuthRecord(userId: string): Promise<void> {
+    const maxAttempts = 5;
+    const baseDelay = 1000;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const { data, error } = await supabase.rpc('check_auth_user_exists', { user_id: userId });
+        
+        if (!error && data === true) {
+          return;
+        }
+        
+        console.log(`Waiting for auth record, attempt ${attempt + 1} of ${maxAttempts}`);
+        await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt)));
+      } catch (err) {
+        console.error(`Error checking auth record (attempt ${attempt + 1}):`, err);
+        if (attempt === maxAttempts - 1) throw err;
+      }
+    }
+    
+    throw new Error('Auth record not found after maximum attempts');
+  }
+
+  private getUserId(input: UserIdInput): string {
+    if (typeof input === 'string') return input;
+    if ('id' in input) return input.id;
+    throw new Error('Invalid user ID input');
+  }
+
+  async getProfile(userId: UserIdInput): Promise<UserProfile | null> {
+    try {
+      // Validate session first
+      await this.validateSession();
+
+      const id = this.getUserId(userId);
+      if (!id) {
+        throw new Error('Invalid user ID provided');
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null;
+        }
+        console.error('Error getting profile:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (err) {
+      console.error('Error in getProfile:', err);
+      throw err;
+    }
+  }
+
+  async createProfile(userId: UserIdInput, email?: string): Promise<UserProfile> {
     try {
       // First verify the session is valid
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        throw new Error('No valid session found. Please sign in again.');
+      const sessionUser = await this.validateSession();
+      const id = this.getUserId(userId);
+
+      if (!id) {
+        throw new Error('Invalid user ID provided');
       }
+
+      // Get email from input or session
+      const userEmail = email || 
+        (typeof userId === 'object' && 'email' in userId ? userId.email : undefined) || 
+        sessionUser.email;
+      
+      if (!userEmail) {
+        throw new Error('Email is required for profile creation');
+      }
+
+      // Wait for auth record to exist
+      await this.waitForAuthRecord(id);
 
       const timestamp = new Date().toISOString();
       
       // Try to get existing profile first
-      const { data: existingProfile, error: selectError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (selectError) {
-        console.error('Error checking existing profile:', selectError);
-        throw selectError;
-      }
-
-      // If profile exists and is not deleted, return it
+      const existingProfile = await this.getProfile(id);
       if (existingProfile && !existingProfile.deleted_at) {
         return existingProfile;
       }
 
       // Prepare profile data
-      const profileData: CreateProfileParams = {
-        id: user.id,
-        email: user.email || '',
-        display_name: user.user_metadata?.full_name,
+      const profileData = {
+        id,
+        email: userEmail,
+        display_name: null,
+        photo_url: null,
+        score: 0,
         permissions_granted: false,
-        privacy_level: 'public', // Set default to public
         created_at: timestamp,
         updated_at: timestamp
       };
 
-      // Try to create profile with retries
-      let retryCount = 0;
-      const maxRetries = 3;
-      
-      while (retryCount < maxRetries) {
-        try {
-          const { data, error } = await supabase
-            .from('users')
-            .upsert([profileData])
-            .select('*')
-            .single();
+      // Create profile
+      const { data, error } = await supabase
+        .from('users')
+        .upsert([profileData])
+        .select('*')
+        .single();
 
-          if (error) {
-            if (error.code === '42501' && retryCount < maxRetries - 1) {
-              console.log(`Retry attempt ${retryCount + 1} for profile creation`);
-              retryCount++;
-              await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-              continue;
-            }
-            throw error;
-          }
+      if (error) throw error;
+      if (!data) throw new Error('Failed to create profile: No data returned');
 
-          if (!data) {
-            throw new Error('Failed to create profile: No data returned');
-          }
-
-          return data;
-        } catch (err) {
-          if (retryCount === maxRetries - 1) {
-            throw err;
-          }
-          retryCount++;
-          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-        }
-      }
-
-      throw new Error('Failed to create profile after maximum retry attempts');
+      return data;
     } catch (err) {
       console.error('Error in createProfile:', err);
       throw err;
     }
   }
 
-  async getProfile(userId: string): Promise<UserProfile | null> {
-    const { data, error } = await supabase
-      .from('users')
-      .select()
-      .eq('id', userId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null;
-      }
-      console.error('Error getting profile:', error);
-      throw error;
-    }
-
-    return data;
-  }
-
-  async updateProfile(userId: string, params: UpdateProfileParams): Promise<UserProfile> {
+  async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
     const { data, error } = await supabase
       .from('users')
       .update({
-        ...params,
-        updated_at: new Date().toISOString(),
+        ...updates,
+        updated_at: new Date().toISOString()
       })
       .eq('id', userId)
       .select()
       .single();
 
-    if (error) {
-      console.error('Error updating profile:', error);
-      throw error;
-    }
-
+    if (error) throw error;
     return data;
   }
 
-  async validateUserAccess(userId: string): Promise<void> {
-    try {
-      const { data: profile, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+  async updateScore(userId: string, newScore: number): Promise<void> {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        score: newScore,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
 
-      if (error) {
-        console.error('Error validating user access:', error);
-        throw new Error('Failed to validate user access');
-      }
-
-      if (!profile) {
-        // Try to get the auth user to auto-create profile if needed
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        
-        if (authError) {
-          console.error('Auth error during validation:', authError);
-          throw new Error('Authentication required');
-        }
-
-        if (user && user.id === userId) {
-          // Auto-create profile for valid auth user
-          await this.createProfile(user);
-          return;
-        }
-
-        throw new Error('Profile not found');
-      }
-
-      if (profile.deleted_at) {
-        throw new Error('Profile has been deleted');
-      }
-
-      // Validate permissions if needed
-      if (!profile.permissions_granted) {
-        console.warn('User permissions not granted:', userId);
-      }
-    } catch (err) {
-      console.error('User validation error:', err);
-      throw err;
-    }
+    if (error) throw error;
   }
 
-  async updateHealthMetrics(userId: string, metrics: Partial<HealthMetrics>): Promise<void> {
+  async uploadProfilePhoto(userId: string, photoUri: string): Promise<string> {
+    const photoPath = `public/profile_photos/${userId}`;
+    const photoFile = await fetch(photoUri);
+    const photoBlob = await photoFile.blob();
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(photoPath, photoBlob, {
+        upsert: true,
+        contentType: 'image/jpeg'
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(photoPath);
+
+    await this.updateProfile(userId, { photo_url: publicUrl });
+    return publicUrl;
+  }
+
+  async updateHealthMetrics(userId: string, metrics: HealthMetricsUpdate): Promise<void> {
     try {
-      // First validate user access
-      await this.validateUserAccess(userId);
-
-      const timestamp = new Date().toISOString();
-      const date = DateUtils.getLocalDateString();
-
-      // Use the updated upsert function with parameters in the correct order
-      const { data: result, error: upsertError } = await supabase
-        .rpc('upsert_health_metrics', {
-          p_date: date,                    // Required parameter first
-          p_user_id: userId,               // Required parameter second
-          p_calories: metrics.calories || 0,
-          p_daily_score: metrics.daily_score || 0,
-          p_distance: metrics.distance || 0,
-          p_heart_rate: metrics.heart_rate || 0,
-          p_steps: metrics.steps || 0,
-          p_device_id: Platform.OS,        // Optional: use platform as device_id
-          p_source: 'app'                  // Optional: default source
-        });
-
-      if (upsertError) {
-        console.error('Error upserting health metrics:', upsertError);
-        throw upsertError;
+      // First validate user exists
+      const profile = await this.getProfile(userId);
+      if (!profile) {
+        throw new Error('Cannot update health metrics: User profile does not exist');
       }
 
-      // Update sync time on success
-      const { error: syncError } = await supabase
-        .from('users')
-        .update({
-          last_health_sync: timestamp,
-          updated_at: timestamp
-        })
-        .eq('id', userId);
+      const timestamp = new Date().toISOString();
 
-      if (syncError) {
-        console.warn('Failed to update sync timestamp:', syncError);
+      // Use the upsert function with retry logic
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          const { error: upsertError } = await supabase
+            .rpc('upsert_health_metrics', {
+              p_date: metrics.date,
+              p_user_id: userId,
+              p_calories: metrics.calories || 0,
+              p_daily_score: 0, // Calculate this server-side
+              p_distance: metrics.distance || 0,
+              p_heart_rate: metrics.heart_rate || 0,
+              p_steps: metrics.steps || 0,
+              p_device_id: Platform.OS,
+              p_source: 'app'
+            });
+
+          if (upsertError) {
+            if (retryCount < maxRetries - 1) {
+              retryCount++;
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              continue;
+            }
+            throw upsertError;
+          }
+
+          // Update sync time on success
+          await this.updateProfile(userId, {
+            last_health_sync: timestamp
+          });
+          
+          break;
+        } catch (err) {
+          if (retryCount === maxRetries - 1) {
+            throw err;
+          }
+          retryCount++;
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
       }
     } catch (err) {
       console.error('Error in updateHealthMetrics:', err);
       throw err;
     }
   }
-
-  async updatePrivacy(userId: string, privacy: PrivacyLevel): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          privacy_level: privacy,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
-      if (error) throw error;
-    } catch (err) {
-      console.error('Failed to update privacy:', err);
-      throw err;
-    }
-  }
-
-  async getPrivacyLevel(userId: string): Promise<PrivacyLevel> {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('privacy_level')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      return data?.privacy_level || 'private';
-    } catch (err) {
-      console.error('Failed to get privacy level:', err);
-      throw err;
-    }
-  }
 }
 
-export const profileService = new ProfileServiceImpl();
+export const profileService = new ProfileService();

@@ -52,15 +52,13 @@ BEGIN
 
     -- Verify privacy level constraint exists
     SELECT EXISTS (
-        SELECT FROM information_schema.check_constraints cc
-        JOIN information_schema.constraint_column_usage cu 
-            ON cc.constraint_name = cu.constraint_name
-        WHERE cu.table_name = 'users'
-        AND cu.column_name = 'privacy_level'
-        AND cc.check_clause LIKE '%IN %private%public%friends%'
+        SELECT FROM pg_constraint
+        WHERE conname = 'privacy_level_check'
+        AND contype = 'c'
+        AND conrelid = 'users'::regclass
     ) INTO constraint_exists;
-
-    ASSERT constraint_exists = true,
+    
+    ASSERT constraint_exists = true, 
         'Privacy level check constraint is missing or incorrect';
 
     -- Test view masking
@@ -72,10 +70,17 @@ BEGIN
 
     -- Verify no NULL privacy levels exist
     ASSERT (
-        SELECT COUNT(*) = 0
-        FROM users
+        SELECT COUNT(*) = 0 
+        FROM users 
         WHERE privacy_level IS NULL
     ), 'Found NULL values in privacy_level column';
+
+    -- Verify privacy level values
+    ASSERT (
+        SELECT COUNT(*) = 0 
+        FROM users 
+        WHERE privacy_level NOT IN ('private', 'public', 'friends')
+    ), 'Invalid privacy level values found';
 
     RAISE NOTICE 'All validation checks passed successfully';
 END;

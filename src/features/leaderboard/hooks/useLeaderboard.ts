@@ -1,18 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { leaderboardService, LeaderboardEntry } from '../services/leaderboardService';
 
-export const useLeaderboard = (initialPage = 1) => {
+export const useLeaderboard = () => {
   const [data, setData] = useState<LeaderboardEntry[]>([]);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [page, setPage] = useState(initialPage);
 
-  const fetchData = async () => {
+  const fetchData = async (pageNum: number) => {
     try {
       setLoading(true);
-      const result = await leaderboardService.getLeaderboard(page);
-      setData(result);
-      setError(null);
+      const results = await leaderboardService.getLeaderboard(pageNum);
+      setData(prev => (pageNum === 1 ? results : [...prev, ...results]));
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -21,51 +20,28 @@ export const useLeaderboard = (initialPage = 1) => {
   };
 
   useEffect(() => {
-    let mounted = true;
-    
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const result = await leaderboardService.getLeaderboard(page);
-        if (mounted) {
-          setData(result);
-          setError(null);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err as Error);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadData();
-
-    const subscription = leaderboardService.subscribeToUpdates((newData) => {
-      if (mounted) {
-        setData(newData);
-      }
+    fetchData(page);
+    const subscription = leaderboardService.subscribeToUpdates(async (updated) => {
+      // Reset to first page when updates occur
+      setData(updated);
     });
-
     return () => {
-      mounted = false;
       subscription.then(sub => sub.unsubscribe());
     };
   }, [page]);
 
-  const loadMore = () => {
-    setPage(prev => prev + 1);
+  const loadMore = () => setPage(prev => prev + 1);
+  const refresh = () => {
+    setPage(1);
+    fetchData(1);
   };
 
-  return { 
-    data, 
-    loading, 
-    error, 
-    page, 
+  return {
+    data,
+    loading,
+    error,
     loadMore,
-    refresh: fetchData
+    refresh,
+    page
   };
-}; 
+};
