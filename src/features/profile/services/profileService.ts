@@ -1,11 +1,26 @@
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../../../utils/supabase';
-import { CreateProfileParams, ProfileService, UpdateProfileParams, UserProfile } from '../types/profile.types';
+import { CreateProfileParams, UpdateProfileParams, UserProfile } from '../types/profile.types';
 import { HealthMetrics } from '../../../health-metrics/types';
 import { DateUtils } from '../../../utils/DateUtils';
 import { Platform } from 'react-native';
+import { PrivacyLevel } from '../../../core/types/base';
 
-class ProfileServiceImpl implements ProfileService {
+export interface UpdatePrivacyParams {
+  privacy_level: PrivacyLevel;
+}
+
+export interface IProfileService {
+  createProfile(user: User): Promise<UserProfile>;
+  getProfile(userId: string): Promise<UserProfile | null>;
+  updateProfile(userId: string, params: UpdateProfileParams): Promise<UserProfile>;
+  validateUserAccess(userId: string): Promise<void>;
+  updateHealthMetrics(userId: string, metrics: Partial<HealthMetrics>): Promise<void>;
+  updatePrivacy(userId: string, privacy: PrivacyLevel): Promise<void>;
+  getPrivacyLevel(userId: string): Promise<PrivacyLevel>;
+}
+
+class ProfileServiceImpl implements IProfileService {
   async createProfile(user: User): Promise<UserProfile> {
     try {
       // First verify the session is valid
@@ -39,6 +54,7 @@ class ProfileServiceImpl implements ProfileService {
         email: user.email || '',
         display_name: user.user_metadata?.full_name,
         permissions_granted: false,
+        privacy_level: 'public', // Set default to public
         created_at: timestamp,
         updated_at: timestamp
       };
@@ -209,6 +225,39 @@ class ProfileServiceImpl implements ProfileService {
       }
     } catch (err) {
       console.error('Error in updateHealthMetrics:', err);
+      throw err;
+    }
+  }
+
+  async updatePrivacy(userId: string, privacy: PrivacyLevel): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          privacy_level: privacy,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to update privacy:', err);
+      throw err;
+    }
+  }
+
+  async getPrivacyLevel(userId: string): Promise<PrivacyLevel> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('privacy_level')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      return data?.privacy_level || 'private';
+    } catch (err) {
+      console.error('Failed to get privacy level:', err);
       throw err;
     }
   }

@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { SegmentedButtons, Text, useTheme } from 'react-native-paper';
-import { spacing } from '../../../components/common/theme/spacing';
-import type { PrivacyLevel } from '../../../core/types/base';
+import { View } from 'react-native';
+import { SegmentedButtons, Text } from 'react-native-paper';
+import { createStyles } from '../styles/ProfileScreen.styles';
+import { useTheme } from 'react-native-paper';
 
 interface PrivacySettingsProps {
-  privacyLevel: PrivacyLevel;
-  onChange: (level: PrivacyLevel) => void;
+  privacyLevel: 'public' | 'private';
+  onChange: (level: 'public' | 'private') => void;
 }
 
 export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
@@ -17,40 +17,28 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
   const styles = createStyles(theme);
 
   return (
-    <View style={styles.container}>
-      <Text variant="titleMedium" style={styles.title}>
-        Privacy Settings
-      </Text>
-      <Text variant="bodySmall" style={styles.description}>
-        Control how your health data appears in the leaderboard
-      </Text>
+    <View style={styles.privacySelector}>
       <SegmentedButtons
         value={privacyLevel}
-        onValueChange={value => onChange(value as PrivacyLevel)}
+        onValueChange={value => onChange(value as 'public' | 'private')}
         buttons={[
-          { value: 'private', label: 'Private' },
-          { value: 'friends', label: 'Friends Only' },
-          { value: 'public', label: 'Public' },
+          {
+            value: 'public',
+            label: 'Public',
+            icon: 'earth'
+          },
+          {
+            value: 'private',
+            label: 'Private',
+            icon: 'lock'
+          }
         ]}
-        style={styles.buttons}
       />
+      <Text style={styles.sectionDescription}>
+        {privacyLevel === 'public' 
+          ? 'Your profile and scores are visible to everyone'
+          : 'Your profile and scores are hidden from the leaderboard'}
+      </Text>
     </View>
   );
 };
-
-const createStyles = (theme: any) => StyleSheet.create({
-  container: {
-    marginBottom: spacing.xl,
-  },
-  title: {
-    marginBottom: spacing.xs,
-    color: theme.colors.onSurface,
-  },
-  description: {
-    marginBottom: spacing.md,
-    color: theme.colors.onSurfaceVariant,
-  },
-  buttons: {
-    marginBottom: spacing.md,
-  },
-});

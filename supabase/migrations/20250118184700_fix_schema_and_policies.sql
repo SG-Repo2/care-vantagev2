@@ -133,15 +133,15 @@ CREATE TRIGGER health_metrics_audit
 
 -- Create function to handle upserts with version control
 CREATE OR REPLACE FUNCTION public.upsert_health_metrics(
-    p_calories INT4 DEFAULT 0,
+    p_date DATE,                    -- Required parameters first
+    p_user_id UUID,                 -- Required parameters first
+    p_calories INT4 DEFAULT 0,      -- Optional parameters with defaults after
     p_daily_score INT4 DEFAULT 0,
-    p_date DATE,
-    p_device_id TEXT DEFAULT NULL,
     p_distance NUMERIC DEFAULT 0,
     p_heart_rate INT4 DEFAULT 0,
-    p_source TEXT DEFAULT NULL,
     p_steps INT4 DEFAULT 0,
-    p_user_id UUID
+    p_device_id TEXT DEFAULT NULL,
+    p_source TEXT DEFAULT NULL
 )
 RETURNS public.health_metrics AS $$
 DECLARE

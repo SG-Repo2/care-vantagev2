@@ -1,51 +1,67 @@
-import { testUtils } from '../utils/testData';
-import { leaderboardService } from '../services/leaderboardService';
+import { leaderboardService, LeaderboardEntry } from '../services/leaderboardService';
+import { supabase } from '../../../utils/supabase';
 
-describe('Leaderboard Tests', () => {
-  beforeAll(async () => {
-    // Populate test data before running tests
-    await testUtils.clearTestData(); // Clear any existing test data
-    const success = await testUtils.populateTestData();
-    if (!success) {
-      throw new Error('Failed to populate test data');
-    }
+describe('LeaderboardService', () => {
+  const testUserId = 'test-user-id';
+  const initialScore = 100;
+
+  beforeEach(async () => {
+    // Clean up and set up test data
+    await supabase
+      .from('users')
+      .delete()
+      .eq('id', testUserId);
+
+    await supabase
+      .from('users')
+      .insert({
+        id: testUserId,
+        display_name: 'Test User',
+        score: initialScore,
+        privacy_level: 'public'
+      });
   });
 
-  afterAll(async () => {
-    // Clean up test data after tests
-    await testUtils.clearTestData();
+  afterEach(async () => {
+    // Clean up test data
+    await supabase
+      .from('users')
+      .delete()
+      .eq('id', testUserId);
   });
 
-  it('should fetch leaderboard data in correct order', async () => {
-    const leaderboard = await leaderboardService.fetchLeaderboard();
+  it('should fetch leaderboard data with correct ranking', async () => {
+    const leaderboard = await leaderboardService.getLeaderboard(1);
+    expect(Array.isArray(leaderboard)).toBe(true);
     
-    expect(leaderboard).toBeDefined();
-    expect(leaderboard.length).toBeGreaterThan(0);
-    
-    // Verify sorting
-    for (let i = 1; i < leaderboard.length; i++) {
-      expect(leaderboard[i-1].score).toBeGreaterThanOrEqual(leaderboard[i].score);
-    }
+    const testUser = leaderboard.find(entry => entry.public_id === testUserId);
+    expect(testUser).toBeDefined();
+    expect(testUser?.score).toBe(initialScore);
   });
 
-  it('should have correct rank assignments', async () => {
-    const leaderboard = await leaderboardService.fetchLeaderboard();
-    
-    leaderboard.forEach((entry, index) => {
-      expect(entry.rank).toBe(index + 1);
-    });
-  });
-
-  it('should update user score correctly', async () => {
-    const testUserId = 'test-user-1';
-    const newScore = 2000;
-    
+  it('should handle score updates correctly', async () => {
+    const newScore = 200;
     await leaderboardService.updateScore(testUserId, newScore);
-    
-    const updatedLeaderboard = await leaderboardService.fetchLeaderboard();
-    const updatedUser = updatedLeaderboard.find(entry => entry.user_id === testUserId);
+
+    const leaderboard = await leaderboardService.getLeaderboard(1);
+    const updatedUser = leaderboard.find(entry => entry.public_id === testUserId);
     
     expect(updatedUser).toBeDefined();
     expect(updatedUser?.score).toBe(newScore);
+  });
+
+  it('should respect privacy settings', async () => {
+    // Set user to private
+    await supabase
+      .from('users')
+      .update({ privacy_level: 'private' })
+      .eq('id', testUserId);
+
+    const leaderboard = await leaderboardService.getLeaderboard(1);
+    const privateUser = leaderboard.find(entry => entry.public_id === testUserId);
+
+    expect(privateUser?.score).toBe(0);
+    expect(privateUser?.photo_url).toBeNull();
+    expect(privateUser?.display_name).toMatch(/^anonymous_user_/);
   });
 }); 

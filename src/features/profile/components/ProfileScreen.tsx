@@ -4,11 +4,12 @@ import { Button, Text, useTheme, ActivityIndicator, Avatar, Portal, Dialog } fro
 import { useAuth } from '../../../health-metrics/contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
 import { StyleSheet } from 'react-native';
+import { PrivacySettings } from './PrivacySettings';
 
 export const ProfileScreen = () => {
   const theme = useTheme();
   const { signOut } = useAuth();
-  const { profile, loading, error, isValid, deleteAccount } = useProfile();
+  const { profile, loading, error, isValid, deleteAccount, updateProfile } = useProfile();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleDeleteAccount = async () => {
@@ -87,6 +88,23 @@ export const ProfileScreen = () => {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Privacy Settings</Text>
+          <Text style={styles.sectionDescription}>
+            Control how your information appears to others
+          </Text>
+          <PrivacySettings
+            privacyLevel={profile.privacy_level || 'public'}
+            onChange={async (level) => {
+              try {
+                await updateProfile({ privacy_level: level });
+              } catch (err) {
+                Alert.alert('Error', 'Failed to update privacy settings');
+              }
+            }}
+          />
+        </View>
+
+        <View style={styles.section}>
           <Button 
             mode="contained" 
             onPress={signOut}
@@ -160,6 +178,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
+    marginBottom: 16,
+  },
+  sectionDescription: {
+    fontSize: 16,
+    color: '#666',
     marginBottom: 16,
   },
   infoRow: {

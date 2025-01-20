@@ -1,128 +1,74 @@
-import React, { useEffect, useState } from 'react';
-import { View, FlatList, RefreshControl } from 'react-native';
-import { Text, Card, useTheme, ActivityIndicator } from 'react-native-paper';
-import { useAuth } from '../../../health-metrics/contexts/AuthContext';
-import { StyleSheet } from 'react-native';
-import { leaderboardService, LeaderboardEntry } from '../services/leaderboardService';
+import React from 'react';
+import { View, FlatList, StyleSheet } from 'react-native';
+import { Card, Text, Avatar } from 'react-native-paper';
+import { useLeaderboard } from '../hooks/useLeaderboard';
+import { useAuth } from '../../../core/auth/useAuth';
+import { LoadingScreen } from '../../../health-metrics/components/LoadingScreen';
+import { ErrorScreen } from '../../../health-metrics/components/ErrorScreen';
 
-export const LeaderboardScreen = () => {
-  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const theme = useTheme();
+export const LeaderboardScreen: React.FC = () => {
+  const { data, loading, error, loadMore } = useLeaderboard();
   const { user } = useAuth();
 
-  const fetchData = async () => {
-    try {
-      setError(null);
-      const data = await leaderboardService.fetchLeaderboard();
-      setLeaderboardData(data);
-    } catch (error) {
-      console.error('Error fetching leaderboard:', error);
-      setError('Failed to load leaderboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchData();
-    setRefreshing(false);
-  };
-
-  if (loading && !refreshing) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+  if (loading && !data.length) {
+    return <LoadingScreen />;
   }
 
   if (error) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
-    );
+    return <ErrorScreen error={error.message} />;
   }
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={leaderboardData}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <Card 
-            style={[
-              styles.card,
-              user?.id === item.user_id && styles.currentUserCard
-            ]}
-          >
-            <Card.Content>
-              <View style={styles.row}>
-                <Text style={styles.rank}>#{item.rank}</Text>
-                <Text style={styles.name}>{item.display_name}</Text>
-                <Text style={styles.score}>{item.score}</Text>
-              </View>
-            </Card.Content>
-          </Card>
-        )}
-        refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh}
-            colors={[theme.colors.primary]}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.centered}>
-            <Text>No leaderboard data available</Text>
-          </View>
-        }
-      />
-    </View>
+    <FlatList
+      data={data}
+      keyExtractor={(item) => item.public_id}
+      renderItem={({ item }) => (
+        <Card 
+          style={[
+            styles.card,
+            user?.id === item.public_id && styles.currentUserCard
+          ]}
+        >
+          <Card.Content style={styles.cardContent}>
+            <View style={styles.rankContainer}>
+              <Text variant="titleLarge">#{item.rank}</Text>
+            </View>
+            <Avatar.Image 
+              size={40} 
+              source={item.photo_url ? { uri: item.photo_url } : require('../../../assets/user.png')} 
+            />
+            <View style={styles.userInfo}>
+              <Text variant="titleMedium">{item.display_name}</Text>
+              <Text variant="bodyLarge">{item.score} points</Text>
+            </View>
+          </Card.Content>
+        </Card>
+      )}
+      onEndReached={loadMore}
+      onEndReachedThreshold={0.5}
+    />
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   card: {
-    marginBottom: 8,
+    margin: 8,
+    elevation: 2,
   },
   currentUserCard: {
-    backgroundColor: '#000000',
+    backgroundColor: '#e3f2fd',
   },
-  row: {
+  cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
-  rank: {
+  rankContainer: {
     width: 40,
-    fontWeight: 'bold',
+    alignItems: 'center',
   },
-  name: {
+  userInfo: {
     flex: 1,
-    marginLeft: 8,
-  },
-  score: {
-    fontWeight: 'bold',
-  },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
+    marginLeft: 12,
   },
 });
