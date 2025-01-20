@@ -5,6 +5,8 @@ import AppleHealthKit, {
 } from 'react-native-health';
 import { HealthMetrics, HealthProvider } from '../types';
 import { permissions } from './permissions';
+import { DateUtils } from '../../../utils/DateUtils';
+import { calculateHealthScore } from '../../../utils/HealthScoring';
 
 export class AppleHealthProvider implements HealthProvider {
   private initialized = false;
@@ -80,8 +82,7 @@ export class AppleHealthProvider implements HealthProvider {
     }
 
     const now = new Date();
-    const startOfDay = new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
+    const startOfDay = DateUtils.getStartOfDay(now);
 
     const options: HealthInputOptions = {
       startDate: startOfDay.toISOString(),
@@ -103,13 +104,18 @@ export class AppleHealthProvider implements HealthProvider {
       const metrics: HealthMetrics = {
         id: '', // This should be set by the service layer
         user_id: '', // This should be set by the service layer
-        date: startOfDay.toISOString().split('T')[0],
+        date: DateUtils.getLocalDateString(startOfDay),
         steps,
         calories,
         distance,
         heart_rate,
         last_updated: now.toISOString(),
-        daily_score: this.calculateHealthScore(steps, distance, calories, heart_rate),
+        daily_score: calculateHealthScore({
+          steps,
+          distance,
+          calories,
+          heart_rate
+        }).totalScore,
         weekly_score: null,
         streak_days: null,
         created_at: now.toISOString(),
@@ -222,23 +228,5 @@ export class AppleHealthProvider implements HealthProvider {
         }
       );
     });
-  }
-
-  private calculateHealthScore(steps: number, distance: number, calories: number, heartRate: number): number {
-    // Basic health score calculation
-    const stepsScore = Math.min(steps / 10000, 1); // Max score at 10000 steps
-    const distanceScore = Math.min(distance / 5, 1); // Max score at 5km
-    const caloriesScore = Math.min(calories / 500, 1); // Max score at 500 calories
-    const heartRateScore = heartRate > 0 ? 1 : 0; // Score for having heart rate data
-
-    // Calculate weighted average (adjust weights as needed)
-    const totalScore = (
-      (stepsScore * 0.4) +
-      (distanceScore * 0.3) +
-      (caloriesScore * 0.2) +
-      (heartRateScore * 0.1)
-    ) * 100;
-
-    return Math.round(totalScore);
   }
 }

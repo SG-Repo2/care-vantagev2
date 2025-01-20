@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LoadingScreen } from './LoadingScreen';
 import { ErrorScreen } from './ErrorScreen';
 import { HealthMetrics } from '../providers/types';
+import { DateUtils } from '../../utils/DateUtils';
 
 type MetricType = 'steps' | 'distance' | 'calories' | 'heart_rate';
 
@@ -240,7 +241,7 @@ const HomeScreen: React.FC = () => {
 
 const formatDateLabel = (date: Date): string => {
   const today = new Date();
-  const isToday = date.toDateString() === today.toDateString();
+  const isToday = DateUtils.isSameDay(date, today);
   return isToday ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' });
 };
 

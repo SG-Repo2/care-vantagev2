@@ -196,3 +196,7 @@ export async function updateMetricsWithRetry(
     });
   }
 }
+
+// Import and export the base service
+import { BaseHealthMetricsService } from './BaseHealthMetricsService';
+export const healthMetricsService = BaseHealthMetricsService.getInstance();

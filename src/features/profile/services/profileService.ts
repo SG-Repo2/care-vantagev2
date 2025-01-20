@@ -2,6 +2,8 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '../../../utils/supabase';
 import { CreateProfileParams, ProfileService, UpdateProfileParams, UserProfile } from '../types/profile.types';
 import { HealthMetrics } from '../../../health-metrics/types';
+import { DateUtils } from '../../../utils/DateUtils';
+import { Platform } from 'react-native';
 
 class ProfileServiceImpl implements ProfileService {
   async createProfile(user: User): Promise<UserProfile> {
@@ -172,21 +174,25 @@ class ProfileServiceImpl implements ProfileService {
       await this.validateUserAccess(userId);
 
       const timestamp = new Date().toISOString();
-      const date = new Date().toISOString().split('T')[0];
+      const date = DateUtils.getLocalDateString();
 
-      // Insert or update health metrics
-      const { error: metricsError } = await supabase
-        .from('health_metrics')
-        .upsert([{
-          user_id: userId,
-          date,
-          ...metrics,
-          updated_at: timestamp
-        }]);
+      // Use the updated upsert function with parameters in the correct order
+      const { data: result, error: upsertError } = await supabase
+        .rpc('upsert_health_metrics', {
+          p_date: date,                    // Required parameter first
+          p_user_id: userId,               // Required parameter second
+          p_calories: metrics.calories || 0,
+          p_daily_score: metrics.daily_score || 0,
+          p_distance: metrics.distance || 0,
+          p_heart_rate: metrics.heart_rate || 0,
+          p_steps: metrics.steps || 0,
+          p_device_id: Platform.OS,        // Optional: use platform as device_id
+          p_source: 'app'                  // Optional: default source
+        });
 
-      if (metricsError) {
-        console.error('Error updating health metrics:', metricsError);
-        throw metricsError;
+      if (upsertError) {
+        console.error('Error upserting health metrics:', upsertError);
+        throw upsertError;
       }
 
       // Update sync time on success
