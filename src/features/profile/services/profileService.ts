@@ -6,19 +6,18 @@ import { HealthMetrics } from '../../../health-metrics/types';
 class ProfileServiceImpl implements ProfileService {
   async createProfile(user: User): Promise<UserProfile> {
     try {
-      const timestamp = new Date().toISOString();
-      const profileData: CreateProfileParams = {
-        id: user.id,
-        email: user.email || '',
-        display_name: user.user_metadata?.full_name,
-        created_at: timestamp,
-        updated_at: timestamp
-      };
+      // First verify the session is valid
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('No valid session found. Please sign in again.');
+      }
 
+      const timestamp = new Date().toISOString();
+      
       // Try to get existing profile first
       const { data: existingProfile, error: selectError } = await supabase
         .from('users')
-        .select()
+        .select('*')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -27,31 +26,58 @@ class ProfileServiceImpl implements ProfileService {
         throw selectError;
       }
 
-      // If profile exists, return it
-      if (existingProfile) {
+      // If profile exists and is not deleted, return it
+      if (existingProfile && !existingProfile.deleted_at) {
         return existingProfile;
       }
 
-      // Create new profile with proper auth context
-      const { data, error } = await supabase
-        .from('users')
-        .insert([profileData])
-        .select()
-        .single();
+      // Prepare profile data
+      const profileData: CreateProfileParams = {
+        id: user.id,
+        email: user.email || '',
+        display_name: user.user_metadata?.full_name,
+        permissions_granted: false,
+        created_at: timestamp,
+        updated_at: timestamp
+      };
 
-      if (error) {
-        if (error.code === '42501') {
-          throw new Error('Permission denied: Unable to create profile. Please ensure you are authenticated.');
+      // Try to create profile with retries
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .upsert([profileData])
+            .select('*')
+            .single();
+
+          if (error) {
+            if (error.code === '42501' && retryCount < maxRetries - 1) {
+              console.log(`Retry attempt ${retryCount + 1} for profile creation`);
+              retryCount++;
+              await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+              continue;
+            }
+            throw error;
+          }
+
+          if (!data) {
+            throw new Error('Failed to create profile: No data returned');
+          }
+
+          return data;
+        } catch (err) {
+          if (retryCount === maxRetries - 1) {
+            throw err;
+          }
+          retryCount++;
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
         }
-        console.error('Error creating profile:', error);
-        throw error;
       }
 
-      if (!data) {
-        throw new Error('Failed to create profile: No data returned');
-      }
-
-      return data;
+      throw new Error('Failed to create profile after maximum retry attempts');
     } catch (err) {
       console.error('Error in createProfile:', err);
       throw err;
@@ -96,14 +122,47 @@ class ProfileServiceImpl implements ProfileService {
   }
 
   async validateUserAccess(userId: string): Promise<void> {
-    const profile = await this.getProfile(userId);
-    
-    if (!profile) {
-      throw new Error('Profile not found');
-    }
+    try {
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
 
-    if (profile.deleted_at) {
-      throw new Error('Profile has been deleted');
+      if (error) {
+        console.error('Error validating user access:', error);
+        throw new Error('Failed to validate user access');
+      }
+
+      if (!profile) {
+        // Try to get the auth user to auto-create profile if needed
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError) {
+          console.error('Auth error during validation:', authError);
+          throw new Error('Authentication required');
+        }
+
+        if (user && user.id === userId) {
+          // Auto-create profile for valid auth user
+          await this.createProfile(user);
+          return;
+        }
+
+        throw new Error('Profile not found');
+      }
+
+      if (profile.deleted_at) {
+        throw new Error('Profile has been deleted');
+      }
+
+      // Validate permissions if needed
+      if (!profile.permissions_granted) {
+        console.warn('User permissions not granted:', userId);
+      }
+    } catch (err) {
+      console.error('User validation error:', err);
+      throw err;
     }
   }
 
@@ -113,39 +172,37 @@ class ProfileServiceImpl implements ProfileService {
       await this.validateUserAccess(userId);
 
       const timestamp = new Date().toISOString();
+      const date = new Date().toISOString().split('T')[0];
 
       // Insert or update health metrics
       const { error: metricsError } = await supabase
         .from('health_metrics')
         .upsert([{
           user_id: userId,
+          date,
           ...metrics,
           updated_at: timestamp
         }]);
 
       if (metricsError) {
-        // Update user profile with error, using null instead of undefined
-        await this.updateProfile(userId, {
-          last_error: metricsError.message || 'Unknown error updating health metrics',
-          last_health_sync: timestamp
-        });
+        console.error('Error updating health metrics:', metricsError);
         throw metricsError;
       }
 
-      // Update last sync time on success, using null instead of undefined
-      await this.updateProfile(userId, {
-        last_error: null,
-        last_health_sync: timestamp
-      });
+      // Update sync time on success
+      const { error: syncError } = await supabase
+        .from('users')
+        .update({
+          last_health_sync: timestamp,
+          updated_at: timestamp
+        })
+        .eq('id', userId);
+
+      if (syncError) {
+        console.warn('Failed to update sync timestamp:', syncError);
+      }
     } catch (err) {
       console.error('Error in updateHealthMetrics:', err);
-      // Ensure we always update the error state
-      await this.updateProfile(userId, {
-        last_error: err instanceof Error ? err.message : 'Unknown error in health metrics update',
-        last_health_sync: new Date().toISOString()
-      }).catch(updateErr => {
-        console.error('Failed to update error state:', updateErr);
-      });
       throw err;
     }
   }

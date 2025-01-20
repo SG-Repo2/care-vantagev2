@@ -64,9 +64,9 @@ export const ProfileScreen = () => {
         <View style={styles.header}>
           <Avatar.Text 
             size={120} 
-            label={profile.display_name.substring(0, 2).toUpperCase()}
+            label={(profile.display_name || profile.email || 'U').substring(0, 2).toUpperCase()}
           />
-          <Text style={styles.displayName}>{profile.display_name}</Text>
+          <Text style={styles.displayName}>{profile.display_name || profile.email || 'User'}</Text>
           <Text style={styles.email}>{profile.email}</Text>
         </View>
 

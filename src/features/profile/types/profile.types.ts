@@ -17,6 +17,7 @@ export interface CreateProfileParams {
   id: string;
   email: string;
   display_name?: string;
+  permissions_granted?: boolean;
   created_at?: string;
   updated_at?: string;
 }
