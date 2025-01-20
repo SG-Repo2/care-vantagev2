@@ -23,18 +23,22 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['health_metrics']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['health_metrics']['Row']>
       }
-      user_profiles: {
+      users: {
         Row: {
           id: string
-          user_id: string
+          email: string
           display_name: string | null
-          avatar_url: string | null
-          preferences: Json
+          photo_url: string | null
+          score: number
+          permissions_granted: boolean
+          last_health_sync: string | null
+          last_error: string | null
           created_at: string
-          updated_at: string
+          updated_at: string | null
+          deleted_at: string | null
         }
-        Insert: Omit<Database['public']['Tables']['user_profiles']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['user_profiles']['Row']>
+        Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['users']['Row']>
       }
       achievements: {
         Row: {

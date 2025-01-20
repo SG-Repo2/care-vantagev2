@@ -1,28 +1,7 @@
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../../../utils/supabase';
 import { Platform } from 'react-native';
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  display_name: string | null;
-  photo_url: string | null;
-  score: number;
-  permissions_granted?: boolean;
-  last_health_sync?: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at?: string;
-}
-
-export interface HealthMetricsUpdate {
-  date: string;
-  steps: number;
-  distance: number;
-  calories: number;
-  heart_rate: number;
-  last_updated: string;
-}
+import { UserProfile, UserProfileUpdate, HealthMetricsUpdate } from '../types/profile';
 
 type UserIdInput = string | User | { id: string; email?: string };
 
@@ -177,7 +156,7 @@ class ProfileService {
     }
   }
 
-  async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
+  async updateProfile(userId: string, updates: UserProfileUpdate): Promise<UserProfile> {
     const { data, error } = await supabase
       .from('users')
       .update({
