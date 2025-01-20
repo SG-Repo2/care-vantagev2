@@ -5,6 +5,8 @@ import {
   readRecords,
 } from 'react-native-health-connect';
 import { HealthMetrics, HealthProvider } from '../types';
+import { DateUtils } from '../../../utils/DateUtils';
+import { calculateHealthScore } from '../../../utils/HealthScoring';
 
 interface StepsRecord {
   count: number;
@@ -112,9 +114,10 @@ export class GoogleHealthProvider implements HealthProvider {
 
   private async verifyPermissions(): Promise<void> {
     const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const testRange = {
       operator: 'between' as const,
-      startTime: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+      startTime: DateUtils.getStartOfDay(yesterday).toISOString(),
       endTime: now.toISOString(),
     };
     
@@ -137,8 +140,7 @@ export class GoogleHealthProvider implements HealthProvider {
       await this.ensureInitialized();
 
       const now = new Date();
-      const startOfDay = new Date(now);
-      startOfDay.setHours(0, 0, 0, 0);
+      const startOfDay = DateUtils.getStartOfDay(now);
       
       const timeRangeFilter = {
         operator: 'between' as const,
@@ -158,14 +160,17 @@ export class GoogleHealthProvider implements HealthProvider {
       const metrics: HealthMetrics = {
         id: '', // This should be set by the service layer
         user_id: '', // This should be set by the service layer
-        date: startOfDay.toISOString().split('T')[0],
+        date: DateUtils.getLocalDateString(startOfDay),
         steps: steps ?? null,
         distance: distance ?? null,
         calories: calories ?? null,
         heart_rate: heart_rate ?? null,
-        daily_score: this.calculateHealthScore({
-          steps, distance, calories, heart_rate
-        }),
+        daily_score: calculateHealthScore({
+          steps,
+          distance,
+          calories,
+          heart_rate
+        }).totalScore,
         weekly_score: null,
         streak_days: null,
         last_updated: now.toISOString(),
@@ -179,38 +184,6 @@ export class GoogleHealthProvider implements HealthProvider {
       console.error('[GoogleHealthProvider] Error fetching metrics:', error);
       throw error;
     }
-  }
-
-  private calculateHealthScore(metrics: {
-    steps: number | null;
-    distance: number | null;
-    calories: number | null;
-    heart_rate: number | null;
-  }): number {
-    let score = 0;
-
-    // Steps contribution (up to 40 points)
-    if (metrics.steps !== null) {
-      score += Math.min(40, (metrics.steps / 10000) * 40);
-    }
-
-    // Distance contribution (up to 30 points)
-    if (metrics.distance !== null) {
-      score += Math.min(30, (metrics.distance / 5) * 30);
-    }
-
-    // Calories contribution (up to 20 points)
-    if (metrics.calories !== null) {
-      score += Math.min(20, (metrics.calories / 500) * 20);
-    }
-
-    // Heart rate contribution (up to 10 points)
-    if (metrics.heart_rate !== null) {
-      const heart_rate_score = metrics.heart_rate >= 60 && metrics.heart_rate <= 100 ? 10 : 5;
-      score += heart_rate_score;
-    }
-
-    return Math.round(score);
   }
 
   private async getSteps(timeRangeFilter: any): Promise<number | null> {

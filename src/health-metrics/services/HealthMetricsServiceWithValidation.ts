@@ -2,6 +2,8 @@ import { HealthMetrics, HealthMetricsValidation, UserId, HealthError } from '../
 import { HealthMetricsService } from './HealthMetricsService';
 import { userValidationService, UserValidationError } from './UserValidationService';
 import { supabase } from '../../utils/supabase';
+import { validateMetrics } from '../../utils/HealthScoring';
+
 export class ValidationError extends Error implements HealthError {
   type: 'validation';
   timestamp: string;
@@ -40,11 +42,18 @@ export class HealthMetricsServiceWithValidation implements HealthMetricsService 
 
   async updateMetrics(userId: UserId, metrics: Partial<HealthMetrics>): Promise<void> {
     await this.validateUserBeforeOperation(userId);
+    
+    // Validate metrics before passing to base service
+    const validation = validateMetrics(metrics);
+    if (!validation.isValid) {
+      throw new ValidationError('Invalid metrics data', validation.errors);
+    }
+
     return this.baseService.updateMetrics(userId, metrics);
   }
 
   validateMetrics(metrics: Partial<HealthMetrics>): HealthMetricsValidation {
-    return this.baseService.validateMetrics(metrics);
+    return validateMetrics(metrics);
   }
 
   async syncOfflineData(): Promise<void> {

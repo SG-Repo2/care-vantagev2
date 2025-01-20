@@ -5,6 +5,7 @@ import { LineChart, BarChart, ProgressChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '../../components/common/atoms/Card';
 import { StyleSheet } from 'react-native';
+import { DateUtils } from '../../utils/DateUtils';
 
 export interface MetricModalProps {
   visible: boolean;
@@ -25,7 +26,7 @@ export interface MetricModalProps {
 
 const formatDateLabel = (date: Date): string => {
   const today = new Date();
-  const isToday = date.toDateString() === today.toDateString();
+  const isToday = DateUtils.isSameDay(date, today);
   return isToday ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' });
 };
 

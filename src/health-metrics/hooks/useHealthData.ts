@@ -4,6 +4,7 @@ import { HealthProviderFactory } from '../providers/HealthProviderFactory';
 import { profileService } from '../../features/profile/services/profileService';
 import { useAuth } from '../contexts/AuthContext';
 import { AppState, AppStateStatus } from 'react-native';
+import { DateUtils } from '../../utils/DateUtils';
 
 interface UseHealthDataResult {
   metrics: HealthMetrics | null;
@@ -94,7 +95,7 @@ export const useHealthData = (): UseHealthDataResult => {
       const defaultMetrics: Partial<HealthMetrics> = {
         id: '',
         user_id: user?.id || '',
-        date: new Date().toISOString().split('T')[0],
+        date: DateUtils.getLocalDateString(),
         steps: 0,
         distance: 0,
         calories: 0,
@@ -112,7 +113,7 @@ export const useHealthData = (): UseHealthDataResult => {
         weekly_distance: 0,
         weekly_calories: 0,
         weekly_heart_rate: 0,
-        start_date: new Date().toISOString(),
+        start_date: DateUtils.getStartOfDay(new Date()).toISOString(),
         end_date: new Date().toISOString()
       };
 
