@@ -2,6 +2,8 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '../../../utils/supabase';
 import { Platform } from 'react-native';
 import { UserProfile, UserProfileUpdate, HealthMetricsUpdate } from '../types/profile';
+import { BaseHealthMetrics } from '../../../health-metrics/types';
+import { scoreService } from '../../../health-metrics/services/ScoreService';
 
 type UserIdInput = string | User | { id: string; email?: string };
 
@@ -16,11 +18,13 @@ class ProfileService {
 
   async signOut(): Promise<void> {
     try {
+      // First clear all local state
+      await this.clearLocalState();
+      
+      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-
-      // Clear any cached data or state here
-      await this.clearLocalState();
+      
     } catch (err) {
       console.error('Error signing out:', err);
       throw err;
@@ -29,11 +33,17 @@ class ProfileService {
 
   private async clearLocalState(): Promise<void> {
     try {
-      // Clear any local storage or state related to the profile
-      // This is a placeholder - add any necessary cleanup
-      console.log('Clearing local profile state');
+      // Clear Supabase session
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // Clear any profile-related storage
+      // Add any additional cleanup needed
+      localStorage.removeItem('supabase.auth.token');
+      
     } catch (err) {
       console.error('Error clearing local state:', err);
+      throw err;
     }
   }
 
@@ -43,10 +53,21 @@ class ProfileService {
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        const { data, error } = await supabase.rpc('check_auth_user_exists', { user_id: userId });
-        
-        if (!error && data === true) {
-          return;
+        // First check if the auth session exists
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('No valid session found');
+        }
+
+        // Then verify the user record exists in the database
+        const { data, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+          
+        if (!error && data) {
+          return; // Both auth and user record exist
         }
         
         console.log(`Waiting for auth record, attempt ${attempt + 1} of ${maxAttempts}`);
@@ -108,8 +129,8 @@ class ProfileService {
       }
 
       // Get email from input or session
-      const userEmail = email || 
-        (typeof userId === 'object' && 'email' in userId ? userId.email : undefined) || 
+      const userEmail = email ||
+        (typeof userId === 'object' && 'email' in userId ? userId.email : undefined) ||
         sessionUser.email;
       
       if (!userEmail) {
@@ -122,7 +143,17 @@ class ProfileService {
       const timestamp = new Date().toISOString();
       
       // Try to get existing profile first
-      const existingProfile = await this.getProfile(id);
+      const { data: existingProfile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error checking existing profile:', profileError);
+        throw profileError;
+      }
+
       if (existingProfile && !existingProfile.deleted_at) {
         return existingProfile;
       }
@@ -136,18 +167,29 @@ class ProfileService {
         score: 0,
         permissions_granted: false,
         created_at: timestamp,
-        updated_at: timestamp
+        updated_at: timestamp,
+        last_health_sync: null,
+        last_error: null
       };
 
-      // Create profile
+      // Create profile with upsert and handle potential errors
       const { data, error } = await supabase
         .from('users')
         .upsert([profileData])
-        .select('*')
-        .single();
+        .select()
+        .maybeSingle();
 
-      if (error) throw error;
-      if (!data) throw new Error('Failed to create profile: No data returned');
+      if (error) {
+        console.error('Error creating profile:', error);
+        if (error.code === 'PGRST116') {
+          throw new Error('Failed to create profile: Database synchronization issue');
+        }
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Failed to create profile: No data returned');
+      }
 
       return data;
     } catch (err) {
@@ -206,61 +248,29 @@ class ProfileService {
   }
 
   async updateHealthMetrics(userId: string, metrics: HealthMetricsUpdate): Promise<void> {
-    try {
-      // First validate user exists
-      const profile = await this.getProfile(userId);
-      if (!profile) {
-        throw new Error('Cannot update health metrics: User profile does not exist');
-      }
-
-      const timestamp = new Date().toISOString();
-
-      // Use the upsert function with retry logic
-      let retryCount = 0;
-      const maxRetries = 3;
-      
-      while (retryCount < maxRetries) {
-        try {
-          const { error: upsertError } = await supabase
-            .rpc('upsert_health_metrics', {
-              p_date: metrics.date,
-              p_user_id: userId,
-              p_calories: metrics.calories || 0,
-              p_daily_score: 0, // Calculate this server-side
-              p_distance: metrics.distance || 0,
-              p_heart_rate: metrics.heart_rate || 0,
-              p_steps: metrics.steps || 0,
-              p_device_id: Platform.OS,
-              p_source: 'app'
-            });
-
-          if (upsertError) {
-            if (retryCount < maxRetries - 1) {
-              retryCount++;
-              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-              continue;
-            }
-            throw upsertError;
-          }
-
-          // Update sync time on success
-          await this.updateProfile(userId, {
-            last_health_sync: timestamp
-          });
-          
-          break;
-        } catch (err) {
-          if (retryCount === maxRetries - 1) {
-            throw err;
-          }
-          retryCount++;
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-        }
-      }
-    } catch (err) {
-      console.error('Error in updateHealthMetrics:', err);
-      throw err;
+    // First validate user exists
+    const profile = await this.getProfile(userId);
+    if (!profile) {
+      throw new Error('Cannot update health metrics: User profile does not exist');
     }
+
+    const timestamp = new Date().toISOString();
+
+    // Use ScoreService to handle the update with proper score calculation
+    const { success, score } = await scoreService.updateHealthMetrics(
+      userId,
+      metrics as BaseHealthMetrics,
+      metrics.date
+    );
+
+    if (!success) {
+      throw new Error('Failed to update health metrics');
+    }
+
+    // Update sync time on success
+    await this.updateProfile(userId, {
+      last_health_sync: timestamp
+    });
   }
 }
 
