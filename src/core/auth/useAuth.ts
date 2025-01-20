@@ -92,7 +92,7 @@ export const useAuth = () => {
 
       console.log('Auth state changed:', event, session?.user?.id);
       
-      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      if (event === 'SIGNED_OUT') {
         clearState();
       } else if (session?.user) {
         setUser(session.user);
