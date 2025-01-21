@@ -1,7 +1,7 @@
 import { supabase } from '../../../utils/supabase';
 import { DateUtils } from '../../../utils/DateUtils';
 import { Logger } from '../../../utils/error/Logger';
-import { SupabaseErrorHelper } from '../../../core/supabase/SupabaseErrorHelper';
+import { handleSupabaseError } from '../../../core/supabase/SupabaseErrorHelper';
 import type {
   LeaderboardEntry,
   LeaderboardOptions,
@@ -81,7 +81,7 @@ class LeaderboardService {
 
       if (error) {
         Logger.error('Supabase error fetching leaderboard:', { error, timeframe, options });
-        throw SupabaseErrorHelper.handleError(error);
+        throw handleSupabaseError(error);
       }
 
       if (!data) {

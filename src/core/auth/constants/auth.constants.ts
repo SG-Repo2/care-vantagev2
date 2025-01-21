@@ -1,0 +1,36 @@
+// Auth status constants
+export const AUTH_STATUS = {
+  INITIALIZING: 'initializing',
+  AUTHENTICATED: 'authenticated',
+  UNAUTHENTICATED: 'unauthenticated',
+  ERROR: 'error',
+} as const;
+
+// Auth error codes
+export const AUTH_ERROR_CODES = {
+  INVALID_CREDENTIALS: 'AUTH_INVALID_CREDENTIALS',
+  SESSION_EXPIRED: 'AUTH_SESSION_EXPIRED',
+  TOKEN_REFRESH_FAILED: 'AUTH_TOKEN_REFRESH_FAILED',
+  USER_NOT_FOUND: 'AUTH_USER_NOT_FOUND',
+  EMAIL_IN_USE: 'AUTH_EMAIL_IN_USE',
+  WEAK_PASSWORD: 'AUTH_WEAK_PASSWORD',
+  NETWORK_ERROR: 'AUTH_NETWORK_ERROR',
+  UNAUTHORIZED: 'AUTH_UNAUTHORIZED',
+  RATE_LIMIT: 'AUTH_RATE_LIMIT',
+  GOOGLE_ERROR: 'AUTH_GOOGLE_ERROR',
+  SESSION_ERROR: 'AUTH_SESSION_ERROR',
+  SESSION_CANCELLED: 'AUTH_SESSION_CANCELLED',
+  UNKNOWN: 'AUTH_UNKNOWN',
+} as const;
+
+// Auth providers
+export const AUTH_PROVIDERS = {
+  GOOGLE: 'google',
+  EMAIL: 'email',
+} as const;
+
+// Auth-related timeouts (in milliseconds)
+export const AUTH_TIMEOUTS = {
+  SESSION_REFRESH: 5 * 60 * 1000, // 5 minutes
+  TOKEN_REFRESH: 60 * 1000, // 1 minute
+} as const;

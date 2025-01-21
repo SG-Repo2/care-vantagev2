@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../../utils/supabase';
-import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
-import { profileService } from '../../features/profile/services/profileService';
-import { HealthProviderFactory } from '../providers/HealthProviderFactory';
+import * as WebBrowser from 'expo-web-browser';
+import { supabase } from '../../../utils/supabase';
+import { profileService } from '../../../features/profile/services/profileService';
+import { HealthProviderFactory } from '../../../features/health/providers/HealthProviderFactory';
 
 // Import centralized types and error handling
-import { AuthContextType, AuthProviderProps } from '../../core/auth/types/context';
-import { AuthStatus, User, Session } from '../../core/auth/types/domain';
-import { AUTH_STATUS } from '../../core/auth/constants/auth.constants';
-import { transformAuthError } from '../../core/auth/errors/AuthErrors';
+import { AuthContextType, AuthProviderProps } from '../types/context';
+import { AuthStatus, User, Session } from '../types/domain';
+import { AUTH_STATUS } from '../constants/auth.constants';
+import { transformAuthError } from '../errors/AuthErrors';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 

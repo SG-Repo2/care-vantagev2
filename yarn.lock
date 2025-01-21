@@ -4669,11 +4669,6 @@ expo-font@~13.0.3:
   dependencies:
     fontfaceobserver "^2.1.0"
 
-expo-health-connect@^0.1.1:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/expo-health-connect/-/expo-health-connect-0.1.1.tgz#b16c4228e137f27199a25e3733e3c47824755572"
-  integrity sha512-9URHckKOHYt7OvwwTis6TNo9XhV8KivkwARexgQ9KAyLWH8T+jCLI3kd7fhCm0WWp3IyyKit362oX7F1l6JLHA==
-
 expo-image-loader@~5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/expo-image-loader/-/expo-image-loader-5.0.0.tgz#4f58a21ab26e40d6fccc211b664fd9fe21a5dcb8"

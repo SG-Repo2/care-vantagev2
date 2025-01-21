@@ -84,18 +84,6 @@ export default ({ config }) => ({
     },
     plugins: [
       [
-        "expo-health-connect",
-        {
-          package: "com.groebe1kenobi.carevantage",
-          permissions: [
-            "Steps",
-            "Distance",
-            "HeartRate",
-            "ActiveCaloriesBurned"
-          ]
-        }
-      ],
-      [
         "expo-build-properties",
         {
           android: {

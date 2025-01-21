@@ -5,9 +5,8 @@ import Constants from 'expo-constants';
 import { handleSupabaseError } from '../core/supabase/SupabaseErrorHelper';
 import type { Database } from '../types/supabase';
 
-// Get Supabase configuration from environment variables
-const supabaseUrl = 'https://jnxsqqsbhzirijklxqbq.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpueHNxcXNiaHppcmlqa2x4cWJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUzNDA0MDksImV4cCI6MjA1MDkxNjQwOX0.GQ8a8zlHkldvvamERaz1sVakkyvbwMtDWn1N7b0n3bI';
+// Get Supabase configuration from Constants.expoConfig
+const { url: supabaseUrl, anonKey: supabaseAnonKey } = Constants.expoConfig?.extra?.supabase || {};
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase configuration');

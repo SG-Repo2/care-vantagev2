@@ -1,8 +1,8 @@
-import { HEALTH_METRICS } from '../health-metrics/config/metrics';
-import type { BaseHealthMetrics, HealthMetricsValidation } from '../health-metrics/types';
+import { HEALTH_METRICS } from '../features/health/config/metrics';
+import type { BaseHealthMetrics, HealthMetricsValidation } from '../features/health/providers/types';
 
 export function validateMetrics(metrics: Partial<BaseHealthMetrics>): HealthMetricsValidation {
-  const errors: HealthMetricsValidation['errors'] = {};
+  const errors: Record<string, string[]> = {};
   let isValid = true;
 
   // Steps validation
@@ -36,7 +36,7 @@ export function validateMetrics(metrics: Partial<BaseHealthMetrics>): HealthMetr
     }
   }
 
-  return { isValid, errors: Object.keys(errors).length > 0 ? errors : undefined };
+  return { isValid, errors };
 }
 
 export function calculateMetricScore(value: number | null, metricKey: keyof typeof HEALTH_METRICS): number {
@@ -100,4 +100,4 @@ export function calculateHealthScore(metrics: Partial<BaseHealthMetrics>): {
     totalScore,
     componentScores: scores
   };
-} 
+}
