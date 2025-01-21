@@ -1,5 +1,11 @@
 import { Logger } from './Logger';
 
+declare const global: {
+  ErrorUtils: {
+    setGlobalHandler: (callback: (error: Error, isFatal?: boolean) => void) => void;
+  };
+} & typeof globalThis;
+
 interface SystemHealth {
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;
@@ -161,55 +167,38 @@ export class Monitor {
    * Sets up global error tracking
    */
   private setupErrorTracking(): void {
-    if (typeof window !== 'undefined') {
-      // Browser environment
-      window.addEventListener('error', (event) => {
-        this.addAlert({
-          severity: 'error',
-          component: 'frontend',
-          message: event.message,
-          metadata: {
-            filename: event.filename,
-            lineno: event.lineno,
-            colno: event.colno,
-          },
-        });
+    // React Native environment - use ErrorUtils for global error handling
+    global.ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
+      this.addAlert({
+        severity: isFatal ? 'critical' : 'error',
+        component: 'react-native',
+        message: error.message,
+        metadata: {
+          stack: error.stack,
+          isFatal,
+        },
       });
+    });
 
-      window.addEventListener('unhandledrejection', (event) => {
-        this.addAlert({
-          severity: 'error',
-          component: 'frontend',
-          message: 'Unhandled Promise Rejection',
-          metadata: {
-            reason: event.reason,
-          },
-        });
-      });
-    } else {
-      // Node.js environment
-      process.on('uncaughtException', (error) => {
-        this.addAlert({
-          severity: 'critical',
-          component: 'backend',
-          message: 'Uncaught Exception',
-          metadata: {
-            error: error.message,
-            stack: error.stack,
-          },
-        });
-      });
-
-      process.on('unhandledRejection', (reason) => {
-        this.addAlert({
-          severity: 'error',
-          component: 'backend',
-          message: 'Unhandled Promise Rejection',
-          metadata: {
-            reason,
-          },
-        });
-      });
+    // Handle promise rejections in development
+    if (__DEV__) {
+      const originalConsoleError = console.error;
+      console.error = (...args: any[]) => {
+        originalConsoleError.apply(console, args);
+        
+        const firstArg = args[0];
+        if (typeof firstArg === 'string' &&
+            firstArg.includes('Possible Unhandled Promise Rejection')) {
+          this.addAlert({
+            severity: 'error',
+            component: 'react-native',
+            message: 'Unhandled Promise Rejection',
+            metadata: {
+              reason: args[1],
+            },
+          });
+        }
+      };
     }
   }
 

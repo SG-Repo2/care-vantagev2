@@ -1,3 +1,11 @@
+import { Platform } from 'react-native';
+
+declare const global: {
+  ErrorUtils: {
+    setGlobalHandler: (callback: (error: Error, isFatal?: boolean) => void) => void;
+  };
+} & typeof globalThis;
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface LogEntry {
@@ -30,32 +38,38 @@ export class Logger {
   }
 
   private setupErrorHandlers() {
-    if (typeof window === 'undefined') {
-      // Node.js environment
-      process.on('uncaughtException', (error) => {
-        Logger.error('Uncaught Exception:', { error });
+    const errorHandler = (error: Error, isFatal?: boolean) => {
+      Logger.error('Uncaught Exception:', { 
+        error,
+        isFatal,
+        stack: error.stack,
+        platform: Platform.OS
       });
+      
+      // Rethrow fatal errors after logging
+      if (isFatal) {
+        throw error;
+      }
+    };
 
-      process.on('unhandledRejection', (reason, promise) => {
-        Logger.error('Unhandled Promise Rejection:', { reason, promise });
-      });
-    } else {
-      // Browser environment
-      window.addEventListener('error', (event) => {
-        Logger.error('Uncaught Error:', { 
-          error: event.error,
-          message: event.message,
-          filename: event.filename,
-          lineno: event.lineno,
-          colno: event.colno
-        });
-      });
+    // Set up global error handler
+    global.ErrorUtils.setGlobalHandler(errorHandler);
 
-      window.addEventListener('unhandledrejection', (event) => {
-        Logger.error('Unhandled Promise Rejection:', { 
-          reason: event.reason 
-        });
-      });
+    // Set up development mode promise rejection handling
+    if (__DEV__) {
+      const originalConsoleError = console.error;
+      console.error = (...args: any[]) => {
+        originalConsoleError.apply(console, args);
+        
+        const firstArg = args[0];
+        if (typeof firstArg === 'string' && 
+            firstArg.includes('Possible Unhandled Promise Rejection')) {
+          Logger.error('Unhandled Promise Rejection:', { 
+            error: args[1],
+            platform: Platform.OS
+          });
+        }
+      };
     }
   }
 
@@ -82,18 +96,15 @@ export class Logger {
     const sanitized: Record<string, any> = {};
     
     for (const [key, value] of Object.entries(context)) {
-      // Remove sensitive data
       if (this.isSensitiveKey(key)) {
         sanitized[key] = '[REDACTED]';
       } else if (value instanceof Error) {
-        // Handle Error objects
         sanitized[key] = {
           name: value.name,
           message: value.message,
           stack: value.stack,
         };
       } else if (typeof value === 'object' && value !== null) {
-        // Recursively sanitize nested objects
         sanitized[key] = this.sanitizeContext(value);
       } else {
         sanitized[key] = value;
@@ -126,18 +137,11 @@ export class Logger {
   private flush() {
     if (this.logBuffer.length === 0) return;
 
-    // In a real application, you might want to:
-    // 1. Send logs to a backend service
-    // 2. Store logs in local storage
-    // 3. Write to a file in Node.js environment
-    
-    // Always log errors, regardless of environment
     this.logBuffer.forEach(entry => {
       const { level, message, context } = entry;
       if (level === 'error') {
         console.error(message, context);
       } else if (__DEV__) {
-        // Only log non-errors in development
         console[level](message, context);
       }
     });
@@ -145,7 +149,6 @@ export class Logger {
     this.logBuffer = [];
   }
 
-  // Static methods for logging
   public static debug(message: string, context?: Record<string, any>) {
     const instance = Logger.getInstance();
     instance.log('debug', message, context);
@@ -166,7 +169,6 @@ export class Logger {
     instance.log('error', message, context);
   }
 
-  // Utility methods
   public static getBuffer(): LogEntry[] {
     return Logger.getInstance().logBuffer;
   }

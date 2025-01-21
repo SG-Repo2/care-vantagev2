@@ -1,15 +1,32 @@
 import React from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
-import { useLeaderboard } from '../hooks/useLeaderboard';
-import type { LeaderboardUser } from '../types';
+import { FlatList, View, StyleSheet } from 'react-native';
+import { Text, Card, Avatar, ActivityIndicator, useTheme } from 'react-native-paper';
+import type { LeaderboardEntry } from '../types/leaderboard';
+import { createStyles } from '../styles/LeaderboardScreen.styles';
 
-export const LeaderboardList = () => {
-  const { leaderboard, loading, error, refresh } = useLeaderboard();
+interface LeaderboardListProps {
+  entries: LeaderboardEntry[];
+  loading: boolean;
+  error: Error | null;
+  onRefresh: () => void;
+  onLoadMore: () => void;
+}
 
-  if (loading) {
+export const LeaderboardList: React.FC<LeaderboardListProps> = ({
+  entries,
+  loading,
+  error,
+  onRefresh,
+  onLoadMore
+}) => {
+  const theme = useTheme();
+  const styles = createStyles(theme);
+
+  if (loading && !entries.length) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading leaderboard...</Text>
       </View>
     );
   }
@@ -17,64 +34,75 @@ export const LeaderboardList = () => {
   if (error) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.error}>{error}</Text>
+        <Text style={styles.errorText}>{error.message}</Text>
       </View>
     );
   }
 
-  const renderItem = ({ item, index }: { item: LeaderboardUser; index: number }) => (
-    <View style={styles.row}>
-      <Text style={styles.rank}>#{index + 1}</Text>
-      <Text style={styles.name}>{item.display_name || 'Anonymous User'}</Text>
-      <Text style={styles.score}>{item.score || 0}</Text>
-    </View>
+  const renderItem = ({ item }: { item: LeaderboardEntry }) => (
+    <Card 
+      style={[
+        styles.entryContainer,
+        item.isCurrentUser && styles.currentUserEntry
+      ]}
+    >
+      <Card.Content style={styles.cardContent}>
+        <View style={styles.rankContainer}>
+          <Text style={[
+            styles.rankText,
+            item.rank <= 3 && styles.topThreeRank
+          ]}>
+            #{item.rank}
+          </Text>
+        </View>
+
+        {item.privacyLevel === 'private' ? (
+          <View style={styles.privateAvatar}>
+            <Text style={styles.privateAvatarText}>?</Text>
+          </View>
+        ) : (
+          <Avatar.Image
+            size={48}
+            source={
+              item.photoUrl
+                ? { uri: item.photoUrl }
+                : require('assets/user.png')
+            }
+          />
+        )}
+
+        <View style={styles.userInfoContainer}>
+          <Text style={styles.displayName}>
+            {item.displayName}
+          </Text>
+          <Text style={styles.scoreText}>
+            Score: {item.dailyScore}
+          </Text>
+          {item.streakDays && (
+            <Text style={styles.streakText}>
+              🔥 {item.streakDays} day streak
+            </Text>
+          )}
+        </View>
+      </Card.Content>
+    </Card>
   );
 
   return (
     <FlatList
-      data={leaderboard}
+      data={entries}
       renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.container}
-      onRefresh={refresh}
+      keyExtractor={item => item.id}
+      onRefresh={onRefresh}
       refreshing={loading}
+      onEndReached={onLoadMore}
+      onEndReachedThreshold={0.5}
+      contentContainerStyle={styles.listContent}
+      ListEmptyComponent={
+        <View style={styles.centered}>
+          <Text>No leaderboard entries available</Text>
+        </View>
+      }
     />
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  rank: {
-    width: 50,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  name: {
-    flex: 1,
-    fontSize: 16,
-  },
-  score: {
-    width: 80,
-    fontSize: 16,
-    textAlign: 'right',
-    fontWeight: 'bold',
-  },
-  error: {
-    color: 'red',
-    textAlign: 'center',
-  },
-});
