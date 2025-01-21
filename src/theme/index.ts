@@ -13,8 +13,27 @@ export interface ExtendedTheme extends Omit<MD3Theme, 'fonts'>, Omit<NavigationT
     textSecondary: string;
   };
   fonts: MD3Theme['fonts'];
-  textVariants: {
+  typography: {
+    heading1: {
+      fontSize: number;
+      lineHeight: number;
+      fontWeight: string;
+    };
+    heading2: {
+      fontSize: number;
+      lineHeight: number;
+      fontWeight: string;
+    };
+    heading3: {
+      fontSize: number;
+      lineHeight: number;
+      fontWeight: string;
+    };
     body: {
+      fontSize: number;
+      lineHeight: number;
+    };
+    bodySmall: {
       fontSize: number;
       lineHeight: number;
     };
@@ -35,6 +54,27 @@ export interface ExtendedTheme extends Omit<MD3Theme, 'fonts'>, Omit<NavigationT
       small: number;
       medium: number;
       large: number;
+    };
+    maxWidth: {
+      sm: number;
+      md: number;
+      lg: number;
+    };
+    shadows: {
+      sm: {
+        shadowColor: string;
+        shadowOffset: { width: number; height: number };
+        shadowOpacity: number;
+        shadowRadius: number;
+        elevation: number;
+      };
+      md: {
+        shadowColor: string;
+        shadowOffset: { width: number; height: number };
+        shadowOpacity: number;
+        shadowRadius: number;
+        elevation: number;
+      };
     };
   };
 }
@@ -97,15 +137,34 @@ export const darkColors: MD3Colors = {
   onErrorContainer: '#FFE5E5',
 };
 
-const textVariants = {
+const typography = {
+  heading1: {
+    fontSize: 32,
+    lineHeight: 40,
+    fontWeight: 'bold'
+  },
+  heading2: {
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: 'bold'
+  },
+  heading3: {
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: 'bold'
+  },
   body: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 24
+  },
+  bodySmall: {
+    fontSize: 14,
+    lineHeight: 20
   },
   caption: {
     fontSize: 12,
-    lineHeight: 16,
-  },
+    lineHeight: 16
+  }
 };
 
 export const lightTheme = {
@@ -116,12 +175,33 @@ export const lightTheme = {
     textSecondary: '#666666',
   },
   metrics: metricColors,
-  textVariants,
+  typography,
   layout: {
     borderRadius: {
       small: 4,
       medium: 8,
       large: 16
+    },
+    maxWidth: {
+      sm: 640,
+      md: 768,
+      lg: 1024
+    },
+    shadows: {
+      sm: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.18,
+        shadowRadius: 1.0,
+        elevation: 1
+      },
+      md: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.23,
+        shadowRadius: 2.62,
+        elevation: 4
+      }
     }
   }
 };
@@ -134,12 +214,33 @@ export const darkTheme = {
     textSecondary: '#999999',
   },
   metrics: metricColors,
-  textVariants,
+  typography,
   layout: {
     borderRadius: {
       small: 4,
       medium: 8,
       large: 16
+    },
+    maxWidth: {
+      sm: 640,
+      md: 768,
+      lg: 1024
+    },
+    shadows: {
+      sm: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.18,
+        shadowRadius: 1.0,
+        elevation: 1
+      },
+      md: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.23,
+        shadowRadius: 2.62,
+        elevation: 4
+      }
     }
   }
 };
@@ -156,13 +257,34 @@ export const customLightTheme: ExtendedTheme = {
     shadow: '#000000',
     textSecondary: '#666666',
   },
-  textVariants,
+  typography,
   metrics: metricColors,
   layout: {
     borderRadius: {
       small: 4,
       medium: 8,
       large: 16
+    },
+    maxWidth: {
+      sm: 640,
+      md: 768,
+      lg: 1024
+    },
+    shadows: {
+      sm: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.18,
+        shadowRadius: 1.0,
+        elevation: 1
+      },
+      md: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.23,
+        shadowRadius: 2.62,
+        elevation: 4
+      }
     }
   }
 };
@@ -178,13 +300,34 @@ export const customDarkTheme: ExtendedTheme = {
     shadow: '#000000',
     textSecondary: '#999999',
   },
-  textVariants,
+  typography,
   metrics: metricColors,
   layout: {
     borderRadius: {
       small: 4,
       medium: 8,
       large: 16
+    },
+    maxWidth: {
+      sm: 640,
+      md: 768,
+      lg: 1024
+    },
+    shadows: {
+      sm: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.18,
+        shadowRadius: 1.0,
+        elevation: 1
+      },
+      md: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.23,
+        shadowRadius: 2.62,
+        elevation: 4
+      }
     }
   }
 };

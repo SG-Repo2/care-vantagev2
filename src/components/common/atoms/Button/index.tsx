@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, View, StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from 'react-native-paper';
-import { spacing } from '../../theme/spacing';
+import { spacing } from '../../../../theme';
 import { ButtonProps } from './types';
 
 export const Button: React.FC<ButtonProps> = ({

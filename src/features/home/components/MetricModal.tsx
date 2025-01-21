@@ -5,7 +5,7 @@ import { useStyles } from '../styles/MetricModal.styles';
 import { LineChart, BarChart, ProgressChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '../../../components/common/atoms/Card';
-import { spacing } from '../../../components/common/theme/spacing';
+import { spacing } from '../../../theme';
 
 interface MetricModalProps {
   visible: boolean;

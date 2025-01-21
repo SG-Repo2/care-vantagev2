@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button, useTheme } from 'react-native-paper';
-import { spacing } from '../../../components/common/theme/spacing';
+import { spacing } from '../../../theme';
 
 interface AccountActionsProps {
   onLogout: () => Promise<void>;

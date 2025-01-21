@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { MD3Theme } from 'react-native-paper';
-import { spacing } from '../../../components/common/theme/spacing';
+import { spacing } from '../../../theme';
 
 export const createStyles = (theme: MD3Theme) => StyleSheet.create({
   container: {

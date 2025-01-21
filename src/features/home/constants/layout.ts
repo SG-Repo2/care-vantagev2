@@ -1,5 +1,5 @@
 import { Dimensions } from 'react-native';
-import { spacing } from '../../../components/common/theme/spacing';
+import { spacing } from '../../../theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_MARGIN = spacing.md;
