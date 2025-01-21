@@ -56,20 +56,14 @@ export const LeaderboardList: React.FC<LeaderboardListProps> = ({
           </Text>
         </View>
 
-        {item.privacyLevel === 'private' ? (
-          <View style={styles.privateAvatar}>
-            <Text style={styles.privateAvatarText}>?</Text>
-          </View>
-        ) : (
-          <Avatar.Image
-            size={48}
-            source={
-              item.photoUrl
-                ? { uri: item.photoUrl }
-                : require('assets/user.png')
-            }
-          />
-        )}
+        <Avatar.Image
+          size={48}
+          source={
+            item.photoUrl
+              ? { uri: item.photoUrl }
+              : require('assets/user.png')
+          }
+        />
 
         <View style={styles.userInfoContainer}>
           <Text style={styles.displayName}>

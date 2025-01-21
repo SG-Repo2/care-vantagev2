@@ -38,7 +38,5 @@ export const createStyles = (theme: MD3Theme) => StyleSheet.create({
     marginBottom: spacing.md,
     color: theme.colors.onSurfaceVariant,
   },
-  privacySelector: {
-    marginBottom: spacing.md,
-  },
+
 });

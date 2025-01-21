@@ -2,7 +2,6 @@ import { supabase } from '../../../utils/supabase';
 import { DateUtils } from '../../../utils/DateUtils';
 import { Logger } from '../../../utils/error/Logger';
 import { SupabaseErrorHelper } from '../../../core/supabase/SupabaseErrorHelper';
-import type { PrivacyLevel } from '../../../core/types/base';
 import type {
   LeaderboardEntry,
   LeaderboardOptions,
@@ -69,8 +68,7 @@ class LeaderboardService {
           calories,
           users!inner (
             display_name,
-            photo_url,
-            privacy_level
+            photo_url
           )
         `)
         .gte('date', dateRange.start)
@@ -101,21 +99,17 @@ class LeaderboardService {
         users: {
           display_name: string | null;
           photo_url: string | null;
-          privacy_level: PrivacyLevel;
         };
       }>;
 
       return typedData.map((entry, index) => ({
         id: entry.user_id,
         userId: entry.user_id,
-        displayName: entry.users.privacy_level === 'private' 
-          ? 'Anonymous User'
-          : entry.users.display_name || 'Anonymous User',
+        displayName: entry.users.display_name || 'Anonymous User',
         dailyScore: entry.daily_score,
         weeklyScore: entry.weekly_score,
         rank: start + index + 1,
-        photoUrl: entry.users.privacy_level === 'private' ? null : entry.users.photo_url,
-        privacyLevel: entry.users.privacy_level,
+        photoUrl: entry.users.photo_url,
         streakDays: entry.streak_days,
         isCurrentUser: currentUserId === entry.user_id,
         steps: entry.steps,

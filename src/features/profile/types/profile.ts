@@ -6,7 +6,6 @@ export interface Profile {
   settings: {
     measurementSystem: 'metric' | 'imperial';
     notifications: boolean;
-    privacyLevel: 'private' | 'friends' | 'public';
     dailyGoals: {
       steps: number;
       sleep: number;  // in minutes
